@@ -30,20 +30,25 @@ public class Inventory {
         InventoryItem item = itemsInCategory.get(index);
 
         int remainingQuantity = item.getQuantity() - quantity;
-        if (remainingQuantity <= 0) {
+        if (remainingQuantity < 0) {
             //TODO split the < 0 case as error handling
+            System.out.println("Invalid quantity!");
+            return;
+        }
+        else if (remainingQuantity == 0){
             itemsInCategory.remove(index);
         }
         else {
             item.setQuantity(remainingQuantity);
         }
 
-        System.out.printf("Successfully removed: %dx %s to the inventory\n",item.getQuantity(), item.getName());
+        System.out.printf("Successfully removed: %dx %s from the inventory\n",quantity, item.getName());
     }
 
     public void listItems() {
+        System.out.println("\n" + Ui.DIVIDER);
         System.out.println("Inventory");
-        System.out.println("--------------------------------------------------------------------");
+        System.out.println(Ui.DIVIDER);
         for (String category : items.keySet()) {
             ArrayList<InventoryItem> itemsInCategory = items.get(category);
 
@@ -54,6 +59,6 @@ public class Inventory {
                 System.out.printf("%d: %s (Qty: %s)\n",i+1 ,item.getName(), item.getQuantity());
             }
         }
-        System.out.println("--------------------------------------------------------------------");
+        System.out.println(Ui.DIVIDER);
     }
 }
