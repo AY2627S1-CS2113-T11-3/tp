@@ -17,6 +17,7 @@ public class Duke {
 
         Scanner in = new Scanner(System.in);
         System.out.println("Hello " + in.nextLine());
+        System.out.println(Ui.DIVIDER);
 
         Parser parser = new Parser();
         Inventory inventory = new Inventory();
@@ -25,6 +26,7 @@ public class Duke {
         do {
             line = in.nextLine();
             parser.handleCommand(line, inventory);
+            System.out.println();
         } while (!line.trim().equalsIgnoreCase("Bye"));
     }
 }

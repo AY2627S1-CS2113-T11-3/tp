@@ -46,8 +46,9 @@ public class Inventory {
     }
 
     public void listItems() {
+        System.out.println("\n" + Ui.DIVIDER);
         System.out.println("Inventory");
-        System.out.println("--------------------------------------------------------------------");
+        System.out.println(Ui.DIVIDER);
         for (String category : items.keySet()) {
             ArrayList<InventoryItem> itemsInCategory = items.get(category);
 
@@ -58,6 +59,6 @@ public class Inventory {
                 System.out.printf("%d: %s (Qty: %s)\n",i+1 ,item.getName(), item.getQuantity());
             }
         }
-        System.out.println("--------------------------------------------------------------------");
+        System.out.println(Ui.DIVIDER);
     }
 }
