@@ -17,5 +17,14 @@ public class Duke {
 
         Scanner in = new Scanner(System.in);
         System.out.println("Hello " + in.nextLine());
+
+        Parser parser = new Parser();
+        Inventory inventory = new Inventory();
+        String line;
+
+        do {
+            line = in.nextLine();
+            parser.handleCommand(line, inventory);
+        } while (!line.trim().equalsIgnoreCase("Bye"));
     }
 }
