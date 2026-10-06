@@ -696,6 +696,693 @@ Components
 --------------------------------------------------------------------
 ```
 
+### UI-SESSION-ADD-001: Reject malformed session commands
+
+**Aim:** Verify that `add-s` requires exactly one nonblank value for every prefix in the documented order.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-s d/{{TOMORROW}} n/Test Lab l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-s n/Test Lab n/Other Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-s n/ d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Session name cannot be blank.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/ s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Session location cannot be blank.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-s n/Test Lab d/ l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Date must be a valid date in d MMMM uuuu format.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/ e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Start time must be a valid time in HHmm format.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20 x/extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+```
+
+### UI-SESSION-ADD-002: Validate session dates and times
+
+**Aim:** Verify strict calendar dates, future-date rules, time formats, and same-day time ordering.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/Test Lab d/31 February 2099 l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Date must be a valid date in d MMMM uuuu format.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Test Lab d/2099-01-01 l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Date must be a valid date in d MMMM uuuu format.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{YESTERDAY}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Session date cannot be before today.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Start time must be a valid time in HHmm format.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/2400 p/20
+```
+
+**Expected output**
+
+```text
+End time must be a valid time in HHmm format.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/0900 p/20
+```
+
+**Expected output**
+
+```text
+Start time must be earlier than end time.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/1000 e/0900 p/20
+```
+
+**Expected output**
+
+```text
+Start time must be earlier than end time.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-s n/Today Lab d/{{TODAY}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Successfully added: Today Lab on {{TODAY}} at Room-A from 0900 to 1000 for 20 attendees
+```
+
+### UI-SESSION-ADD-003: Validate session headcounts
+
+**Aim:** Verify that headcounts are positive integers within the Java integer range.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/
+```
+
+**Expected output**
+
+```text
+Headcount must be a positive integer.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/abc
+```
+
+**Expected output**
+
+```text
+Headcount must be a positive integer.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/0
+```
+
+**Expected output**
+
+```text
+Headcount must be a positive integer.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/-1
+```
+
+**Expected output**
+
+```text
+Headcount must be a positive integer.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/2147483648
+```
+
+**Expected output**
+
+```text
+Headcount must be a positive integer.
+```
+
+### UI-SESSION-ADD-004: Enforce session conflicts
+
+**Aim:** Verify overlap rejection by date and location while allowing adjacent sessions and simultaneous sessions elsewhere.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/CG2111A Lab [03] d/{{TOMORROW}} l/E4A-04-08 s/0900 e/1200 p/50
+```
+
+**Expected output**
+
+```text
+Successfully added: CG2111A Lab [03] on {{TOMORROW}} at E4A-04-08 from 0900 to 1200 for 50 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Overlapping Lab d/{{TOMORROW}} l/e4a-04-08 s/1100 e/1300 p/25
+```
+
+**Expected output**
+
+```text
+Session conflicts with "CG2111A Lab [03]" at E4A-04-08 on {{TOMORROW}} from 0900 to 1200.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Adjacent Lab d/{{TOMORROW}} l/E4A-04-08 s/1200 e/1400 p/25
+```
+
+**Expected output**
+
+```text
+Successfully added: Adjacent Lab on {{TOMORROW}} at E4A-04-08 from 1200 to 1400 for 25 attendees
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-s n/Other Room Lab d/{{TOMORROW}} l/E4A-04-09 s/1000 e/1100 p/25
+```
+
+**Expected output**
+
+```text
+Successfully added: Other Room Lab on {{TOMORROW}} at E4A-04-09 from 1000 to 1100 for 25 attendees
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-s n/Different Date Lab d/1 January 2099 l/E4A-04-08 s/1000 e/1100 p/25
+```
+
+**Expected output**
+
+```text
+Successfully added: Different Date Lab on 1 January 2099 at E4A-04-08 from 1000 to 1100 for 25 attendees
+```
+
+### UI-SESSION-DELETE-001: Reject invalid session deletions
+
+**Aim:** Verify strict single-index syntax and distinguish malformed indices from out-of-range indices.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+delete-s
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-s INDEX
+```
+
+#### Step 2
+
+**Input**
+
+```text
+delete-s 1 extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-s INDEX
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-s abc
+```
+
+**Expected output**
+
+```text
+Session index must be a positive integer.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-s 0
+```
+
+**Expected output**
+
+```text
+Session index must be a positive integer.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-s -1
+```
+
+**Expected output**
+
+```text
+Session index must be a positive integer.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-s 2147483648
+```
+
+**Expected output**
+
+```text
+Session index must be a positive integer.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Session index 1 is invalid. There are 0 scheduled session(s).
+```
+
+### UI-SESSION-DELETE-002: Delete sessions and shift indices
+
+**Aim:** Verify successful deletion and one-based index shifting after an earlier session is removed.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Second Lab d/{{TOMORROW}} l/Room-A s/1000 e/1100 p/25
+```
+
+**Expected output**
+
+```text
+Successfully added: Second Lab on {{TOMORROW}} at Room-A from 1000 to 1100 for 25 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: First Lab
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: Second Lab
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Session index 1 is invalid. There are 0 scheduled session(s).
+```
+
+### UI-SESSION-LIST-001: Reject arguments and list an empty schedule
+
+**Aim:** Verify that `list-s` accepts no arguments and clearly reports an empty schedule.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+list-s extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-s
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+No sessions scheduled.
+--------------------------------------------------------------------
+```
+
+### UI-SESSION-LIST-002: List sessions in full format and insertion order
+
+**Aim:** Verify that scheduled sessions retain their insertion order and use the approved full display format.
+
+**Preconditions:** Empty schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Second Lab d/{{TOMORROW}} l/Room-B s/0930 e/1030 p/25
+```
+
+**Expected output**
+
+```text
+Successfully added: Second Lab on {{TOMORROW}} at Room-B from 0930 to 1030 for 25 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
+2. Second Lab on {{TOMORROW}} at Room-B from 0930 to 1030 for 25 attendees
+--------------------------------------------------------------------
+```
+
 <!--
 ### UI-001: Short title
 

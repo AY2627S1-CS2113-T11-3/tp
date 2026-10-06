@@ -1,6 +1,6 @@
 # UI Test Session
 
-Latest result: **PASS** - 8 test cases and 43 feature commands.
+Latest result: **PASS** - 16 test cases and 88 feature commands.
 
 ## Environment
 
@@ -8,6 +8,9 @@ Latest result: **PASS** - 8 test cases and 43 feature commands.
 [java] 25.0.4
 [build] gradlew.bat shadowJar
 [build] BUILD SUCCESSFUL
+[date] TODAY=6 October 2026
+[date] YESTERDAY=5 October 2026
+[date] TOMORROW=7 October 2026
 ```
 
 Each case started a fresh process. The following startup output matched exactly before every case; `␠` represents a literal trailing space.
@@ -233,6 +236,32 @@ Each case started a fresh process. The following startup output matched exactly 
 [process] Exited with code 0
 ```
 
+## Scheduling transcript summary
+
+The automated runner printed and compared the chronological startup, input,
+application output, cleanup, and exit-code transcript for every step. Each
+actual response matched the corresponding expected output in
+`test/ui-test-plan.md` exactly.
+
+```text
+[case] UI-SESSION-ADD-001
+[result] PASS: 10/10 commands
+[case] UI-SESSION-ADD-002
+[result] PASS: 8/8 commands
+[case] UI-SESSION-ADD-003
+[result] PASS: 5/5 commands
+[case] UI-SESSION-ADD-004
+[result] PASS: 5/5 commands
+[case] UI-SESSION-DELETE-001
+[result] PASS: 7/7 commands
+[case] UI-SESSION-DELETE-002
+[result] PASS: 5/5 commands
+[case] UI-SESSION-LIST-001
+[result] PASS: 2/2 commands
+[case] UI-SESSION-LIST-002
+[result] PASS: 3/3 commands
+```
+
 ## Results
 
 - UI-ADD-001: 7/7 steps passed.
@@ -243,5 +272,13 @@ Each case started a fresh process. The following startup output matched exactly 
 - UI-DELETE-003: 7/7 steps passed.
 - UI-LIST-001: 2/2 steps passed.
 - UI-LIST-002: 4/4 steps passed.
+- UI-SESSION-ADD-001: 10/10 steps passed.
+- UI-SESSION-ADD-002: 8/8 steps passed.
+- UI-SESSION-ADD-003: 5/5 steps passed.
+- UI-SESSION-ADD-004: 5/5 steps passed.
+- UI-SESSION-DELETE-001: 7/7 steps passed.
+- UI-SESSION-DELETE-002: 5/5 steps passed.
+- UI-SESSION-LIST-001: 2/2 steps passed.
+- UI-SESSION-LIST-002: 3/3 steps passed.
 
-All 8 test cases and 43 feature-command steps passed.
+All 16 test cases and 88 feature-command steps passed.
