@@ -82,7 +82,8 @@ public class Parser {
                     Session session = new Session(name, date, location, startTime, endTime, headcount);
                     sessionManager.addSession(session);
                 } catch (IllegalArgumentException e) {
-                    System.out.println(e.getMessage() != null ? e.getMessage() : "Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT");
+                    System.out.println(e.getMessage() != null ? e.getMessage() :
+                            "Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT");
                 } catch (Exception e) {
                     System.out.println("Error parsing add-s command. Please check your format.");
                 }
