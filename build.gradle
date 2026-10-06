@@ -38,7 +38,7 @@ test {
 }
 
 application {
-    mainClass = 'seedu.duke.Duke'
+    mainClass = 'seedu.bob.Bob'
 }
 
 jar {
