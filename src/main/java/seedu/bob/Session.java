@@ -1,4 +1,4 @@
-package seedu.duke;
+package seedu.bob;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -6,9 +6,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 /**
- * Represents a scheduled lab session with a date, location, time, and headcount.
+ * Represents a scheduled lab session with a date, location, time, and
+ * headcount.
  */
 public class Session {
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmm");
 
@@ -20,7 +22,7 @@ public class Session {
     private int headcount;
 
     public Session(String name, String dateStr, String location,
-                   String startTimeStr, String endTimeStr, int headcount)
+            String startTimeStr, String endTimeStr, int headcount)
             throws IllegalArgumentException {
         this.name = name;
         this.location = location;

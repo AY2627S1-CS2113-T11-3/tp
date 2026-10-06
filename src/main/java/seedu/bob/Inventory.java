@@ -1,4 +1,4 @@
-package seedu.duke;
+package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,8 +31,9 @@ public class Inventory {
     }
 
     /**
-     * Removes the requested quantity and prints a confirmation, removing the item when none remain.
-     * Prints an error without changing the inventory if the quantity exceeds the available stock.
+     * Removes the requested quantity and prints a confirmation, removing the
+     * item when none remain. Prints an error without changing the inventory if
+     * the quantity exceeds the available stock.
      *
      * @param category Existing category containing the item.
      * @param userIndex One-based item position in the category.
@@ -61,7 +62,8 @@ public class Inventory {
     }
 
     /**
-     * Prints inventory items by category with one-based positions and quantities.
+     * Prints inventory items by category with one-based positions and
+     * quantities.
      */
     public void listItems() {
         System.out.println("\n" + Ui.DIVIDER);

@@ -1,11 +1,12 @@
-package seedu.duke;
+package seedu.bob;
 
 import java.util.Scanner;
 
 /**
  * Runs the interactive Bob inventory and scheduling application.
  */
-public class Duke {
+public class Bob {
+
     /**
      * Greets the user and processes commands until the user enters Bye.
      *

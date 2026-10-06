@@ -1,4 +1,4 @@
-package seedu.duke;
+package seedu.bob;
 
 import java.util.ArrayList;
 
@@ -6,6 +6,7 @@ import java.util.ArrayList;
  * Manages scheduled lab sessions and displays scheduling changes.
  */
 public class SessionManager {
+
     private static final int INDEX_OFFSET = 1;
     private final ArrayList<Session> sessions = new ArrayList<>();
 

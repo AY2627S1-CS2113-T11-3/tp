@@ -1,21 +1,26 @@
-package seedu.duke;
+package seedu.bob;
 
 /**
  * Parses inventory and scheduling commands and dispatches them.
  */
 public class Parser {
+
     private static final int PREFIX_LENGTH = 2;
 
     /**
-     * Executes an add-i, delete-i, or list command, or prints a message for an unknown command.
-     * Expects add-i arguments in n/, c/, q/ order and delete-i arguments in c/, i/, q/ order.
+     * Executes an add-i, delete-i, or list command, or prints a message for an
+     * unknown command. Expects add-i arguments in n/, c/, q/ order and delete-i
+     * arguments in c/, i/, q/ order.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
-     * @throws IndexOutOfBoundsException If arguments or item positions are missing or invalid.
-     * @throws NumberFormatException If a quantity or item position is not an integer.
-     * @throws NullPointerException If the input is null or a deletion category does not exist.
+     * @throws IndexOutOfBoundsException If arguments or item positions are
+     * missing or invalid.
+     * @throws NumberFormatException If a quantity or item position is not an
+     * integer.
+     * @throws NullPointerException If the input is null or a deletion category
+     * does not exist.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager) {
         String[] parts = input.trim().split(" ", 2);
@@ -82,8 +87,8 @@ public class Parser {
                     Session session = new Session(name, date, location, startTime, endTime, headcount);
                     sessionManager.addSession(session);
                 } catch (IllegalArgumentException e) {
-                    System.out.println(e.getMessage() != null ? e.getMessage() :
-                            "Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT");
+                    System.out.println(e.getMessage() != null ? e.getMessage()
+                            : "Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT");
                 } catch (Exception e) {
                     System.out.println("Error parsing add-s command. Please check your format.");
                 }

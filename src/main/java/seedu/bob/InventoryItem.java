@@ -1,9 +1,10 @@
-package seedu.duke;
+package seedu.bob;
 
 /**
  * Represents a named inventory item with a category and quantity.
  */
 public class InventoryItem {
+
     private String name;
     private String category;
     private int quantity;
