@@ -4,8 +4,9 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <!--
-    This configuration file enforces rules for the coding standard at
-    https://se-education.org/guides/conventions/java/basic.html
+    This configuration file checks a subset of the coding standard at
+    https://se-education.org/guides/conventions/java/intermediate.html
+    Review naming and documentation requirements manually as well.
 -->
 
 <module name="Checker">
@@ -238,7 +239,7 @@
         <module name="CommentsIndentation"/>
 
         <module name="Indentation">
-            <property name="caseIndent" value="0" />
+            <property name="caseIndent" value="4" />
             <property name="throwsIndent" value="8" />
         </module>
 

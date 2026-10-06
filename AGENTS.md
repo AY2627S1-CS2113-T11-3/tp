@@ -24,11 +24,23 @@ Unless the user says otherwise, assume that you are assisting a student working 
 
 # Project-specific requirements
 
+## Mandatory coding standard
+
+All Java code in this project, including tests, must follow the SE-EDU basic and intermediate coding standard.
+Before writing, modifying, or reviewing Java code, read and apply the project skill
+[seedu-java-coding-standard](.agents/skills/seedu-java-coding-standard/SKILL.md).
+Review rules that Checkstyle cannot enforce manually, and run the Gradle wrapper's `check` task with Java 25 after changes.
+These requirements apply to all agents working in this repository.
+
 ## Java version:
 
 Ensure that Java 25 is used when running the application or build tasks. On macOS, use `sdk use java 25.0.3.fx-zulu` to switch to Java 25 if needed.
 
 ## Git
+
+All future commits must follow the SE-EDU Git conventions. Before proposing, writing, or reviewing commit messages,
+read and apply [seedu-git-standard](.agents/skills/seedu-git-standard/SKILL.md).
+Apply its branch naming rules when creating branches. These requirements apply to all agents in this repository.
 
 Use lightweight tags unless the user requests an annotated tag.
 When proposing or creating a commit message, include enough detail to explain the rationale for the change.
