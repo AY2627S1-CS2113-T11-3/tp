@@ -7,21 +7,26 @@ import java.util.regex.Pattern;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
+import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
+import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
  * Parses inventory and scheduling commands and dispatches them.
  */
 public class Parser {
 
-    private static final int PREFIX_LENGTH = 2;
     private static final int DEFAULT_ITEM_QUANTITY = 1;
     private static final String ADD_ITEM_USAGE =
             "Invalid format. Use: add-i n/NAME c/CATEGORY [q/QUANTITY]";
     private static final String DELETE_ITEM_USAGE =
             "Invalid format. Use: delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY";
     private static final String LIST_ITEM_USAGE = "Invalid format. Use: list-i";
+    private static final String ADD_SESSION_USAGE = "Invalid format. Use: add-s n/NAME d/DATE "
+            + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
+    private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
+    private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
@@ -66,44 +71,27 @@ public class Parser {
             }
             case "add-s" -> {
                 try {
-                    String args = parts[1];
-                    int nIdx = args.indexOf("n/");
-                    int dIdx = args.indexOf("d/");
-                    int lIdx = args.indexOf("l/");
-                    int sIdx = args.indexOf("s/");
-                    int eIdx = args.indexOf("e/");
-                    int pIdx = args.indexOf("p/");
-
-                    if (nIdx == -1 || dIdx == -1 || lIdx == -1 || sIdx == -1 || eIdx == -1 || pIdx == -1) {
-                        throw new IllegalArgumentException();
-                    }
-
-                    String name = args.substring(nIdx + PREFIX_LENGTH, dIdx).trim();
-                    String date = args.substring(dIdx + PREFIX_LENGTH, lIdx).trim();
-                    String location = args.substring(lIdx + PREFIX_LENGTH, sIdx).trim();
-                    String startTime = args.substring(sIdx + PREFIX_LENGTH, eIdx).trim();
-                    String endTime = args.substring(eIdx + PREFIX_LENGTH, pIdx).trim();
-                    int headcount = Integer.parseInt(args.substring(pIdx + PREFIX_LENGTH).trim());
-
-                    Session session = new Session(name, date, location, startTime, endTime, headcount);
-                    sessionManager.addSession(session);
-                } catch (IllegalArgumentException e) {
-                    System.out.println(e.getMessage() != null ? e.getMessage()
-                            : "Invalid format. Use: add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT");
-                } catch (Exception e) {
-                    System.out.println("Error parsing add-s command. Please check your format.");
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    addSession(arguments, sessionManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
                 }
             }
             case "delete-s" -> {
                 try {
-                    int index = Integer.parseInt(parts[1].trim());
-                    sessionManager.deleteSession(index);
-                } catch (Exception e) {
-                    System.out.println("Invalid format. Use: delete-s INDEX");
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    deleteSession(arguments, sessionManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
                 }
             }
             case "list-s" -> {
-                sessionManager.listSessions();
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    listSessions(arguments, sessionManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
             }
             default -> {
                 System.out.println("Invalid command");
@@ -181,6 +169,62 @@ public class Parser {
             throw new CommandFormatException(LIST_ITEM_USAGE);
         }
         inventory.listItems();
+    }
+
+    /**
+     * Parses and executes an add-session command.
+     *
+     * @param arguments Text following the {@code add-s} command word.
+     * @param sessionManager Session schedule to update.
+     * @throws CommandException If the arguments or session values are invalid.
+     */
+    private void addSession(String arguments, SessionManager sessionManager) throws CommandException {
+        List<String> expectedPrefixes = List.of("n", "d", "l", "s", "e", "p");
+        if (!findPrefixes(arguments).equals(expectedPrefixes)) {
+            throw new CommandFormatException(ADD_SESSION_USAGE);
+        }
+
+        List<String> values = extractValues(arguments, expectedPrefixes, ADD_SESSION_USAGE);
+        String name = values.get(0);
+        String date = values.get(1);
+        String location = values.get(2);
+        String startTime = values.get(3);
+        String endTime = values.get(4);
+        int headcount = parseHeadcount(values.get(5));
+
+        Session session = new Session(name, date, location, startTime, endTime, headcount);
+        sessionManager.addSession(session);
+    }
+
+    /**
+     * Parses and executes a delete-session command.
+     *
+     * @param arguments Text following the {@code delete-s} command word.
+     * @param sessionManager Session schedule to update.
+     * @throws CommandException If the index is malformed or outside the schedule.
+     */
+    private void deleteSession(String arguments, SessionManager sessionManager) throws CommandException {
+        String trimmedArguments = arguments.trim();
+        if (trimmedArguments.isEmpty() || trimmedArguments.matches(".*\\s+.*")) {
+            throw new CommandFormatException(DELETE_SESSION_USAGE);
+        }
+
+        int index = parseSessionIndex(trimmedArguments);
+        sessionManager.deleteSession(index);
+    }
+
+    /**
+     * Validates and executes a list-sessions command.
+     *
+     * @param arguments Text following the {@code list-s} command word.
+     * @param sessionManager Session schedule to display.
+     * @throws CommandFormatException If any arguments are supplied.
+     */
+    private void listSessions(String arguments, SessionManager sessionManager) throws CommandFormatException {
+        if (!arguments.isBlank()) {
+            throw new CommandFormatException(LIST_SESSION_USAGE);
+        }
+        sessionManager.listSessions();
     }
 
     /**
@@ -271,6 +315,44 @@ public class Parser {
             return quantity;
         } catch (NumberFormatException e) {
             throw new InvalidQuantityException();
+        }
+    }
+
+    /**
+     * Parses a positive session headcount.
+     *
+     * @param headcountText Headcount text supplied by the user.
+     * @return Parsed positive headcount.
+     * @throws InvalidHeadcountException If the headcount is not a positive integer.
+     */
+    private int parseHeadcount(String headcountText) throws InvalidHeadcountException {
+        try {
+            int headcount = Integer.parseInt(headcountText);
+            if (headcount <= 0) {
+                throw new InvalidHeadcountException();
+            }
+            return headcount;
+        } catch (NumberFormatException e) {
+            throw new InvalidHeadcountException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based session index.
+     *
+     * @param indexText Index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidSessionIndexException If the index is not a positive integer.
+     */
+    private int parseSessionIndex(String indexText) throws InvalidSessionIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidSessionIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidSessionIndexException();
         }
     }
 }
