@@ -9,6 +9,9 @@ import java.time.format.DateTimeParseException;
  * Represents a scheduled lab session with a date, location, time, and headcount.
  */
 public class Session {
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy");
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmm");
+
     private String name;
     private LocalDate date;
     private String location;
@@ -16,10 +19,9 @@ public class Session {
     private LocalTime endTime;
     private int headcount;
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("d MMMM yyyy");
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HHmm");
-
-    public Session(String name, String dateStr, String location, String startTimeStr, String endTimeStr, int headcount) throws IllegalArgumentException {
+    public Session(String name, String dateStr, String location,
+                   String startTimeStr, String endTimeStr, int headcount)
+            throws IllegalArgumentException {
         this.name = name;
         this.location = location;
         this.headcount = headcount;
@@ -29,7 +31,8 @@ public class Session {
             this.startTime = LocalTime.parse(startTimeStr, TIME_FORMATTER);
             this.endTime = LocalTime.parse(endTimeStr, TIME_FORMATTER);
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Invalid date or time format. Use 'd MMMM yyyy' for dates and 'HHmm' for times.");
+            throw new IllegalArgumentException("Invalid date or time format. "
+                    + "Use 'd MMMM yyyy' for dates and 'HHmm' for times.");
         }
     }
 
