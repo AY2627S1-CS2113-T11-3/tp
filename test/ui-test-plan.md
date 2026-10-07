@@ -811,7 +811,7 @@ add-s n/Test Lab d/ l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM uuuu format.
+Date must be a valid date in d MMMM yyyy format.
 ```
 
 #### Step 9
@@ -859,7 +859,7 @@ add-s n/Test Lab d/31 February 2099 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM uuuu format.
+Date must be a valid date in d MMMM yyyy format.
 ```
 
 #### Step 2
@@ -873,7 +873,7 @@ add-s n/Test Lab d/2099-01-01 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM uuuu format.
+Date must be a valid date in d MMMM yyyy format.
 ```
 
 #### Step 3
@@ -1380,6 +1380,879 @@ Sessions
 --------------------------------------------------------------------
 1. First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
 2. Second Lab on {{TOMORROW}} at Room-B from 0930 to 1030 for 25 attendees
+--------------------------------------------------------------------
+```
+
+### UI-PREP-001: Calculate requirements and refresh stock availability
+
+**Aim:** Verify default quantities, headcount multiplication, shortages, and that preparation does not consume stock.
+
+**Preconditions:** Fresh application with empty inventory and schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/20
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire to the inventory
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-i n/Red LED c/Components q/3
+```
+
+**Expected output**
+
+```text
+Successfully added: 3x Red LED to the inventory
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-p s/1 i/Red LED c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Red LED [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-p s/1 i/Battery c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Battery [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+3. Battery [Components] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 20)
+2: Red LED (Qty: 3)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+delete-p s/1 i/3 q/10
+```
+
+**Expected output**
+
+```text
+Successfully removed: 10x Battery [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/10
+```
+
+**Expected output**
+
+```text
+Successfully removed: 10x Wire from the inventory
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 10) !! Insufficient items (Shortfall: 10)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+```
+
+### UI-PREP-002: Accumulate and remove preparation quantities
+
+**Aim:** Verify case-insensitive names, partial deletion, complete deletion, and unchanged state after excessive removal.
+
+**Preconditions:** Fresh application with empty inventory and schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/30
+```
+
+**Expected output**
+
+```text
+Successfully added: 30x Wire to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 30)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-p s/1 i/wIRE c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 30, Available: 30)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/10
+```
+
+**Expected output**
+
+```text
+Successfully removed: 10x Wire [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 30)
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/21
+```
+
+**Expected output**
+
+```text
+Cannot remove 21x Wire [Components] from preparation; only 20 required.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 30)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/20
+```
+
+**Expected output**
+
+```text
+Successfully removed: 20x Wire [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/1
+```
+
+**Expected output**
+
+```text
+Preparation item index 1 is invalid. There are 0 item(s) in this preparation.
+```
+
+### UI-PREP-003: Reject invalid preparation arguments
+
+**Aim:** Verify malformed commands, invalid indices and quantities, and overflow do not change preparation.
+
+**Preconditions:** Fresh application with empty inventory and schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+Session index 1 is invalid. There are 0 scheduled session(s).
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-p i/Wire s/1 c/Components
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-p s/1 i/Wire i/Battery c/Components
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-p s/1 i/ c/Components
+```
+
+**Expected output**
+
+```text
+Item name cannot be blank.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-p s/0 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Session index must be a positive integer.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-p s/2 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Session index 2 is invalid. There are 1 scheduled session(s).
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/0
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/1.5
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 11
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2147483648
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 12
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2147483647
+```
+
+**Expected output**
+
+```text
+Required quantity must not exceed 2147483647.
+```
+
+#### Step 13
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+#### Step 14
+
+**Input**
+
+```text
+list-p
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-p s/SESSION_INDEX
+```
+
+#### Step 15
+
+**Input**
+
+```text
+list-p s/1 q/1
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-p s/SESSION_INDEX
+```
+
+#### Step 16
+
+**Input**
+
+```text
+delete-p s/1 i/1
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+```
+
+#### Step 17
+
+**Input**
+
+```text
+delete-p s/1 i/0 q/1
+```
+
+**Expected output**
+
+```text
+Item index must be a positive integer.
+```
+
+#### Step 18
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/-1
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+### UI-PREP-004: Keep preparation attached to its session
+
+**Aim:** Verify independent sessions retain their preparation when preceding sessions are deleted.
+
+**Preconditions:** Fresh application with empty inventory and schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Second Lab d/{{TOMORROW}} l/Room-B s/0900 e/1000 p/5
+```
+
+**Expected output**
+
+```text
+Successfully added: Second Lab on {{TOMORROW}} at Room-B from 0900 to 1000 for 5 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-p s/2
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Second Lab on {{TOMORROW}} at Room-B from 0900 to 1000 for 5 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: First Lab
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Second Lab on {{TOMORROW}} at Room-B from 0900 to 1000 for 5 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+### UI-PREP-005: Distinguish categories and match case-insensitively
+
+**Aim:** Ensure stock in a different category cannot hide a shortage, category is required, and removal uses displayed positions.
+
+**Preconditions:** Fresh application with empty inventory and schedule.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/3
+```
+
+**Expected output**
+
+```text
+Successfully added: 3x Wire to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/100
+```
+
+**Expected output**
+
+```text
+Successfully added: 100x Wire to the inventory
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-p s/1 i/Wire
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/
+```
+
+**Expected output**
+
+```text
+Category cannot be blank.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-p s/1 i/wire c/spares q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x wire [spares] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+2. wire [spares] (Required: 20, Available: 100)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+2. wire [spares] (Required: 20, Available: 100)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/10
+```
+
+**Expected output**
+
+```text
+Successfully removed: 10x Wire [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. wire [spares] (Required: 20, Available: 100)
 --------------------------------------------------------------------
 ```
 

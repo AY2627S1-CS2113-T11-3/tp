@@ -32,6 +32,8 @@ public class Session {
     private LocalTime startTime;
     private LocalTime endTime;
     private int headcount;
+    /** Belongs to the session itself so schedule renumbering cannot change its preparation. */
+    private final Preparation preparation = new Preparation();
 
     /**
      * Creates a validated lab session.
@@ -64,7 +66,7 @@ public class Session {
             this.date = LocalDate.parse(dateText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
             throw new InvalidSessionDateException(
-                    "Date must be a valid date in d MMMM uuuu format.");
+                    "Date must be a valid date in d MMMM yyyy format.");
         }
         if (date.isBefore(LocalDate.now())) {
             throw new InvalidSessionDateException("Session date cannot be before today.");
@@ -105,6 +107,14 @@ public class Session {
 
     public LocalTime getEndTime() {
         return endTime;
+    }
+
+    public int getHeadcount() {
+        return headcount;
+    }
+
+    public Preparation getPreparation() {
+        return preparation;
     }
 
     /**

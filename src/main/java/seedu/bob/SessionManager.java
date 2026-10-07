@@ -36,13 +36,24 @@ public class SessionManager {
      * @throws InvalidSessionIndexException If the index is outside the schedule.
      */
     public void deleteSession(int userIndex) throws InvalidSessionIndexException {
+        Session removedSession = getSession(userIndex);
+        int index = userIndex - INDEX_OFFSET;
+        sessions.remove(index);
+        System.out.println("Successfully removed session: " + removedSession.getName());
+    }
+
+    /**
+     * Returns the session at the position shown by {@code list-s}.
+     *
+     * @param userIndex One-based session position.
+     * @return Session at the requested position.
+     * @throws InvalidSessionIndexException If the index is outside the schedule.
+     */
+    public Session getSession(int userIndex) throws InvalidSessionIndexException {
         if (userIndex <= 0 || userIndex > sessions.size()) {
             throw new InvalidSessionIndexException(userIndex, sessions.size());
         }
-
-        int index = userIndex - INDEX_OFFSET;
-        Session removedSession = sessions.remove(index);
-        System.out.println("Successfully removed session: " + removedSession.getName());
+        return sessions.get(userIndex - INDEX_OFFSET);
     }
 
     /**
