@@ -13,7 +13,7 @@ import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses inventory and scheduling commands and dispatches them.
+ * Parses inventory, scheduling, and session preparation commands and dispatches them.
  */
 public class Parser {
 
@@ -27,12 +27,17 @@ public class Parser {
             + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
     private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
     private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
+    private static final String ADD_PREPARATION_USAGE =
+            "Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]";
+    private static final String DELETE_PREPARATION_USAGE =
+            "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
+    private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
-     * Executes an inventory or scheduling command, or prints a message for an
+     * Executes an inventory, scheduling, or preparation command, or prints a message for an
      * unknown command. Expected user errors are displayed without ending the application.
      *
      * @param input Command text containing the required arguments.
@@ -89,6 +94,14 @@ public class Parser {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     listSessions(arguments, sessionManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "add-p", "delete-p", "list-p" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    handlePreparation(command, arguments, inventory, sessionManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -225,6 +238,87 @@ public class Parser {
             throw new CommandFormatException(LIST_SESSION_USAGE);
         }
         sessionManager.listSessions();
+    }
+
+    /**
+     * Dispatches a preparation command and displays the resulting requirements against current stock.
+     *
+     * @throws CommandException If the command arguments or requested change are invalid.
+     */
+    private void handlePreparation(String command, String arguments, Inventory inventory,
+            SessionManager sessionManager) throws CommandException {
+        Session session;
+        switch (command) {
+            case "add-p" -> session = addPreparation(arguments, sessionManager);
+            case "delete-p" -> session = deletePreparation(arguments, sessionManager);
+            case "list-p" -> {
+                List<String> values = extractValues(arguments, List.of("s"), LIST_PREPARATION_USAGE);
+                session = sessionManager.getSession(parseSessionIndex(values.get(0)));
+            }
+            default -> throw new CommandFormatException("Invalid preparation command.");
+        }
+        listPreparation(session, inventory);
+    }
+
+    /**
+     * Adds an item's per-person quantity to the selected session's preparation.
+     *
+     * @return Updated session.
+     * @throws CommandException If arguments or the calculated requirement are invalid.
+     */
+    private Session addPreparation(String arguments, SessionManager sessionManager) throws CommandException {
+        List<String> prefixes = findPrefixes(arguments);
+        List<String> expectedPrefixes = prefixes.equals(List.of("s", "i", "c"))
+                ? List.of("s", "i", "c") : List.of("s", "i", "c", "q");
+        List<String> values = extractValues(arguments, expectedPrefixes, ADD_PREPARATION_USAGE);
+        Session session = sessionManager.getSession(parseSessionIndex(values.get(0)));
+        int quantityPerPerson = values.size() == 3 ? DEFAULT_ITEM_QUANTITY : parseQuantity(values.get(3));
+        PreparationItem item = session.getPreparation().addItem(
+                values.get(1), values.get(2), quantityPerPerson, session.getHeadcount());
+        int addedQuantity = quantityPerPerson * session.getHeadcount();
+        System.out.printf("Successfully added: %dx %s to preparation%n", addedQuantity, item);
+        return session;
+    }
+
+    /**
+     * Removes a total quantity from an item in the selected session's preparation.
+     *
+     * @return Updated session.
+     * @throws CommandException If the arguments or removal are invalid.
+     */
+    private Session deletePreparation(String arguments, SessionManager sessionManager) throws CommandException {
+        List<String> values = extractValues(arguments, List.of("s", "i", "q"), DELETE_PREPARATION_USAGE);
+        Session session = sessionManager.getSession(parseSessionIndex(values.get(0)));
+        int index = parseItemIndex(values.get(1));
+        int quantity = parseQuantity(values.get(2));
+        PreparationItem item = session.getPreparation().removeItem(index, quantity);
+        System.out.printf("Successfully removed: %dx %s from preparation%n", quantity, item);
+        return session;
+    }
+
+    /**
+     * Displays required totals and current availability, including a shortfall for insufficient items.
+     */
+    private void listPreparation(Session session, Inventory inventory) {
+        System.out.println(Ui.DIVIDER);
+        System.out.println("Lab preparation: " + session);
+        System.out.println(Ui.DIVIDER);
+        List<PreparationItem> items = session.getPreparation().getItems();
+        if (items.isEmpty()) {
+            System.out.println("No items in preparation.");
+        }
+
+        int index = 1;
+        for (PreparationItem item : items) {
+            int available = inventory.getAvailableQuantity(item.getName(), item.getCategory());
+            int required = item.getQuantity();
+            String shortage = available < required
+                    ? " !! Insufficient items (Shortfall: " + (required - available) + ")" : "";
+            System.out.printf("%d. %s (Required: %d, Available: %d)%s%n",
+                    index, item, required, available, shortage);
+            index++;
+        }
+        System.out.println(Ui.DIVIDER);
     }
 
     /**

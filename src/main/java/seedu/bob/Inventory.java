@@ -106,6 +106,27 @@ public class Inventory {
     }
 
     /**
+     * Returns current stock matching a preparation item's name and category.
+     * Matching is case-insensitive and does not reserve or remove stock.
+     *
+     * @param name Item name to look up.
+     * @param category Category containing the item.
+     * @return Available quantity, or zero if the name/category pair is absent from inventory.
+     */
+    public int getAvailableQuantity(String name, String category) {
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            return 0;
+        }
+        for (InventoryItem item : items.get(storedCategory)) {
+            if (item.getName().equalsIgnoreCase(name)) {
+                return item.getQuantity();
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Prints inventory items by category with one-based positions and
      * quantities.
      */
