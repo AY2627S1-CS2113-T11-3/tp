@@ -111,4 +111,16 @@ class InventoryTest {
 
         assertThrows(InsufficientStockException.class, () -> inventory.removeItem("Tools", 1, 6));
     }
+
+    @Test
+    void removeItem_insufficientStock_preservesStockAndReportsQuantities() throws DuplicateItemException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wrench", "Tools", 5));
+
+        InsufficientStockException exception = assertThrows(InsufficientStockException.class,
+                () -> inventory.removeItem("Tools", 1, 6));
+
+        assertEquals("Cannot remove 6 Wrench. Only 5 are available.", exception.getMessage());
+        assertEquals(5, inventory.getAvailableQuantity("Wrench", "Tools"));
+    }
 }
