@@ -72,4 +72,12 @@ public class SessionTest {
         Session session2 = new Session("Lab 2", "16 September 2050", "Lab B", "0900", "1200", 50);
         assertFalse(session1.conflictsWith(session2));
     }
+
+    @Test
+    public void conflictsWith_adjacentTimes_returnsFalse() throws Exception {
+        Session session1 = new Session("Lab 1", "16 September 2050", "Lab A", "0900", "1000", 50);
+        Session session2 = new Session("Lab 2", "16 September 2050", "Lab A", "1000", "1100", 50);
+
+        assertFalse(session1.conflictsWith(session2));
+    }
 }
