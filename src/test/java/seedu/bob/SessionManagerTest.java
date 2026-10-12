@@ -62,6 +62,19 @@ class SessionManagerTest {
         assertThrows(InvalidSessionIndexException.class, () -> manager.getSession(2));
     }
 
+    @Test
+    void deleteSession_invalidIndex_throwsExceptionAndPreservesSchedule() throws CommandException {
+        SessionManager manager = new SessionManager();
+        Session existingSession = createSession("First Lab", "Room-A", 10);
+        manager.addSession(existingSession);
+
+        InvalidSessionIndexException exception = assertThrows(InvalidSessionIndexException.class,
+                () -> manager.deleteSession(2));
+
+        assertEquals("Session index 2 is invalid. There are 1 scheduled session(s).", exception.getMessage());
+        assertSame(existingSession, manager.getSession(1));
+    }
+
     /**
      * Creates a future session so the tests remain valid as the date changes.
      */
