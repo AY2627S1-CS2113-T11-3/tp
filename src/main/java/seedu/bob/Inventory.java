@@ -50,6 +50,7 @@ public class Inventory {
             }
         }
         itemsInCategory.add(item);
+        assert hasValidState() : "Inventory state must remain valid after addition";
         LOGGER.fine(() -> "Added inventory item: " + item.getName() + " in category "
                 + item.getCategory() + ", quantity=" + item.getQuantity());
 
@@ -69,6 +70,36 @@ public class Inventory {
             }
         }
         return null;
+    }
+
+    /**
+     * Returns whether all stored categories and items satisfy inventory invariants.
+     */
+    private boolean hasValidState() {
+        for (String category : items.keySet()) {
+            ArrayList<InventoryItem> itemsInCategory = items.get(category);
+            if (category == null || category.isBlank()
+                    || itemsInCategory == null || itemsInCategory.isEmpty()) {
+                return false;
+            }
+
+            for (int i = 0; i < itemsInCategory.size(); i++) {
+                InventoryItem item = itemsInCategory.get(i);
+                if (item == null || item.getName() == null || item.getName().isBlank()
+                        || item.getCategory() == null || !category.equalsIgnoreCase(item.getCategory())
+                        || item.getQuantity() <= 0) {
+                    return false;
+                }
+
+                for (int j = i + 1; j < itemsInCategory.size(); j++) {
+                    InventoryItem otherItem = itemsInCategory.get(j);
+                    if (otherItem == null || item.getName().equalsIgnoreCase(otherItem.getName())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -118,6 +149,7 @@ public class Inventory {
             item.removeQuantity(quantity);
         }
 
+        assert hasValidState() : "Inventory state must remain valid after removal";
         LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
                 + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
         System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
