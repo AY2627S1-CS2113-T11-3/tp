@@ -5,8 +5,8 @@ package seedu.bob;
  */
 public class InventoryItem {
 
-    private String name;
-    private String category;
+    private final String name;
+    private final String category;
     private int quantity;
 
     /**
@@ -33,23 +33,25 @@ public class InventoryItem {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getCategory() {
         return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
     }
 
     public int getQuantity() {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
+    /**
+     * Removes units while preserving the positive-stock invariant of a stored item.
+     * Complete removal is handled by {@link Inventory}, which removes the item itself.
+     *
+     * @param quantityToRemove Number of units to remove.
+     * @throws IllegalArgumentException If the removal is non-positive or would leave no stock.
+     */
+    void removeQuantity(int quantityToRemove) {
+        if (quantityToRemove <= 0 || quantityToRemove >= quantity) {
+            throw new IllegalArgumentException("Partial stock removal must leave a positive quantity");
+        }
+        quantity -= quantityToRemove;
     }
 }

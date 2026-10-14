@@ -2,6 +2,8 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,7 +19,10 @@ import seedu.bob.exception.InvalidSessionIndexException;
  */
 public class Parser {
 
+    private static final Logger LOGGER = Logger.getLogger(Parser.class.getName());
     private static final int DEFAULT_ITEM_QUANTITY = 1;
+    private static final String UNEXPECTED_ERROR_MESSAGE =
+            "An unexpected error occurred while processing the command. Please try again.";
     private static final String ADD_ITEM_USAGE =
             "Invalid format. Use: add-i n/NAME c/CATEGORY [q/QUANTITY]";
     private static final String DELETE_ITEM_USAGE =
@@ -38,14 +43,26 @@ public class Parser {
 
     /**
      * Executes an inventory, scheduling, or preparation command, or prints a message for an
-     * unknown command. Expected user errors are displayed without ending the application.
+     * unknown command. Expected user errors are displayed without ending the application. Unexpected
+     * runtime failures are logged and replaced with a safe user-facing message.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
-     * @throws NullPointerException If a required argument is {@code null}.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager) {
+        try {
+            handleCommandInternal(input, inventory, sessionManager);
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
+            System.out.println(UNEXPECTED_ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Parses and dispatches one command after the public failure boundary has been established.
+     */
+    private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager) {
         String[] parts = input.trim().split("\\s+", 2);
         String command = parts[0];
 

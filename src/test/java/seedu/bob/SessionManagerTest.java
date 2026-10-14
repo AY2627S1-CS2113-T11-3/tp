@@ -20,6 +20,17 @@ import seedu.bob.exception.SessionConflictException;
 class SessionManagerTest {
 
     @Test
+    void addSession_nullSession_throwsNullPointerExceptionWithoutChangingSchedule() {
+        SessionManager manager = new SessionManager();
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> manager.addSession(null));
+
+        assertEquals("Session to add must not be null", exception.getMessage());
+        assertThrows(InvalidSessionIndexException.class, () -> manager.getSession(1));
+    }
+
+    @Test
     void getSession_invalidIndex_exceptionThrown() {
         SessionManager manager = new SessionManager();
 

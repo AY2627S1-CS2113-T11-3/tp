@@ -2,6 +2,7 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
@@ -28,11 +29,11 @@ public class Inventory {
      * Adds an item to its category and prints a confirmation.
      *
      * @param item Item to add.
+     * @throws NullPointerException If {@code item} is {@code null}.
      * @throws DuplicateItemException If an item with the same name already exists in the category.
      */
     public void addItem(InventoryItem item) throws DuplicateItemException {
-        // InventoryItem construction guarantees positive stock; detect accidental mutation by callers.
-        assert item.getQuantity() > 0 : "Items added to inventory must have positive stock";
+        Objects.requireNonNull(item, "Item to add must not be null");
         String category = findCategory(item.getCategory());
 
         if (category == null) {
@@ -49,6 +50,7 @@ public class Inventory {
             }
         }
         itemsInCategory.add(item);
+        assert hasValidState() : "Inventory state must remain valid after addition";
         LOGGER.fine(() -> "Added inventory item: " + item.getName() + " in category "
                 + item.getCategory() + ", quantity=" + item.getQuantity());
 
@@ -68,6 +70,36 @@ public class Inventory {
             }
         }
         return null;
+    }
+
+    /**
+     * Returns whether all stored categories and items satisfy inventory invariants.
+     */
+    private boolean hasValidState() {
+        for (String category : items.keySet()) {
+            ArrayList<InventoryItem> itemsInCategory = items.get(category);
+            if (category == null || category.isBlank()
+                    || itemsInCategory == null || itemsInCategory.isEmpty()) {
+                return false;
+            }
+
+            for (int i = 0; i < itemsInCategory.size(); i++) {
+                InventoryItem item = itemsInCategory.get(i);
+                if (item == null || item.getName() == null || item.getName().isBlank()
+                        || item.getCategory() == null || !category.equalsIgnoreCase(item.getCategory())
+                        || item.getQuantity() <= 0) {
+                    return false;
+                }
+
+                for (int j = i + 1; j < itemsInCategory.size(); j++) {
+                    InventoryItem otherItem = itemsInCategory.get(j);
+                    if (otherItem == null || item.getName().equalsIgnoreCase(otherItem.getName())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -114,9 +146,10 @@ public class Inventory {
                 items.remove(storedCategory);
             }
         } else {
-            item.setQuantity(remainingQuantity);
+            item.removeQuantity(quantity);
         }
 
+        assert hasValidState() : "Inventory state must remain valid after removal";
         LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
                 + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
         System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());

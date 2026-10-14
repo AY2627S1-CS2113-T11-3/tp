@@ -1,6 +1,7 @@
 package seedu.bob;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.InvalidSessionIndexException;
@@ -11,7 +12,7 @@ import seedu.bob.exception.SessionConflictException;
  */
 public class SessionManager {
 
-    private static final Logger logger = Logger.getLogger(SessionManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
     private static final int INDEX_OFFSET = 1;
     private final ArrayList<Session> sessions = new ArrayList<>();
 
@@ -19,20 +20,22 @@ public class SessionManager {
      * Adds a session to the schedule and prints a confirmation.
      *
      * @param session Session to add.
+     * @throws NullPointerException If {@code session} is {@code null}.
      * @throws SessionConflictException If the session overlaps another at the same date and location.
      */
     public void addSession(Session session) throws SessionConflictException {
-        assert session != null : "Session object to be added must not be null";
-        logger.info("Attempting to add new session: " + session.getName());
+        Objects.requireNonNull(session, "Session to add must not be null");
+        LOGGER.info("Attempting to add new session: " + session.getName());
 
         for (Session existingSession : sessions) {
             if (session.conflictsWith(existingSession)) {
-                logger.warning("Session conflict detected with: " + existingSession.getName());
+                LOGGER.warning("Session conflict detected with: " + existingSession.getName());
                 throw new SessionConflictException(existingSession.toConflictMessage());
             }
         }
         sessions.add(session);
-        logger.info("Session successfully added to schedule.");
+        assert hasValidState() : "Schedule must remain conflict-free after addition";
+        LOGGER.info("Session successfully added to schedule.");
         System.out.println("Successfully added: " + session.toString());
     }
 
@@ -43,7 +46,7 @@ public class SessionManager {
      * @throws InvalidSessionIndexException If the index is outside the schedule.
      */
     public void deleteSession(int userIndex) throws InvalidSessionIndexException {
-        logger.info("Attempting to delete session at index " + userIndex);
+        LOGGER.info("Attempting to delete session at index " + userIndex);
         Session removedSession = getSession(userIndex);
 
         assert removedSession != null : "Retrieved session should not be null prior to deletion";
@@ -51,8 +54,29 @@ public class SessionManager {
         int index = userIndex - INDEX_OFFSET;
         sessions.remove(index);
 
-        logger.info("Successfully removed session: " + removedSession.getName());
+        assert hasValidState() : "Schedule must remain valid after deletion";
+        LOGGER.info("Successfully removed session: " + removedSession.getName());
         System.out.println("Successfully removed session: " + removedSession.getName());
+    }
+
+    /**
+     * Returns whether the schedule contains only nonnull, mutually compatible sessions.
+     */
+    private boolean hasValidState() {
+        for (int i = 0; i < sessions.size(); i++) {
+            Session session = sessions.get(i);
+            if (session == null) {
+                return false;
+            }
+
+            for (int j = i + 1; j < sessions.size(); j++) {
+                Session otherSession = sessions.get(j);
+                if (otherSession == null || session.conflictsWith(otherSession)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -64,7 +88,7 @@ public class SessionManager {
      */
     public Session getSession(int userIndex) throws InvalidSessionIndexException {
         if (userIndex <= 0 || userIndex > sessions.size()) {
-            logger.warning("Invalid session index requested: " + userIndex);
+            LOGGER.warning("Invalid session index requested: " + userIndex);
             throw new InvalidSessionIndexException(userIndex, sessions.size());
         }
         assert userIndex - INDEX_OFFSET >= 0 : "Calculated array index must always be non-negative";
