@@ -34,6 +34,7 @@ public class SessionManager {
             }
         }
         sessions.add(session);
+        assert hasValidState() : "Schedule must remain conflict-free after addition";
         LOGGER.info("Session successfully added to schedule.");
         System.out.println("Successfully added: " + session.toString());
     }
@@ -53,8 +54,29 @@ public class SessionManager {
         int index = userIndex - INDEX_OFFSET;
         sessions.remove(index);
 
+        assert hasValidState() : "Schedule must remain valid after deletion";
         LOGGER.info("Successfully removed session: " + removedSession.getName());
         System.out.println("Successfully removed session: " + removedSession.getName());
+    }
+
+    /**
+     * Returns whether the schedule contains only nonnull, mutually compatible sessions.
+     */
+    private boolean hasValidState() {
+        for (int i = 0; i < sessions.size(); i++) {
+            Session session = sessions.get(i);
+            if (session == null) {
+                return false;
+            }
+
+            for (int j = i + 1; j < sessions.size(); j++) {
+                Session otherSession = sessions.get(j);
+                if (otherSession == null || session.conflictsWith(otherSession)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
