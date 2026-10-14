@@ -25,6 +25,8 @@ public class Inventory {
      * @throws DuplicateItemException If an item with the same name already exists in the category.
      */
     public void addItem(InventoryItem item) throws DuplicateItemException {
+        // InventoryItem construction guarantees positive stock; detect accidental mutation by callers.
+        assert item.getQuantity() > 0 : "Items added to inventory must have positive stock";
         String category = findCategory(item.getCategory());
 
         if (category == null) {
@@ -93,6 +95,7 @@ public class Inventory {
         }
 
         int remainingQuantity = item.getQuantity() - quantity;
+        assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {
             itemsInCategory.remove(index);
             if (itemsInCategory.isEmpty()) {
@@ -120,6 +123,7 @@ public class Inventory {
         }
         for (InventoryItem item : items.get(storedCategory)) {
             if (item.getName().equalsIgnoreCase(name)) {
+                assert item.getQuantity() > 0 : "Stored inventory items must have positive stock";
                 return item.getQuantity();
             }
         }
