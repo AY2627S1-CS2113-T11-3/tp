@@ -1,11 +1,14 @@
 package seedu.bob;
 
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 /**
  * Runs the interactive Bob inventory and scheduling application.
  */
 public class Bob {
+
+    private static final Logger logger = Logger.getLogger(Bob.class.getName());
 
     /**
      * Greets the user and processes commands until the user enters Bye.
@@ -13,6 +16,8 @@ public class Bob {
      * @param args Command-line arguments, which are not used.
      */
     public static void main(String[] args) {
+        logger.info("Initializing Bob application");
+
         String banner = "  ____        _     \n"
                 + " |  _ \\      | |    \n"
                 + " | |_) | ___ | |__  \n"
@@ -34,10 +39,13 @@ public class Bob {
         do {
             line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
+                logger.info("User requested application termination");
                 break;
             }
             parser.handleCommand(line, inventory, sessionManager);
             System.out.println();
         } while (true);
+
+        logger.info("Exiting Bob application cleanly");
     }
 }
