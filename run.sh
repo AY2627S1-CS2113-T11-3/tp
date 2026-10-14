@@ -7,4 +7,4 @@ cd "$(dirname "$0")"
 
 mkdir -p bin
 javac -d bin $(find src/main/java -name "*.java")
-java -cp bin seedu.duke.Duke
+java -cp bin seedu.bob.Bob
