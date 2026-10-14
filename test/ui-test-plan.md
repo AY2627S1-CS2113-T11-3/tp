@@ -2,6 +2,11 @@
 
 This file is the source of truth for repeatable console UI test cases run with the `test-ui` skill.
 
+The course-style I/O redirection test in `text-ui-test/input.txt` and `text-ui-test/EXPECTED.txt`
+reuses UI-PREP-001, substituting the fixed future date `31 December 2099` for `{{TOMORROW}}`.
+Its shell/batch script compares the full session after execution. The remaining cases below
+are retained for manual command-by-command testing.
+
 ## Test environment
 
 - Java: 25

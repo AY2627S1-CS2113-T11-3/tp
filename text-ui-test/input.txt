@@ -1,0 +1,13 @@
+Alex
+add-s n/First Lab d/31 December 2099 l/Room-A s/0900 e/1000 p/10
+list-p s/1
+add-i n/Wire c/Components q/20
+add-i n/Red LED c/Components q/3
+add-p s/1 i/Wire c/Components q/2
+add-p s/1 i/Red LED c/Components
+add-p s/1 i/Battery c/Components
+list-i
+delete-p s/1 i/3 q/10
+delete-i c/Components i/1 q/10
+list-p s/1
+Bye

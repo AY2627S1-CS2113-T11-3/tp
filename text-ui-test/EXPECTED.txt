@@ -1,0 +1,71 @@
+  ____        _     
+ |  _ \      | |    
+ | |_) | ___ | |__  
+ |  _ < / _ \| '_ \ 
+ | |_) | (_) | |_) |
+ |____/ \___/|_.__/ 
+
+What is your name?
+Hello Alex, welcome to Bob!
+--------------------------------------------------------------------
+Successfully added: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+
+Successfully added: 20x Wire to the inventory
+
+Successfully added: 3x Red LED to the inventory
+
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+--------------------------------------------------------------------
+
+Successfully added: 10x Red LED [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+
+Successfully added: 10x Battery [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+3. Battery [Components] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 20)
+2: Red LED (Qty: 3)
+--------------------------------------------------------------------
+
+Successfully removed: 10x Battery [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 20)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+
+Successfully removed: 10x Wire from the inventory
+
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 10) !! Insufficient items (Shortfall: 10)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+
