@@ -34,6 +34,25 @@ Hello Alex, welcome to Bob!
 
 ## Test cases
 
+### UI-LIFECYCLE-001: Exit cleanly at end of input
+
+**Aim:** Verify that closing standard input after startup exits the application without an exception.
+
+**Preconditions:** Fresh application at the command prompt after accepting the test-user name.
+
+#### Step 1
+
+**Input**
+
+```text
+Close standard input (EOF)
+```
+
+**Expected output (no output)**
+
+```text
+```
+
 ### UI-ADD-001: Reject malformed add commands
 
 **Aim:** Verify that malformed `add-i` prefixes and empty required values produce precise errors.
