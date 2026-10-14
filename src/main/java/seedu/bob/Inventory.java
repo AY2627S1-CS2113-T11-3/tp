@@ -2,6 +2,7 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
@@ -28,11 +29,11 @@ public class Inventory {
      * Adds an item to its category and prints a confirmation.
      *
      * @param item Item to add.
+     * @throws NullPointerException If {@code item} is {@code null}.
      * @throws DuplicateItemException If an item with the same name already exists in the category.
      */
     public void addItem(InventoryItem item) throws DuplicateItemException {
-        // InventoryItem construction guarantees positive stock; detect accidental mutation by callers.
-        assert item.getQuantity() > 0 : "Items added to inventory must have positive stock";
+        Objects.requireNonNull(item, "Item to add must not be null");
         String category = findCategory(item.getCategory());
 
         if (category == null) {

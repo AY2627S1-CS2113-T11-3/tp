@@ -17,6 +17,17 @@ import seedu.bob.exception.InvalidQuantityException;
 class InventoryTest {
 
     @Test
+    void addItem_nullItem_throwsNullPointerExceptionWithoutChangingInventory() {
+        Inventory inventory = new Inventory();
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> inventory.addItem(null));
+
+        assertEquals("Item to add must not be null", exception.getMessage());
+        assertEquals(0, inventory.getAvailableQuantity("Screws", "Fasteners"));
+    }
+
+    @Test
     void addItem_validItem_success() throws DuplicateItemException {
         Inventory inventory = new Inventory();
         InventoryItem item = new InventoryItem("Screws", "Fasteners", 100);
