@@ -57,6 +57,7 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        assert hasValidState() : "Preparation state must remain valid after addition";
         return updated;
     }
 
@@ -71,6 +72,33 @@ public class Preparation {
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns whether all stored requirements satisfy preparation invariants.
+     */
+    private boolean hasValidState() {
+        for (int i = 0; i < items.size(); i++) {
+            PreparationItem item = items.get(i);
+            if (item == null || item.getName() == null || item.getName().isBlank()
+                    || item.getCategory() == null || item.getCategory().isBlank()
+                    || item.getQuantity() <= 0) {
+                return false;
+            }
+
+            for (int j = i + 1; j < items.size(); j++) {
+                PreparationItem otherItem = items.get(j);
+                if (otherItem == null) {
+                    return false;
+                }
+                boolean hasSameName = item.getName().equalsIgnoreCase(otherItem.getName());
+                boolean hasSameCategory = item.getCategory().equalsIgnoreCase(otherItem.getCategory());
+                if (hasSameName && hasSameCategory) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -104,6 +132,7 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        assert hasValidState() : "Preparation state must remain valid after removal";
         return item;
     }
 
