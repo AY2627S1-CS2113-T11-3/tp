@@ -37,7 +37,9 @@ Prerequisites: JDK 25 (use the exact version), update Intellij to the most recen
 
 ### I/O redirection tests
 
-* To run _I/O redirection_ tests (aka _Text UI tests_), navigate to the `text-ui-test` and run the `runtest(.bat/.sh)` script.
+* To run _I/O redirection_ tests (aka _Text UI tests_), build with `./gradlew check shadowJar`,
+  then run `sh text-ui-test/runtest.sh`. On Windows, use `gradlew.bat check shadowJar`
+  and `text-ui-test\runtest.bat`. See [the test instructions](text-ui-test/README.md).
 
 ### JUnit tests
 

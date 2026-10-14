@@ -24,5 +24,13 @@ jobs:
           java-package: jdk+fx
 
       - name: Build and check with Gradle
-        run: ./gradlew check
+        run: ./gradlew check shadowJar
 
+      - name: Run text UI tests on macOS and Linux
+        if: runner.os != 'Windows'
+        run: sh text-ui-test/runtest.sh
+
+      - name: Run text UI tests on Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: text-ui-test\runtest.bat
