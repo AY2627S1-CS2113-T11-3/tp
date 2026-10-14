@@ -2,6 +2,7 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
 import seedu.bob.exception.DuplicateItemException;
@@ -15,6 +16,11 @@ import seedu.bob.exception.InvalidQuantityException;
 public class Inventory {
 
     private static final int INDEX_OFFSET = 1;
+
+    /**
+     * Records inventory diagnostics at FINE level so normal console output stays unchanged.
+     */
+    private static final Logger LOGGER = Logger.getLogger(Inventory.class.getName());
 
     private final LinkedHashMap<String, ArrayList<InventoryItem>> items = new LinkedHashMap<>();
 
@@ -37,10 +43,14 @@ public class Inventory {
         ArrayList<InventoryItem> itemsInCategory = items.get(category);
         for (InventoryItem existingItem : itemsInCategory) {
             if (existingItem.getName().equalsIgnoreCase(item.getName())) {
+                LOGGER.fine(() -> "Rejected duplicate inventory item: " + item.getName()
+                        + " in category " + item.getCategory());
                 throw new DuplicateItemException(item.getName(), category);
             }
         }
         itemsInCategory.add(item);
+        LOGGER.fine(() -> "Added inventory item: " + item.getName() + " in category "
+                + item.getCategory() + ", quantity=" + item.getQuantity());
 
         System.out.printf("Successfully added: %dx %s to the inventory\n", item.getQuantity(), item.getName());
     }
@@ -91,6 +101,8 @@ public class Inventory {
         int index = userIndex - INDEX_OFFSET;
         InventoryItem item = itemsInCategory.get(index);
         if (quantity > item.getQuantity()) {
+            LOGGER.fine(() -> "Rejected stock removal: " + item.getName() + " in category "
+                    + storedCategory + ", requested=" + quantity + ", available=" + item.getQuantity());
             throw new InsufficientStockException(item.getName(), quantity, item.getQuantity());
         }
 
@@ -105,6 +117,8 @@ public class Inventory {
             item.setQuantity(remainingQuantity);
         }
 
+        LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
+                + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
         System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
     }
 
