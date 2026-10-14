@@ -114,7 +114,7 @@ public class Inventory {
                 items.remove(storedCategory);
             }
         } else {
-            item.setQuantity(remainingQuantity);
+            item.removeQuantity(quantity);
         }
 
         LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "

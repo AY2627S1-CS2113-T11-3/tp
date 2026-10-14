@@ -40,15 +40,24 @@ class InventoryItemTest {
     }
 
     @Test
-    void setters_validValues_updatesFields() {
+    void removeQuantity_validPartialRemoval_updatesQuantity() {
         InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
 
-        item.setName("Capacitor");
-        item.setCategory("Components");
-        item.setQuantity(100);
+        item.removeQuantity(20);
 
-        assertEquals("Capacitor", item.getName());
-        assertEquals("Components", item.getCategory());
-        assertEquals(100, item.getQuantity());
+        assertEquals("Resistor", item.getName());
+        assertEquals("Electronics", item.getCategory());
+        assertEquals(30, item.getQuantity());
+    }
+
+    @Test
+    void removeQuantity_invalidRemoval_throwsIllegalArgumentException() {
+        InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
+
+        assertThrows(IllegalArgumentException.class, () -> item.removeQuantity(0));
+        assertThrows(IllegalArgumentException.class, () -> item.removeQuantity(-1));
+        assertThrows(IllegalArgumentException.class, () -> item.removeQuantity(50));
+        assertThrows(IllegalArgumentException.class, () -> item.removeQuantity(51));
+        assertEquals(50, item.getQuantity());
     }
 }

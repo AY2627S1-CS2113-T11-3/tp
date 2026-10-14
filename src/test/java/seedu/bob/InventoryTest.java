@@ -17,27 +17,6 @@ import seedu.bob.exception.InvalidQuantityException;
 class InventoryTest {
 
     @Test
-    void addItem_mutatedZeroQuantity_throwsAssertionErrorWithoutAddingItem() {
-        Inventory inventory = new Inventory();
-        InventoryItem item = new InventoryItem("Screws", "Fasteners", 100);
-        item.setQuantity(0);
-
-        assertThrows(AssertionError.class, () -> inventory.addItem(item));
-
-        assertEquals(0, inventory.getAvailableQuantity("Screws", "Fasteners"));
-    }
-
-    @Test
-    void getAvailableQuantity_mutatedNegativeStock_throwsAssertionError() throws DuplicateItemException {
-        Inventory inventory = new Inventory();
-        InventoryItem item = new InventoryItem("Screws", "Fasteners", 100);
-        inventory.addItem(item);
-        item.setQuantity(-1);
-
-        assertThrows(AssertionError.class, () -> inventory.getAvailableQuantity("Screws", "Fasteners"));
-    }
-
-    @Test
     void addItem_validItem_success() throws DuplicateItemException {
         Inventory inventory = new Inventory();
         InventoryItem item = new InventoryItem("Screws", "Fasteners", 100);
