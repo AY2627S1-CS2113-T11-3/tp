@@ -39,6 +39,7 @@ public class Parser {
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
     private static final String ADD_CONTACT_USAGE =
             "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
 
     /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
     private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
@@ -139,6 +140,14 @@ public class Parser {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     addContact(arguments, contactManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "list-c" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    listContacts(arguments, contactManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -384,6 +393,20 @@ public class Parser {
         }
 
         contactManager.addContact(new Contact(values.get(0), values.get(1), email, role));
+    }
+
+    /**
+     * Validates and executes a list-contacts command.
+     *
+     * @param arguments Text following the {@code list-c} command word.
+     * @param contactManager Contact list to display.
+     * @throws CommandFormatException If any arguments are supplied.
+     */
+    private void listContacts(String arguments, ContactManager contactManager) throws CommandFormatException {
+        if (!arguments.isBlank()) {
+            throw new CommandFormatException(LIST_CONTACT_USAGE);
+        }
+        contactManager.listContacts();
     }
 
     /**

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 class ParserContactTest {
 
     private static final String ADD_USAGE = "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n";
+    private static final String EMPTY_LIST = contactList("No contacts saved.\n");
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Parser parser = new Parser();
@@ -83,6 +84,39 @@ class ParserContactTest {
     void contactCommands_wrongCommandWord_treatedAsUnknown() {
         assertEquals("Invalid command\n", execute("ADD-C n/Bob t/91234567"));
         assertEquals("Invalid command\n", execute("add-contact n/Bob t/91234567"));
+    }
+
+    @Test
+    void listContacts_emptyAndPopulated_displaysInInsertionOrder() {
+        assertEquals(EMPTY_LIST, execute("list-c"));
+
+        execute("add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs");
+        execute("add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires");
+
+        assertEquals(contactList("1. NUS Infrastructure (65161234) - Aircon and lighting repairs\n"
+                + "2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires\n"),
+                execute("list-c"));
+    }
+
+    @Test
+    void listContacts_afterRejectedAdds_stillEmpty() {
+        execute("add-c n/Bob");
+        execute("add-c n/Bob t/abc");
+        execute("add-c n/Bob t/91234567 e/nope");
+
+        assertEquals(EMPTY_LIST, execute("list-c"));
+    }
+
+    @Test
+    void listContacts_withArguments_usageShown() {
+        assertEquals("Invalid format. Use: list-c\n", execute("list-c extra"));
+    }
+
+    /**
+     * Builds the expected output of the contact list display around the given rows.
+     */
+    private static String contactList(String rows) {
+        return Ui.DIVIDER + "\nContacts\n" + Ui.DIVIDER + "\n" + rows + Ui.DIVIDER + "\n";
     }
 
     /**

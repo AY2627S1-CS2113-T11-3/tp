@@ -10,7 +10,7 @@
 
 ### Contact management
 
-`add-c` follows the same structure as sessions: `Contact` is the validated data class,
+`add-c` and `list-c` follow the same structure as sessions: `Contact` is the validated data class,
 `ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands.
 
 The user guide did not specify the rules below. They are design decisions made when implementing the feature and
@@ -22,6 +22,7 @@ can be changed in `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
 | Email format | Contains `@`, no whitespace | Catches obvious typos without a full email grammar. |
 | Duplicate contacts | Allowed | Two suppliers can share a name or switchboard number. Unlike `add-i`, a contact has no natural unique key. |
 | Optional fields | `e/` before `r/`; a supplied value must not be blank | Matches the fixed prefix order used by every other command. |
+| Empty list | `list-c` shows `No contacts saved.` | Matches `list-s`, which shows `No sessions scheduled.` |
 
 Known limitation: prefixes are detected by a shared pattern (a single letter followed by `/` at the start of a
 word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.

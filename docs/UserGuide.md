@@ -403,6 +403,31 @@ Expected output:
 Successfully added: Component Supplier (91234567) to contacts
 ```
 
+### List contacts: `list-c`
+
+Displays all contacts with their indices. No arguments are accepted.
+
+**Format:** `list-c`
+
+With the two contacts above:
+
+```text
+list-c
+```
+
+Expected output:
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+```
+
+An empty contact list displays `No contacts saved.` between the contacts heading and the closing divider.
+
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
@@ -492,4 +517,5 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Remove preparation units | `delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY` |
 | List a session's preparation | `list-p s/SESSION_INDEX` |
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
+| List contacts | `list-c` |
 | Exit and discard data | `Bye` |

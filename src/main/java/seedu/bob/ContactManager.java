@@ -13,6 +13,7 @@ public class ContactManager {
      * Records contact diagnostics at FINE level so normal console output stays unchanged.
      */
     private static final Logger LOGGER = Logger.getLogger(ContactManager.class.getName());
+    private static final int INDEX_OFFSET = 1;
 
     private final ArrayList<Contact> contacts = new ArrayList<>();
 
@@ -40,5 +41,23 @@ public class ContactManager {
             }
         }
         return true;
+    }
+
+    /**
+     * Prints all contacts with one-based positions.
+     */
+    public void listContacts() {
+        System.out.println(Ui.DIVIDER);
+        System.out.println("Contacts");
+        System.out.println(Ui.DIVIDER);
+
+        if (contacts.isEmpty()) {
+            System.out.println("No contacts saved.");
+        } else {
+            for (int i = 0; i < contacts.size(); i++) {
+                System.out.printf("%d. %s%n", i + INDEX_OFFSET, contacts.get(i));
+            }
+        }
+        System.out.println(Ui.DIVIDER);
     }
 }

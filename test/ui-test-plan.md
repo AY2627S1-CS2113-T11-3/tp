@@ -2406,6 +2406,131 @@ Email must be a valid address, e.g. name@example.com.
 ```
 
 
+### UI-CONTACT-LIST-001: List contacts in insertion order
+
+**Aim:** Verify list-c shows a placeholder for an empty list, then numbered contacts in the order they were added.
+
+**Preconditions:** Empty contact list.
+
+#### Step 1
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
+```
+
+**Expected output**
+
+```text
+Successfully added: Component Supplier (91234567) to contacts
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+```
+
+
+### UI-CONTACT-LIST-002: Reject arguments and keep rejected contacts out of the list
+
+**Aim:** Verify list-c rejects arguments and that rejected add-c commands do not create contacts.
+
+**Preconditions:** Empty contact list.
+
+#### Step 1
+
+**Input**
+
+```text
+list-c extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-c
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Bob t/abc
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+
 <!--
 ### UI-001: Short title
 
