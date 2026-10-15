@@ -2280,6 +2280,132 @@ Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 at
 --------------------------------------------------------------------
 ```
 
+### UI-CONTACT-ADD-001: Add contacts with and without optional fields
+
+**Aim:** Verify that add-c confirms contacts with a name and phone, with an email, and with a role.
+
+**Preconditions:** None.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
+```
+
+**Expected output**
+
+```text
+Successfully added: Component Supplier (91234567) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Bare t/87654321
+```
+
+**Expected output**
+
+```text
+Successfully added: Bare (87654321) to contacts
+```
+
+
+### UI-CONTACT-ADD-002: Reject invalid add-c commands
+
+**Aim:** Verify malformed prefixes and invalid values produce precise errors.
+
+**Preconditions:** None.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/Bob
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Bob t/91234567 r/Role e/a@b.com
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/ t/91234567
+```
+
+**Expected output**
+
+```text
+Contact name cannot be blank.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Bob t/abc
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-c n/Bob t/91234567 e/nope
+```
+
+**Expected output**
+
+```text
+Email must be a valid address, e.g. name@example.com.
+```
+
+
 <!--
 ### UI-001: Short title
 

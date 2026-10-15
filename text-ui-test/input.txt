@@ -10,4 +10,6 @@ list-i
 delete-p s/1 i/3 q/10
 delete-i c/Components i/1 q/10
 list-p s/1
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
 Bye
