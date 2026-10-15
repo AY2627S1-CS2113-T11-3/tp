@@ -52,6 +52,22 @@ class ParserContactTest {
     }
 
     @Test
+    void addContact_duplicateContact_storedAsSeparateEntries() {
+        String command = "add-c n/Component Supplier t/91234567 e/supplier@example.com";
+
+        assertEquals("Successfully added: Component Supplier (91234567) to contacts\n", execute(command));
+        assertEquals("Successfully added: Component Supplier (91234567) to contacts\n", execute(command));
+
+        assertEquals(contactList("1. Component Supplier (91234567, supplier@example.com)\n"
+                + "2. Component Supplier (91234567, supplier@example.com)\n"), execute("list-c"));
+
+        // Deleting one copy must leave the other untouched.
+        assertEquals("Successfully removed contact: Component Supplier\n", execute("delete-c 1"));
+        assertEquals(contactList("1. Component Supplier (91234567, supplier@example.com)\n"),
+                execute("list-c"));
+    }
+
+    @Test
     void addContact_malformedArguments_usageShown() {
         String[] commands = {
             "add-c",
@@ -133,6 +149,21 @@ class ParserContactTest {
         assertEquals("Contact index must be a positive integer.\n", execute("delete-c 2147483648"));
         assertEquals("Contact index 2 is invalid. There are 1 contact(s).\n", execute("delete-c 2"));
         assertEquals(contactList("1. First (11111111)\n"), execute("list-c"));
+    }
+
+    @Test
+    void deleteContact_secondOfFour_remainingContactsListedAsOneTwoThree() {
+        execute("add-c n/First t/11111111");
+        execute("add-c n/Second t/22222222");
+        execute("add-c n/Third t/33333333");
+        execute("add-c n/Fourth t/44444444");
+
+        assertEquals("Successfully removed contact: Second\n", execute("delete-c 2"));
+
+        // The old positions 3 and 4 must become 2 and 3, with no gap left where "Second" was.
+        assertEquals(contactList("1. First (11111111)\n"
+                + "2. Third (33333333)\n"
+                + "3. Fourth (44444444)\n"), execute("list-c"));
     }
 
     /**
