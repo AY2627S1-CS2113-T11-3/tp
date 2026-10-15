@@ -10,4 +10,5 @@ list-i
 delete-p s/1 i/3 q/10
 delete-i c/Components i/1 q/10
 list-p s/1
+help
 Bye
