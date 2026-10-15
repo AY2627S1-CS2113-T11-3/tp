@@ -10,8 +10,9 @@
 
 ### Contact management
 
-`add-c` and `list-c` follow the same structure as sessions: `Contact` is the validated data class,
-`ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands.
+`add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
+`ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
+single index on the command line, like `delete-s`.
 
 The user guide did not specify the rules below. They are design decisions made when implementing the feature and
 can be changed in `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):

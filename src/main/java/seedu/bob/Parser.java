@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
+import seedu.bob.exception.InvalidContactIndexException;
 import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
@@ -39,6 +40,7 @@ public class Parser {
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
     private static final String ADD_CONTACT_USAGE =
             "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
 
     /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
@@ -140,6 +142,14 @@ public class Parser {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     addContact(arguments, contactManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "delete-c" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    deleteContact(arguments, contactManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -396,6 +406,22 @@ public class Parser {
     }
 
     /**
+     * Parses and executes a delete-contact command.
+     *
+     * @param arguments Text following the {@code delete-c} command word.
+     * @param contactManager Contact list to update.
+     * @throws CommandException If the index is malformed or outside the contact list.
+     */
+    private void deleteContact(String arguments, ContactManager contactManager) throws CommandException {
+        String trimmedArguments = arguments.trim();
+        if (trimmedArguments.isEmpty() || trimmedArguments.matches(".*\\s+.*")) {
+            throw new CommandFormatException(DELETE_CONTACT_USAGE);
+        }
+
+        contactManager.deleteContact(parseContactIndex(trimmedArguments));
+    }
+
+    /**
      * Validates and executes a list-contacts command.
      *
      * @param arguments Text following the {@code list-c} command word.
@@ -535,6 +561,25 @@ public class Parser {
             return index;
         } catch (NumberFormatException e) {
             throw new InvalidSessionIndexException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based contact index.
+     *
+     * @param indexText Index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidContactIndexException If the index is not a positive integer.
+     */
+    private int parseContactIndex(String indexText) throws InvalidContactIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidContactIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidContactIndexException();
         }
     }
 }

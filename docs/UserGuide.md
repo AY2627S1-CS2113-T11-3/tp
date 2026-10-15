@@ -428,6 +428,26 @@ Contacts
 
 An empty contact list displays `No contacts saved.` between the contacts heading and the closing divider.
 
+### Delete a contact: `delete-c`
+
+Deletes a contact from the list.
+
+**Format:** `delete-c INDEX`
+
+Use the index from `list-c`. Like `delete-s`, this command takes a plain number, without a prefix.
+
+```text
+delete-c 1
+```
+
+Expected output:
+
+```text
+Successfully removed contact: NUS Infrastructure
+```
+
+Remaining contacts are renumbered. Run `list-c` to check the updated indices before the next command.
+
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
@@ -454,6 +474,7 @@ These are examples of the current messages:
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
 | Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |
 | Invalid phone or email | `Phone must contain digits only.` or `Email must be a valid address, e.g. name@example.com.` | Correct the value after the prefix. |
+| Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
 | Removal exceeds stock | `Cannot remove 20 Wire. Only 15 are available.` | Remove no more than the available quantity. |
@@ -517,5 +538,6 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Remove preparation units | `delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY` |
 | List a session's preparation | `list-p s/SESSION_INDEX` |
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
+| Delete a contact | `delete-c INDEX` |
 | List contacts | `list-c` |
 | Exit and discard data | `Bye` |

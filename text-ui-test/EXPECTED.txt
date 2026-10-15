@@ -80,3 +80,11 @@ Contacts
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 --------------------------------------------------------------------
 
+Successfully removed contact: NUS Infrastructure
+
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+

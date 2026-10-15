@@ -2531,6 +2531,182 @@ No contacts saved.
 ```
 
 
+### UI-CONTACT-DELETE-001: Reject invalid delete-c commands
+
+**Aim:** Verify delete-c rejects missing, extra, malformed, and out-of-range indices without changing the list.
+
+**Preconditions:** Empty contact list.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/First t/11111111
+```
+
+**Expected output**
+
+```text
+Successfully added: First (11111111) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+delete-c
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-c 1 2
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-c abc
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 0
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-c 2
+```
+
+**Expected output**
+
+```text
+Contact index 2 is invalid. There are 1 contact(s).
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. First (11111111)
+--------------------------------------------------------------------
+```
+
+
+### UI-CONTACT-DELETE-002: Delete contacts and shift indices
+
+**Aim:** Verify delete-c removes the chosen contact and renumbers the rest.
+
+**Preconditions:** Empty contact list.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/First t/11111111
+```
+
+**Expected output**
+
+```text
+Successfully added: First (11111111) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Second t/22222222
+```
+
+**Expected output**
+
+```text
+Successfully added: Second (22222222) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: First
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Second (22222222)
+--------------------------------------------------------------------
+```
+
+
 <!--
 ### UI-001: Short title
 
