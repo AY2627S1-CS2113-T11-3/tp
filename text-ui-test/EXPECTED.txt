@@ -69,3 +69,22 @@ Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 1
 2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
 --------------------------------------------------------------------
 
+Successfully added: NUS Infrastructure (65161234) to contacts
+
+Successfully added: Component Supplier (91234567) to contacts
+
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+
+Successfully removed contact: NUS Infrastructure
+
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+

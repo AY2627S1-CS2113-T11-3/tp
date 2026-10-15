@@ -9,13 +9,14 @@ import java.util.regex.Pattern;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
+import seedu.bob.exception.InvalidContactIndexException;
 import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses inventory, scheduling, and session preparation commands and dispatches them.
+ * Parses inventory, scheduling, session preparation, and contact commands and dispatches them.
  */
 public class Parser {
 
@@ -37,22 +38,35 @@ public class Parser {
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
+    private static final String ADD_CONTACT_USAGE =
+            "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
+    private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
+
+    /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
+    private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
+            List.of("n", "t"),
+            List.of("n", "t", "e"),
+            List.of("n", "t", "r"),
+            List.of("n", "t", "e", "r"));
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
-     * Executes an inventory, scheduling, or preparation command, or prints a message for an
+     * Executes an inventory, scheduling, preparation, or contact command, or prints a message for an
      * unknown command. Expected user errors are displayed without ending the application. Unexpected
      * runtime failures are logged and replaced with a safe user-facing message.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
+     * @param contactManager ContactManager to add, remove, or display contacts.
      */
-    public void handleCommand(String input, Inventory inventory, SessionManager sessionManager) {
+    public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
+            ContactManager contactManager) {
         try {
-            handleCommandInternal(input, inventory, sessionManager);
+            handleCommandInternal(input, inventory, sessionManager, contactManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
@@ -62,7 +76,8 @@ public class Parser {
     /**
      * Parses and dispatches one command after the public failure boundary has been established.
      */
-    private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager) {
+    private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
+            ContactManager contactManager) {
         String[] parts = input.trim().split("\\s+", 2);
         String command = parts[0];
 
@@ -119,6 +134,30 @@ public class Parser {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     handlePreparation(command, arguments, inventory, sessionManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "add-c" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    addContact(arguments, contactManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "delete-c" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    deleteContact(arguments, contactManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "list-c" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    listContacts(arguments, contactManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -339,6 +378,64 @@ public class Parser {
     }
 
     /**
+     * Parses and executes an add-contact command.
+     *
+     * @param arguments Text following the {@code add-c} command word.
+     * @param contactManager Contact list to update.
+     * @throws CommandException If the arguments or contact values are invalid.
+     */
+    private void addContact(String arguments, ContactManager contactManager) throws CommandException {
+        List<String> prefixes = findPrefixes(arguments);
+        if (!ADD_CONTACT_PREFIXES.contains(prefixes)) {
+            throw new CommandFormatException(ADD_CONTACT_USAGE);
+        }
+
+        List<String> values = extractValues(arguments, prefixes, ADD_CONTACT_USAGE);
+        String email = null;
+        String role = null;
+        // Optional values follow the two required ones, in the order given by the prefixes.
+        for (int i = 2; i < prefixes.size(); i++) {
+            if (prefixes.get(i).equals("e")) {
+                email = values.get(i);
+            } else {
+                role = values.get(i);
+            }
+        }
+
+        contactManager.addContact(new Contact(values.get(0), values.get(1), email, role));
+    }
+
+    /**
+     * Parses and executes a delete-contact command.
+     *
+     * @param arguments Text following the {@code delete-c} command word.
+     * @param contactManager Contact list to update.
+     * @throws CommandException If the index is malformed or outside the contact list.
+     */
+    private void deleteContact(String arguments, ContactManager contactManager) throws CommandException {
+        String trimmedArguments = arguments.trim();
+        if (trimmedArguments.isEmpty() || trimmedArguments.matches(".*\\s+.*")) {
+            throw new CommandFormatException(DELETE_CONTACT_USAGE);
+        }
+
+        contactManager.deleteContact(parseContactIndex(trimmedArguments));
+    }
+
+    /**
+     * Validates and executes a list-contacts command.
+     *
+     * @param arguments Text following the {@code list-c} command word.
+     * @param contactManager Contact list to display.
+     * @throws CommandFormatException If any arguments are supplied.
+     */
+    private void listContacts(String arguments, ContactManager contactManager) throws CommandFormatException {
+        if (!arguments.isBlank()) {
+            throw new CommandFormatException(LIST_CONTACT_USAGE);
+        }
+        contactManager.listContacts();
+    }
+
+    /**
      * Returns all single-letter argument prefixes in their encountered order.
      *
      * @param arguments Command arguments to inspect.
@@ -464,6 +561,25 @@ public class Parser {
             return index;
         } catch (NumberFormatException e) {
             throw new InvalidSessionIndexException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based contact index.
+     *
+     * @param indexText Index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidContactIndexException If the index is not a positive integer.
+     */
+    private int parseContactIndex(String indexText) throws InvalidContactIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidContactIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidContactIndexException();
         }
     }
 }

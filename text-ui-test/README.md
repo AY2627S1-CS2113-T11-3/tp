@@ -19,9 +19,10 @@ the expected console output. The script feeds the input into Bob, saves output
 to `build/text-ui-test/ACTUAL.txt`, and compares the files. Differences or an
 application error make the test fail. Java diagnostic logs remain on stderr.
 
-The 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
+The first 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
 session, add stock, calculate preparation quantities, report shortages, remove
-a preparation item, and refresh shortages after stock changes. The fixed future
+a preparation item, and refresh shortages after stock changes. The last 5
+commands exercise the contact commands: add two contacts, list them, delete one, and list again. The fixed future
 date, 31 December 2099, avoids a date-substitution helper. Update both files if
 that date is no longer valid. The other cases remain in the manual test plan.
 

@@ -38,7 +38,8 @@ class ParserLoggingTest {
             logger.addHandler(handler);
             System.setOut(capturedOutput);
 
-            new Parser().handleCommand("list-i", failingInventory, new SessionManager());
+            new Parser().handleCommand("list-i", failingInventory, new SessionManager(),
+                    new ContactManager());
         } finally {
             System.setOut(originalOutput);
             logger.removeHandler(handler);
