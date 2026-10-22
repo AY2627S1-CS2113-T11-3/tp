@@ -20,6 +20,12 @@ public class ContactManager {
     private final ArrayList<Contact> contacts = new ArrayList<>();
 
     /**
+     * Creates an empty supplier and maintenance contact list.
+     */
+    public ContactManager() {
+    }
+
+    /**
      * Adds a contact to the list and prints a confirmation.
      *
      * @param contact Contact to add.
