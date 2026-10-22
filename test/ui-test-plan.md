@@ -11,7 +11,7 @@ are retained for manual command-by-command testing.
 
 - Java: 25
 - Build command: `gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS/Linux
-- Run command: `java -jar build/libs/duke.jar`
+- Run command: `java -jar build/libs/bob.jar`
 - Comparison: exact after newline normalization, ANSI-sequence removal, and ignoring one final newline
 - Isolation: each test case starts a fresh application process
 - Command response terminator: each ordinary command emits exactly one additional blank line after its expected output; EOF and `Bye` exit without a response terminator
@@ -107,7 +107,7 @@ still use checked exceptions with assertions disabled. Duplicate loans and past 
 After this phase, run the full plan normally and again with `java -ea -jar build/libs/duke.jar`.
 Both runs must produce the same expected stdout. Unit tests use faulty
 inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
-The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/duke.jar`.
+The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/bob.jar`.
 
 ## Defensive programming: phase 3 logging contract
 

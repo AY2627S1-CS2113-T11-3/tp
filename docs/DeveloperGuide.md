@@ -60,7 +60,7 @@ is configured for Java 25.
 After building, run the generated JAR:
 
 ```text
-java -jar build/libs/duke.jar
+java -jar build/libs/bob.jar
 ```
 
 Bob prints a banner, asks for the user's name, and then accepts one command per line. Enter `Bye` to exit.
@@ -251,7 +251,7 @@ also validate item names, categories, and positive quantities before modifying i
 Loan assertions check valid stored records and the exact inventory quantity and active-list size changes for successful
 operations. Stock restoration is checked before removing a loan. Assertions identify internal programming errors;
 expected invalid commands are always handled by exceptions. Assertion failures are not caught as recoverable user errors.
-Use `java -ea -jar build/libs/duke.jar` for debugging; Gradle tests enable assertions, while normal launch is unchanged.
+Use `java -ea -jar build/libs/bob.jar` for debugging; Gradle tests enable assertions, while normal launch is unchanged.
 
 ## Documentation, logging, testing, and DevOps
 
@@ -286,7 +286,7 @@ seedu.bob.Parser.level=FINE
 Then launch a debug session with:
 
 ```text
-java -ea -Djava.util.logging.config.file=build/loan-debug-logging.properties -jar build/libs/duke.jar
+java -ea -Djava.util.logging.config.file=build/loan-debug-logging.properties -jar build/libs/bob.jar
 ```
 
 Normal launches need no logging configuration. Logging tests capture records directly and restore shared logger settings
@@ -395,7 +395,7 @@ with a fresh Bob process because application data is not persisted.
 ### Launch and shutdown
 
 1. Build with `gradlew.bat check shadowJar` on Windows or `./gradlew check shadowJar` on macOS/Linux.
-2. Launch with `java -jar build/libs/duke.jar`.
+2. Launch with `java -jar build/libs/bob.jar`.
 3. Verify that Bob prints the banner and asks for a name.
 4. Enter a name and verify that the welcome message and divider appear.
 5. Enter `help` and verify that all command groups are displayed.

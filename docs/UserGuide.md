@@ -35,17 +35,17 @@ contacts, and loans.
 
    ```bash
    ./gradlew shadowJar
-   java -jar build/libs/duke.jar
+   java -jar build/libs/bob.jar
    ```
 
    **Windows PowerShell**
 
    ```powershell
    .\gradlew.bat shadowJar
-   java -jar build/libs/duke.jar
+   java -jar build/libs/bob.jar
    ```
 
-   The application is named Bob, but the current build produces a file named `duke.jar`.
+   The application is named Bob, and the build produces a file named `bob.jar`.
 
 4. Bob displays a banner and asks `What is your name?`. Enter your name, for example `Alex`, and press Enter.
    Bob responds:
@@ -67,7 +67,7 @@ contacts, and loans.
    The example date is deliberately in the future. Replace it with your session date, which must be today or later.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
-6. Enter `Bye` to exit. To start again, run `java -jar build/libs/duke.jar`. Rebuild with `shadowJar` after changing
+6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
    the source code. Each launch starts with empty lists.
 
 ## Command format
@@ -766,7 +766,7 @@ These are examples of the current messages:
 | Calculated preparation total is too large | `Required quantity must not exceed 2147483647.` | Reduce the per-person quantity or existing requirement. |
 
 If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
-`build/libs/duke.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
+`build/libs/bob.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
 
 ## Current limitations
 
