@@ -2,6 +2,8 @@ package seedu.bob;
 
 /**
  * Provides shared display constants for console output.
+ *
+ * @author Lokwx
  */
 public class Ui {
 
@@ -24,6 +26,11 @@ public class Ui {
             "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]",
             "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY",
             "  list-p s/SESSION_INDEX",
+            "Student requests",
+            "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE",
+            "  delete-r INDEX",
+            "  list-r",
+            "  mark-r INDEX STATUS",
             "Contacts",
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
             "  delete-c INDEX",
