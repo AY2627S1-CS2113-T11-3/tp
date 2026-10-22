@@ -1,10 +1,12 @@
 # Bob User Guide
 
-Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, and prepare
-materials for each session. Preparation uses the session's headcount to calculate required quantities and compare
-them with the inventory.
+Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, prepare
+materials for each session, track student requests, and keep contacts. Preparation uses the session's headcount to
+calculate required quantities and compare them with the inventory. Requests are sorted by deadline and show whether
+the requested quantity is currently in inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations, and contacts.
+**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
+requests, and contacts.
 
 ## Contents
 
@@ -14,6 +16,7 @@ them with the inventory.
 - [Inventory management](#inventory-management)
 - [Lab session scheduling](#lab-session-scheduling)
 - [Lab session preparation](#lab-session-preparation)
+- [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
@@ -82,11 +85,12 @@ them with the inventory.
 - Item names and categories are matched without regard to capitalization. Location matching for session conflicts
   also ignores capitalization. Month names in dates must use the capitalization shown below.
 - Indices are positive, one-based positions in the displayed lists. Inventory item indices restart at 1 in each
-  category; preparation item indices belong to the selected session. Use the latest list after deleting an entry.
+  category; preparation item indices belong to the selected session. Request indices follow the deadline-sorted
+  `list-r` display. Use the latest list after deleting an entry.
 - Quantities, indices, and headcounts must be positive integers no greater than 2,147,483,647. Do not include commas
   or decimal points when entering numbers. Calculated preparation totals must also fit within this limit.
-- `q/` has different meanings: inventory units for inventory commands, units **per attendee** for `add-p`, and
-  **total units** to remove for `delete-p`.
+- `q/` has different meanings: inventory units for inventory commands, units **per attendee** for `add-p`,
+  **total units** to remove for `delete-p`, and requested units for `add-r`.
 
 The examples below show command responses without the extra blank line Bob prints after each command.
 
@@ -120,6 +124,11 @@ Lab preparation
   add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
   delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
   list-p s/SESSION_INDEX
+Student requests
+  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
+  delete-r INDEX
+  list-r
+  mark-r INDEX STATUS
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -406,6 +415,138 @@ Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 
 --------------------------------------------------------------------
 ```
 
+## Student request tracking
+
+Track items that students ask to borrow or collect. Requests are kept in a separate list, do not reserve stock, and
+are displayed in deadline order.
+
+### Add a request: `add-r`
+
+Creates a request with the student's name, item, quantity, and deadline.
+
+**Format:** `add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE`
+
+- All four arguments are required, in the order shown.
+- `STUDENT_NAME` and `ITEM` must not be blank. Names can contain spaces.
+- `QUANTITY` is a positive whole number.
+- `DEADLINE` uses the same `d MMMM yyyy` format as sessions, for example `8 October 2099`. Use a full English month
+  name with an initial capital. The deadline must be today or later.
+- A new request starts with status `Pending`.
+- Duplicate requests are allowed.
+- The request does not name an inventory category. Availability combines stock with the same item name from all
+  categories.
+
+Example in an empty request list, with 15 Wire in inventory:
+
+```text
+add-r n/Alice i/Wire q/20 d/8 October 2099
+```
+
+Expected output:
+
+```text
+Successfully added request: Alice - 20x Wire by 8 October 2099
+```
+
+The request is stored in deadline order, so the list may show it before or after requests added earlier.
+
+### List requests: `list-r`
+
+Displays all requests sorted by earliest deadline, with their status and current inventory availability. No arguments
+are accepted.
+
+**Format:** `list-r`
+
+Rows show `Available: N`, where `N` is the total stock for the item name across all categories. If `N` is less than
+the requested quantity, Bob also shows the shortfall.
+
+```text
+list-r
+```
+
+Expected output after the request above:
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Pending] Alice - 20x Wire by 8 October 2099 (Available: 15) !! Insufficient stock (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+An empty request list displays `No requests recorded.` between the heading and the closing divider.
+
+Availability is checked again each time `list-r` runs. Removing inventory after adding a request can increase the
+shortfall; adding inventory can remove it. Requests never reserve or consume stock.
+
+### Delete a request: `delete-r`
+
+Deletes a request from the list.
+
+**Format:** `delete-r INDEX`
+
+Use the index from `list-r`. Like `delete-s` and `delete-c`, this command takes a plain number, without a prefix.
+
+```text
+delete-r 1
+```
+
+Expected output:
+
+```text
+Successfully removed request: Alice - 20x Wire by 8 October 2099
+```
+
+Remaining requests are renumbered in deadline order. Run `list-r` to check the updated indices before the next
+command.
+
+### Mark a request as prepared or fulfilled: `mark-r`
+
+Changes the status shown for a request.
+
+**Format:** `mark-r INDEX STATUS`
+
+- Use the index from `list-r`.
+- `STATUS` must be `prepared` or `fulfilled`. The status is not case-sensitive, so `Prepared` and `FULFILLED` also
+  work.
+- Marking replaces the current status. A fulfilled request can be marked as prepared again if it was marked by
+  mistake.
+- Marking a request does not change inventory stock.
+
+Continuing the example above:
+
+```text
+mark-r 1 prepared
+```
+
+Expected output:
+
+```text
+Successfully marked request 1 as prepared: Alice - 20x Wire by 8 October 2099
+```
+
+The next `list-r` shows `[Prepared]` in place of `[Pending]`:
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Prepared] Alice - 20x Wire by 8 October 2099 (Available: 15) !! Insufficient stock (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+To complete the request, run:
+
+```text
+mark-r 1 fulfilled
+```
+
+Expected output:
+
+```text
+Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
+```
+
 ## Contact management
 
 Keep a list of people to call for repairs and procurement, such as facilities staff or component suppliers.
@@ -499,7 +640,7 @@ Bob exits without a farewell message or a save prompt. All data entered during t
 ## Errors and troubleshooting
 
 Bob displays an error and continues accepting commands when input is invalid. A rejected command does not change
-inventory, sessions, or preparation. Format errors show the required command syntax.
+inventory, sessions, preparation, or requests. Format errors show the required command syntax.
 
 These are examples of the current messages:
 
@@ -526,6 +667,11 @@ These are examples of the current messages:
 | Unknown preparation item index | `Preparation item index 1 is invalid. There are 0 item(s) in this preparation.` | Use `list-p` to check the selected session's preparation. |
 | Removal exceeds a preparation requirement | `Cannot remove 21x Wire [Components] from preparation; only 20 required.` | Remove no more than the required total. |
 | Calculated preparation total is too large | `Required quantity must not exceed 2147483647.` | Reduce the per-person quantity or existing requirement. |
+| Missing `add-r` arguments | `Invalid format. Use: add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE` | Supply the student, item, quantity, and deadline in that order. |
+| Blank student name or request item | `Student name cannot be blank.` or `Item name cannot be blank.` | Enter a nonblank value after the prefix. |
+| Invalid or past request deadline | `Deadline must be a valid date in d MMMM yyyy format.` or `Request deadline cannot be before today.` | Use a real date such as `8 October 2099`, with a capitalized full month name, and do not use a date before today. |
+| Unknown request index | `Request index 3 is invalid. There are 2 request(s).` | Use `list-r` to check the index. |
+| Invalid request status | `Status must be "prepared" or "fulfilled".` | Use `prepared` or `fulfilled` after the index. |
 
 If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
 `build/libs/duke.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
@@ -537,9 +683,14 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
   have sufficient stock even if there is not enough to supply both at once.
+- Requests do not reserve inventory either. Two requests can each show enough stock for the same units, and marking a
+  request as fulfilled does not deduct anything from inventory. Delete or adjust inventory separately with `delete-i`.
+- Requests are not removed automatically when their deadline passes. Delete them with `delete-r` when they are no
+  longer needed.
+- Requests cannot be edited in place. Delete the old request and add the corrected one.
 - Session dates are checked against today's date on the computer running Bob. For a session dated today, its start
   time is not checked against the current clock time. Sessions do not disappear automatically after their dates pass.
-- Commands cannot be chained on one line. Each add or delete command affects one item or session.
+- Commands cannot be chained on one line. Each add or delete command affects one item, session, contact, or request.
 
 ## FAQ
 
@@ -564,6 +715,15 @@ Dates require full English month names with the usual capitalization, for exampl
 
 No inventory adjustment is needed: preparation never removes stock. `delete-p` changes only the checklist.
 
+**Does marking a request as fulfilled remove the item from inventory?**
+
+No. Request tracking only records that the item was prepared or handed over. Use `delete-i` to reduce inventory when
+you actually take the units out. `list-r` rechecks stock each time it is displayed.
+
+**Can I change a request's student, item, quantity, or deadline?**
+
+Not in place. Delete the request with `delete-r` and add a corrected one with `add-r`.
+
 **Can I keep my data for the next launch or transfer it to another computer?**
 
 Not in the current version. Bob has no save or import function; a new launch starts with empty lists.
@@ -582,6 +742,10 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a preparation requirement | `add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]` |
 | Remove preparation units | `delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY` |
 | List a session's preparation | `list-p s/SESSION_INDEX` |
+| Add a student request | `add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE` |
+| Delete a student request | `delete-r INDEX` |
+| List student requests by deadline | `list-r` |
+| Mark a request as prepared or fulfilled | `mark-r INDEX STATUS` |
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
 | Delete a contact | `delete-c INDEX` |
 | List contacts | `list-c` |
