@@ -923,7 +923,7 @@ add-s n/Test Lab d/ l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
+Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). Ensure the month is capitalized.
 ```
 
 #### Step 9
@@ -971,7 +971,7 @@ add-s n/Test Lab d/31 February 2099 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
+Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). Ensure the month is capitalized.
 ```
 
 #### Step 2
@@ -985,7 +985,7 @@ add-s n/Test Lab d/2099-01-01 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
+Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). Ensure the month is capitalized.
 ```
 
 #### Step 3
