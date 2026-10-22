@@ -182,6 +182,7 @@ public class Parser {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     handleLoan(command, arguments, loanManager);
                 } catch (CommandException e) {
+                    LOGGER.log(Level.FINE, "Rejected loan command: " + command, e);
                     System.out.println(e.getMessage());
                 }
             }

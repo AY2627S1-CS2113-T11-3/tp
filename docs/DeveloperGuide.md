@@ -85,6 +85,31 @@ operations. Stock restoration is checked before removing a loan. Assertions iden
 expected invalid commands are always handled by exceptions. Assertion failures are not caught as recoverable user errors.
 Use `java -ea -jar build/libs/duke.jar` for debugging; Gradle tests enable assertions, while normal launch is unchanged.
 
+Loan lifecycle, overdue-list queries, stock changes, and expected rejections use `FINE`, matching inventory diagnostics.
+Messages include item/category, quantities, due dates, indices, or active counts as appropriate. They omit borrower
+names, phone numbers, and raw commands. Expected loan command errors retain their exception causes in debug records;
+unexpected runtime failures are logged once at the existing parser `SEVERE` boundary. Default logging is unchanged.
+
+To inspect loan diagnostics, save this configuration as `build/loan-debug-logging.properties` after building:
+
+```properties
+handlers=java.util.logging.ConsoleHandler
+.level=INFO
+java.util.logging.ConsoleHandler.level=FINE
+seedu.bob.LoanManager.level=FINE
+seedu.bob.Inventory.level=FINE
+seedu.bob.Parser.level=FINE
+```
+
+Then launch a debug session with:
+
+```text
+java -ea -Djava.util.logging.config.file=build/loan-debug-logging.properties -jar build/libs/duke.jar
+```
+
+Normal launches need no logging configuration. Logging tests capture records directly and restore shared logger settings
+after each test. The UI regression plan is checked both normally and with assertions enabled.
+
 ## Product scope
 ### Target user profile
 

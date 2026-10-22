@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.InvalidLoanIndexException;
@@ -13,6 +14,9 @@ import seedu.bob.exception.InvalidLoanIndexException;
  * Owns active loans in insertion order and coordinates inventory deductions, corrections, and full returns.
  */
 public class LoanManager {
+
+    /** Records loan diagnostics without adding messages to the normal console workflow. */
+    private static final Logger LOGGER = Logger.getLogger(LoanManager.class.getName());
 
     private final Inventory inventory;
     /** Supplies the local date at each operation so overdue state is never cached across days. */
@@ -64,6 +68,9 @@ public class LoanManager {
         assert loans.size() == previousCount + 1 && loans.get(previousCount) == loan
                 : "Lending must append exactly one loan";
         assert hasValidState() : "Loan records must remain valid after addition";
+        LOGGER.fine(() -> "Recorded loan: " + loan.getName() + " in category " + loan.getCategory()
+                + ", quantity=" + loan.getQuantity() + ", due=" + loan.getDueDate()
+                + ", overdue=" + loan.isOverdue(today) + ", active=" + loans.size());
         System.out.println("Successfully added loan: " + loan);
         if (loan.isOverdue(today)) {
             System.out.println("Warning: this loan is already overdue.");
@@ -79,6 +86,9 @@ public class LoanManager {
      */
     public void deleteLoan(int userIndex) throws CommandException {
         Loan loan = removeLoanAndRestoreStock(userIndex);
+        LOGGER.fine(() -> "Deleted incorrect loan: index=" + userIndex + ", item=" + loan.getName()
+                + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
+                + ", active=" + loans.size());
         System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
     }
 
@@ -90,6 +100,9 @@ public class LoanManager {
      */
     public void returnLoan(int userIndex) throws CommandException {
         Loan loan = removeLoanAndRestoreStock(userIndex);
+        LOGGER.fine(() -> "Returned loan: index=" + userIndex + ", item=" + loan.getName()
+                + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
+                + ", active=" + loans.size());
         System.out.println("Successfully returned loan: " + loan + ". Inventory restored.");
     }
 
@@ -102,6 +115,7 @@ public class LoanManager {
     private Loan removeLoanAndRestoreStock(int userIndex) throws CommandException {
         assert hasValidState() : "Removing a loan requires valid manager state";
         if (userIndex <= 0 || userIndex > loans.size()) {
+            LOGGER.fine(() -> "Rejected loan removal: index=" + userIndex + ", active=" + loans.size());
             throw new InvalidLoanIndexException(userIndex, loans.size());
         }
         int index = userIndex - 1;
@@ -163,6 +177,8 @@ public class LoanManager {
     private void printLoans(boolean isOverdueOnly) {
         assert hasValidState() : "Listing requires valid loan records";
         LocalDate today = LocalDate.now(clock);
+        LOGGER.fine(() -> "Listing loans: overdueOnly=" + isOverdueOnly + ", active=" + loans.size()
+                + ", date=" + today);
         System.out.println(Ui.DIVIDER);
         System.out.println(isOverdueOnly ? "Overdue loans" : "Loans");
         System.out.println(Ui.DIVIDER);

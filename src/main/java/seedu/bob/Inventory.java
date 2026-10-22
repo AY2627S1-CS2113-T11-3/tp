@@ -188,10 +188,12 @@ public class Inventory {
     void lendItem(String name, String category, int quantity) throws CommandException {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
             throw new InvalidQuantityException();
         }
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
+            LOGGER.fine(() -> "Rejected lending: missing category=" + category + ", item=" + name);
             throw new CategoryNotFoundException(category);
         }
         ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
@@ -201,12 +203,18 @@ public class Inventory {
                 continue;
             }
             if (quantity > item.getQuantity()) {
+                LOGGER.fine(() -> "Rejected lending: " + item.getName() + " in category " + storedCategory
+                        + ", requested=" + quantity + ", available=" + item.getQuantity());
                 throw new LoanException(String.format("Cannot loan %d %s. Only %d are available.",
                         quantity, item.getName(), item.getQuantity()));
             }
+            int remainingQuantity = item.getQuantity() - quantity;
             deductQuantity(storedCategory, i, quantity);
+            LOGGER.fine(() -> "Lent inventory stock: " + item.getName() + " in category " + storedCategory
+                    + ", quantity=" + quantity + ", remaining=" + remainingQuantity);
             return;
         }
+        LOGGER.fine(() -> "Rejected lending: missing item=" + name + " in category " + storedCategory);
         throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
     }
 
@@ -222,6 +230,7 @@ public class Inventory {
     void restoreStock(String name, String category, int quantity) throws CommandException {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected loan stock restoration: quantity must be positive, requested=" + quantity);
             throw new InvalidQuantityException();
         }
         String storedCategory = findCategory(category);
@@ -237,17 +246,24 @@ public class Inventory {
                     continue;
                 }
                 if (quantity > Integer.MAX_VALUE - item.getQuantity()) {
+                    LOGGER.fine(() -> "Rejected loan stock restoration: " + item.getName()
+                            + " in category " + storedCategory + ", requested=" + quantity
+                            + ", available=" + item.getQuantity() + ", maximum=" + Integer.MAX_VALUE);
                     throw new LoanException(String.format(
                             "Cannot restore %d %s. Inventory quantity must not exceed %d.",
                             quantity, item.getName(), Integer.MAX_VALUE));
                 }
                 item.addQuantity(quantity);
                 assert hasValidState() : "Inventory state must remain valid after restoration";
+                LOGGER.fine(() -> "Restored loan stock: " + item.getName() + " in category " + storedCategory
+                        + ", quantity=" + quantity + ", available=" + item.getQuantity());
                 return;
             }
             itemsInCategory.add(new InventoryItem(name, storedCategory, quantity));
         }
         assert hasValidState() : "Inventory state must remain valid after restoration";
+        LOGGER.fine(() -> "Recreated loan stock: " + name + " in category " + category
+                + ", quantity=" + quantity);
     }
 
     /**
@@ -258,9 +274,11 @@ public class Inventory {
      */
     private void validateLoanItemDetails(String name, String category) throws CommandFormatException {
         if (name == null || name.isBlank()) {
+            LOGGER.fine("Rejected loan stock operation: item name is blank");
             throw new CommandFormatException("Item name cannot be blank.");
         }
         if (category == null || category.isBlank()) {
+            LOGGER.fine("Rejected loan stock operation: category is blank");
             throw new CommandFormatException("Category cannot be blank.");
         }
     }

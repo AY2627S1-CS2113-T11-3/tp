@@ -109,6 +109,22 @@ Both runs must produce the same expected stdout. Unit tests use faulty
 inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
 The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/duke.jar`.
 
+## Defensive programming: phase 3 logging contract
+
+Loan lifecycle, overdue-list queries, stock changes, and expected rejections use `java.util.logging`
+at FINE level, following existing inventory diagnostics. Default logger settings and normal stdout
+remain unchanged. Diagnostic messages omit borrower names, phone numbers, and raw command input.
+Expected loan command failures retain their checked exception and parsing cause in the debug log.
+Unexpected runtime failures remain logged once at the parser's existing SEVERE boundary.
+Run all cases normally and with assertions enabled after this phase. Logging unit tests capture
+records directly to verify levels, causes, operation details, and exclusion of borrower details.
+
+Verification on 22 October 2026 (Java 25): phase 1 passed 134 unit tests and the full normal UI run;
+phase 2 passed 136 unit tests and full normal/debug UI runs; phase 3 passed 144 unit tests and full
+normal/debug UI runs. Each UI run passed 58 cases, 481 steps, and 480 commands (one step is EOF).
+All three Gradle `check shadowJar` builds passed both Checkstyle checks. Per-step results and full
+chronological transcripts are retained in `test/ui-test-session.md` as local session records.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input
