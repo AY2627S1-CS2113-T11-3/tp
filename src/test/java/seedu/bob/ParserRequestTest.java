@@ -58,6 +58,22 @@ class ParserRequestTest {
     }
 
     @Test
+    void addRequest_todayDeadline_accepted() {
+        String deadline = date(0);
+
+        assertEquals("Successfully added request: Alice - 1x Wire by " + deadline + "\n",
+                execute("add-r n/Alice i/Wire q/1 d/" + deadline));
+    }
+
+    @Test
+    void addRequest_multiWordValues_accepted() {
+        String deadline = date(2);
+
+        assertEquals("Successfully added request: Alice Tan - 10x Red LED by " + deadline + "\n",
+                execute("add-r n/Alice Tan i/Red LED q/10 d/" + deadline));
+    }
+
+    @Test
     void addRequest_malformedArguments_usageShown() {
         String deadline = date(2);
         String[] commands = {
@@ -85,6 +101,10 @@ class ParserRequestTest {
                 execute("add-r n/Alice i/Wire q/0 d/" + deadline));
         assertEquals("Quantity must be a positive integer.\n",
                 execute("add-r n/Alice i/Wire q/abc d/" + deadline));
+        assertEquals("Quantity must be a positive integer.\n",
+                execute("add-r n/Alice i/Wire q/2147483648 d/" + deadline));
+        assertEquals("Deadline must be a valid date in d MMMM yyyy format.\n",
+                execute("add-r n/Alice i/Wire q/2 d/"));
         assertEquals("Deadline must be a valid date in d MMMM yyyy format.\n",
                 execute("add-r n/Alice i/Wire q/2 d/31 February 2099"));
         assertEquals("Deadline must be a valid date in d MMMM yyyy format.\n",
@@ -149,6 +169,15 @@ class ParserRequestTest {
     }
 
     @Test
+    void listRequests_itemNameCaseDiffers_stillFindsStock() {
+        String deadline = date(2);
+        execute("add-i n/Wire c/Components q/20");
+        execute("add-r n/Alice i/wire q/5 d/" + deadline);
+
+        assertTrue(execute("list-r").contains("(Available: 20)"));
+    }
+
+    @Test
     void listRequests_withArguments_usageShown() {
         assertEquals(LIST_USAGE, execute("list-r extra"));
     }
@@ -192,6 +221,26 @@ class ParserRequestTest {
 
         assertEquals("Successfully marked request 1 as fulfilled: Alice - 5x Wire by " + deadline + "\n",
                 execute("mark-r 1 Fulfilled"));
+        assertTrue(execute("list-r").contains("1. [Fulfilled] Alice"));
+    }
+
+    @Test
+    void markRequest_statusUppercase_statusUpdated() {
+        String deadline = date(2);
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+
+        assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by " + deadline + "\n",
+                execute("mark-r 1 PREPARED"));
+        assertTrue(execute("list-r").contains("1. [Prepared] Alice"));
+    }
+
+    @Test
+    void markRequest_pendingDirectlyToFulfilled_allowed() {
+        String deadline = date(2);
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+
+        assertEquals("Successfully marked request 1 as fulfilled: Alice - 5x Wire by " + deadline + "\n",
+                execute("mark-r 1 fulfilled"));
         assertTrue(execute("list-r").contains("1. [Fulfilled] Alice"));
     }
 
