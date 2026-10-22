@@ -49,17 +49,19 @@ public class LoanManager {
     }
 
     /**
-     * Deducts stock and records a validated loan, then prints one loan confirmation.
-     * Warns when the accepted loan is already overdue. Rejected stock requests do not change state.
+     * Deducts stock and records a validated loan without printing a confirmation.
+     * Captures whether the accepted loan is already overdue. Rejected requests do not change state.
      *
      * @param loan Validated loan to record.
+     * @return Recorded loan and overdue status at addition.
      * @throws CommandException If the item is missing or its available stock is insufficient.
      * @throws NullPointerException If the loan is null.
      */
-    public void addLoan(Loan loan) throws CommandException {
+    public LoanAdditionResult addLoan(Loan loan) throws CommandException {
         Objects.requireNonNull(loan, "Loan to add must not be null");
         assert hasValidState() && loan.hasValidState() : "Adding a loan requires valid records";
         LocalDate today = LocalDate.now(clock);
+        LoanAdditionResult result = new LoanAdditionResult(loan, loan.isOverdue(today));
         int previousCount = loans.size();
         int previousStock = inventory.getAvailableQuantity(loan.getName(), loan.getCategory());
         inventory.lendItem(loan.getName(), loan.getCategory(), loan.getQuantity());
@@ -71,11 +73,8 @@ public class LoanManager {
         assert hasValidState() : "Loan records must remain valid after addition";
         LOGGER.fine(() -> "Recorded loan: " + loan.getName() + " in category " + loan.getCategory()
                 + ", quantity=" + loan.getQuantity() + ", due=" + loan.getDueDate()
-                + ", overdue=" + loan.isOverdue(today) + ", active=" + loans.size());
-        System.out.println("Successfully added loan: " + loan);
-        if (loan.isOverdue(today)) {
-            System.out.println("Warning: this loan is already overdue.");
-        }
+                + ", overdue=" + result.isOverdue() + ", active=" + loans.size());
+        return result;
     }
 
     /**
@@ -83,28 +82,30 @@ public class LoanManager {
      * Restores stock before removing the record so a failed restoration preserves the loan.
      *
      * @param userIndex One-based loan position from the latest loan list.
+     * @return Incorrect loan removed after successful stock restoration.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
-    public void deleteLoan(int userIndex) throws CommandException {
+    public Loan deleteLoan(int userIndex) throws CommandException {
         Loan loan = removeLoanAndRestoreStock(userIndex);
         LOGGER.fine(() -> "Deleted incorrect loan: index=" + userIndex + ", item=" + loan.getName()
                 + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
                 + ", active=" + loans.size());
-        System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
+        return loan;
     }
 
     /**
      * Records a full return by restoring all units and removing the active loan without retaining history.
      *
      * @param userIndex One-based loan position from the latest loan list.
+     * @return Fully returned loan removed after successful stock restoration.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
-    public void returnLoan(int userIndex) throws CommandException {
+    public Loan returnLoan(int userIndex) throws CommandException {
         Loan loan = removeLoanAndRestoreStock(userIndex);
         LOGGER.fine(() -> "Returned loan: index=" + userIndex + ", item=" + loan.getName()
                 + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
                 + ", active=" + loans.size());
-        System.out.println("Successfully returned loan: " + loan + ". Inventory restored.");
+        return loan;
     }
 
     /**

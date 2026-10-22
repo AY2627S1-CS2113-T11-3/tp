@@ -231,9 +231,9 @@ public class Parser {
             }
             int index = parseLoanIndex(indexText);
             if (command.equals("return")) {
-                loanManager.returnLoan(index);
+                Ui.showLoanReturned(loanManager.returnLoan(index));
             } else {
-                loanManager.deleteLoan(index);
+                Ui.showLoanDeleted(loanManager.deleteLoan(index));
             }
             return;
         }
@@ -251,7 +251,7 @@ public class Parser {
         int quantity = parseQuantity(values.get(2));
         Contact borrower = new Contact(values.get(3), values.get(4), null, null);
         Loan loan = new Loan(values.get(0), values.get(1), quantity, borrower, values.get(5));
-        loanManager.addLoan(loan);
+        Ui.showLoanAdded(loanManager.addLoan(loan));
     }
 
     /**

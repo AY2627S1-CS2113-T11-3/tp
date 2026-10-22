@@ -135,6 +135,16 @@ JUnit tests use a mutable Contact test double to verify source edits cannot chan
 After committing this phase, execute the complete UI regression plan with assertions enabled before
 starting the next phase. Expected outputs are preserved before implementation and execution.
 
+## Loan review fixes: phase 2 operation results and confirmations
+
+Adding a loan returns its recorded loan and overdue status at addition; corrections and returns return
+the removed loan. These manager mutations produce no stdout. Parser passes successful results to Ui,
+which retains the existing add, incorrect-record deletion, full-return, and backlog-warning messages.
+The manager still owns validation, stock transitions, assertions, logging, and the injected clock.
+All existing add/delete/return and overdue-warning expected outputs remain unchanged. Unit tests verify
+silent manager mutations and independently verify Ui confirmations. Commit this phase, then run the
+complete existing UI plan with assertions enabled before changing list rendering in phase 3.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input

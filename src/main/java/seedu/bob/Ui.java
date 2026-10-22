@@ -1,7 +1,9 @@
 package seedu.bob;
 
+import java.util.Objects;
+
 /**
- * Provides shared display constants for console output.
+ * Displays loan operation results and provides shared constants for console output.
  */
 public class Ui {
 
@@ -43,5 +45,41 @@ public class Ui {
      * Creates an instance; display constants can also be accessed directly through the class.
      */
     public Ui() {
+    }
+
+    /**
+     * Prints a successful loan addition and its warning if it was already overdue when recorded.
+     *
+     * @param result Successful addition with its captured overdue status.
+     * @throws NullPointerException If result is null.
+     */
+    public static void showLoanAdded(LoanAdditionResult result) {
+        Objects.requireNonNull(result, "Loan addition result must not be null");
+        System.out.println("Successfully added loan: " + result.getLoan());
+        if (result.isOverdue()) {
+            System.out.println("Warning: this loan is already overdue.");
+        }
+    }
+
+    /**
+     * Prints a correction confirmation after an incorrect loan has been removed and stock restored.
+     *
+     * @param loan Removed incorrect loan.
+     * @throws NullPointerException If loan is null.
+     */
+    public static void showLoanDeleted(Loan loan) {
+        Objects.requireNonNull(loan, "Deleted loan must not be null");
+        System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
+    }
+
+    /**
+     * Prints a return confirmation after all loaned units have been restored to inventory.
+     *
+     * @param loan Fully returned loan.
+     * @throws NullPointerException If loan is null.
+     */
+    public static void showLoanReturned(Loan loan) {
+        Objects.requireNonNull(loan, "Returned loan must not be null");
+        System.out.println("Successfully returned loan: " + loan + ". Inventory restored.");
     }
 }

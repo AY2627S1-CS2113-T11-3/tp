@@ -234,8 +234,7 @@ class LoanLoggingTest {
         loans.returnLoan(1);
 
         assertTrue(handler.records.isEmpty());
-        assertTrue(normalizedOutput().contains("Successfully added loan:"));
-        assertTrue(normalizedOutput().contains("Successfully returned loan:"));
+        assertEquals("", normalizedOutput());
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
     }
 

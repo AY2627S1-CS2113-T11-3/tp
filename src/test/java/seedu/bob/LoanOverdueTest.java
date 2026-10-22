@@ -71,19 +71,20 @@ class LoanOverdueTest {
     }
 
     @Test
-    void addLoan_pastDate_acceptsAndWarnsAfterSuccess() throws CommandException {
-        loans.addLoan(createLoan("21 October 2026"));
-        assertEquals("Successfully added loan: 1x Wire [Components] to Alex (91234567), due 21 October 2026\n"
-                + "Warning: this loan is already overdue.\n", response());
+    void addLoan_pastDate_returnsOverdueResultWithoutPrinting() throws CommandException {
+        LoanAdditionResult result = loans.addLoan(createLoan("21 October 2026"));
+        assertTrue(result.isOverdue());
+        assertEquals(LocalDate.of(2026, 10, 21), result.getLoan().getDueDate());
+        assertEquals("", response());
         assertEquals(19, inventory.getAvailableQuantity("Wire", "Components"));
         assertEquals(1, loans.getLoans().size());
     }
 
     @Test
-    void addLoan_dueTodayOrTomorrow_doesNotWarn() throws CommandException {
-        loans.addLoan(createLoan("22 October 2026"));
-        loans.addLoan(createLoan("23 October 2026"));
-        assertFalse(response().contains("Warning:"));
+    void addLoan_dueTodayOrTomorrow_returnsCurrentResultsWithoutPrinting() throws CommandException {
+        assertFalse(loans.addLoan(createLoan("22 October 2026")).isOverdue());
+        assertFalse(loans.addLoan(createLoan("23 October 2026")).isOverdue());
+        assertEquals("", response());
         output.reset();
         loans.listOverdueLoans();
         assertEquals(display("Overdue loans", "No overdue loans."), response());
@@ -115,12 +116,14 @@ class LoanOverdueTest {
     @Test
     void listLoans_clockCrossesMidnight_recomputesStatusWithoutRestart() throws CommandException {
         clock.setInstant(Instant.parse("2026-10-22T15:59:59Z"));
-        loans.addLoan(createLoan("22 October 2026"));
+        LoanAdditionResult addition = loans.addLoan(createLoan("22 October 2026"));
+        assertFalse(addition.isOverdue());
         output.reset();
         loans.listOverdueLoans();
         assertEquals(display("Overdue loans", "No overdue loans."), response());
 
         clock.advance(Duration.ofSeconds(1));
+        assertFalse(addition.isOverdue());
         output.reset();
         loans.listOverdueLoans();
         assertEquals(display("Overdue loans",
@@ -135,11 +138,11 @@ class LoanOverdueTest {
     void listOverdueLoans_sameInstantInDifferentZones_usesTheClockLocalDate() throws CommandException {
         clock.setInstant(Instant.parse("2026-10-22T16:00:00Z"));
         LoanManager utcLoans = new LoanManager(inventory, clock.withZone(ZoneOffset.UTC));
-        utcLoans.addLoan(createLoan("22 October 2026"));
-        assertFalse(response().contains("Warning:"));
+        assertFalse(utcLoans.addLoan(createLoan("22 October 2026")).isOverdue());
+        assertEquals("", response());
         output.reset();
-        loans.addLoan(createLoan("22 October 2026"));
-        assertTrue(response().contains("Warning: this loan is already overdue."));
+        assertTrue(loans.addLoan(createLoan("22 October 2026")).isOverdue());
+        assertEquals("", response());
         output.reset();
         utcLoans.listOverdueLoans();
         assertEquals(display("Overdue loans", "No overdue loans."), response());

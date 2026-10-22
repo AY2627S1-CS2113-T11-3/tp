@@ -1,6 +1,8 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,14 +47,15 @@ class LoanManagerTest {
     }
 
     @Test
-    void addLoan_validQuantity_deductsOnceAndPrintsOnlyLoanConfirmation() throws CommandException {
+    void addLoan_validQuantity_returnsResultAndDeductsOnceWithoutPrinting() throws CommandException {
         Loan loan = createLoan("Wire", "Components", 3, "30 October 2099");
-        loans.addLoan(loan);
+        LoanAdditionResult result = loans.addLoan(loan);
 
         assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
         assertEquals(List.of(loan), loans.getLoans());
-        assertEquals("Successfully added loan: 3x Wire [Components] to Alex (91234567), due 30 October 2099\n",
-                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        assertSame(loan, result.getLoan());
+        assertFalse(result.isOverdue());
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
         loans.listLoans();
         loans.listLoans();
         assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
@@ -126,12 +129,12 @@ class LoanManagerTest {
         loans.addLoan(third);
         output.reset();
 
-        loans.deleteLoan(2);
+        Loan removed = loans.deleteLoan(2);
 
         assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
         assertEquals(List.of(first, third), loans.getLoans());
-        assertEquals("Successfully deleted incorrect loan: " + second + ". Inventory restored.\n",
-                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        assertSame(second, removed);
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
         loans.deleteLoan(2);
         loans.deleteLoan(1);
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
@@ -152,16 +155,14 @@ class LoanManagerTest {
     }
 
     @Test
-    void deleteLoan_depletedCategory_recreatesStockFromLoanWithoutExtraConfirmation() throws CommandException {
+    void deleteLoan_depletedCategory_recreatesStockWithoutPrinting() throws CommandException {
         loans.addLoan(createLoan("wire", "COMPONENTS", 10, "30 October 2099"));
         output.reset();
         loans.deleteLoan(1);
 
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
         assertTrue(loans.getLoans().isEmpty());
-        assertEquals("Successfully deleted incorrect loan: 10x wire [COMPONENTS] to Alex (91234567),"
-                + " due 30 October 2099. Inventory restored.\n",
-                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -220,12 +221,12 @@ class LoanManagerTest {
         loans.addLoan(third);
         output.reset();
 
-        loans.returnLoan(2);
+        Loan returned = loans.returnLoan(2);
 
         assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
         assertEquals(List.of(first, third), loans.getLoans());
-        assertEquals("Successfully returned loan: " + second + ". Inventory restored.\n",
-                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        assertSame(second, returned);
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
         loans.deleteLoan(1);
         assertEquals(List.of(third), loans.getLoans());
         loans.returnLoan(1);
@@ -265,15 +266,15 @@ class LoanManagerTest {
     }
 
     @Test
-    void returnLoan_depletedCategory_recreatesCategoryWithoutExtraConfirmation() throws CommandException {
+    void returnLoan_depletedCategory_returnsLoanAndRecreatesCategoryWithoutPrinting() throws CommandException {
         Loan loan = createLoan("Wire", "Components", 10, "30 October 2099");
         loans.addLoan(loan);
         output.reset();
-        loans.returnLoan(1);
+        Loan returned = loans.returnLoan(1);
 
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
-        assertEquals("Successfully returned loan: " + loan + ". Inventory restored.\n",
-                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        assertSame(loan, returned);
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
         assertTrue(loans.getLoans().isEmpty());
     }
 

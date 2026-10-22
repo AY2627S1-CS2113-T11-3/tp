@@ -220,6 +220,11 @@ display but keeps the original active-list indices so that `return` and `delete-
 items and categories are updated case-insensitively; missing entries are recreated. Integer overflow or an invalid index
 therefore leaves the loan and inventory unchanged.
 
+Loan mutations return domain results without printing. `addLoan` returns an immutable `LoanAdditionResult` containing
+the loan and overdue status evaluated with the manager's clock at addition. Corrections and returns return the removed
+`Loan`. `Parser` passes these successful results to `Ui`, which owns their distinct confirmations and backlog warning.
+Loan listing still prints through the manager until the query/rendering phase is completed.
+
 ### Validation and error handling
 
 Validation is performed at the parser and domain boundaries:
