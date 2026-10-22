@@ -32,6 +32,11 @@ class ParserHelpTest {
             + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
             + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
             + "  list-p s/SESSION_INDEX\n"
+            + "Student requests\n"
+            + "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE\n"
+            + "  delete-r INDEX\n"
+            + "  list-r\n"
+            + "  mark-r INDEX STATUS\n"
             + "Contacts\n"
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"
@@ -45,6 +50,8 @@ class ParserHelpTest {
     private final Parser parser = new Parser();
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
+    private final ContactManager contacts = new ContactManager();
+    private final RequestManager requests = new RequestManager();
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -102,7 +109,7 @@ class ParserHelpTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions);
+        parser.handleCommand(command, inventory, sessions, contacts, requests);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }
