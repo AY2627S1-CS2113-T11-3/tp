@@ -42,6 +42,19 @@ public class InventoryItem {
     }
 
     /**
+     * Restores positive units without overflowing the inventory quantity.
+     *
+     * @param quantityToAdd Units to restore.
+     * @throws IllegalArgumentException If the addition is non-positive or exceeds the integer limit.
+     */
+    void addQuantity(int quantityToAdd) {
+        if (quantityToAdd <= 0 || quantityToAdd > Integer.MAX_VALUE - quantity) {
+            throw new IllegalArgumentException("Stock addition must be positive and fit within the integer limit");
+        }
+        quantity += quantityToAdd;
+    }
+
+    /**
      * Removes units while preserving the positive-stock invariant of a stored item.
      * Complete removal is handled by {@link Inventory}, which removes the item itself.
      *

@@ -14,5 +14,8 @@ add-l n/Wire c/Components q/3 b/Alex Tan t/91234567 d/31 December 2099
 list-l
 list-p s/1
 list-c
+delete-l 1
+list-l
+list-p s/1
 help
 Bye

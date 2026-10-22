@@ -12,6 +12,7 @@ import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidContactIndexException;
 import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
+import seedu.bob.exception.InvalidLoanIndexException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
@@ -44,6 +45,7 @@ public class Parser {
     private static final String ADD_LOAN_USAGE =
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l";
+    private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Accepted required and optional contact prefixes, in command order. */
@@ -65,7 +67,7 @@ public class Parser {
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
      * @param contactManager ContactManager to add, remove, or display contacts.
-     * @param loanManager LoanManager to add or display loans.
+     * @param loanManager LoanManager to add, correct, or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
             ContactManager contactManager, LoanManager loanManager) {
@@ -174,7 +176,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
-            case "add-l", "list-l" -> {
+            case "add-l", "list-l", "delete-l" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     handleLoan(command, arguments, loanManager);
@@ -202,11 +204,19 @@ public class Parser {
     }
 
     /**
-     * Parses loan commands, validating every field before asking the manager to deduct stock.
+     * Parses loan commands, validating input before the manager changes loans or stock.
      *
      * @throws CommandException If arguments, borrower details, date, or requested stock are invalid.
      */
     private void handleLoan(String command, String arguments, LoanManager loanManager) throws CommandException {
+        if (command.equals("delete-l")) {
+            String indexText = arguments.trim();
+            if (indexText.isEmpty() || indexText.matches(".*\\s+.*")) {
+                throw new CommandFormatException(DELETE_LOAN_USAGE);
+            }
+            loanManager.deleteLoan(parseLoanIndex(indexText));
+            return;
+        }
         if (command.equals("list-l")) {
             if (!arguments.isBlank()) {
                 throw new CommandFormatException(LIST_LOAN_USAGE);
@@ -614,6 +624,25 @@ public class Parser {
             return index;
         } catch (NumberFormatException e) {
             throw new InvalidSessionIndexException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based active loan index.
+     *
+     * @param indexText Loan index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidLoanIndexException If the text does not represent a positive integer.
+     */
+    private int parseLoanIndex(String indexText) throws InvalidLoanIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidLoanIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidLoanIndexException();
         }
     }
 

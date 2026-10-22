@@ -5,9 +5,10 @@ import java.util.List;
 import java.util.Objects;
 
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.InvalidLoanIndexException;
 
 /**
- * Owns active loans in insertion order and coordinates deductions from available inventory.
+ * Owns active loans in insertion order and coordinates inventory deductions and corrections.
  */
 public class LoanManager {
 
@@ -38,6 +39,24 @@ public class LoanManager {
         inventory.lendItem(loan.getName(), loan.getCategory(), loan.getQuantity());
         loans.add(loan);
         System.out.println("Successfully added loan: " + loan);
+    }
+
+    /**
+     * Removes an incorrect loan and restores all of its units to available inventory.
+     * Restores stock before removing the record so a failed restoration preserves the loan.
+     *
+     * @param userIndex One-based loan position from the latest loan list.
+     * @throws CommandException If the index is invalid or stock restoration would overflow.
+     */
+    public void deleteLoan(int userIndex) throws CommandException {
+        if (userIndex <= 0 || userIndex > loans.size()) {
+            throw new InvalidLoanIndexException(userIndex, loans.size());
+        }
+        int index = userIndex - 1;
+        Loan loan = loans.get(index);
+        inventory.restoreStock(loan.getName(), loan.getCategory(), loan.getQuantity());
+        loans.remove(index);
+        System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
     }
 
     /**

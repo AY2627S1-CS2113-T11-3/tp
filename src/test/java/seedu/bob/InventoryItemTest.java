@@ -11,6 +11,22 @@ import org.junit.jupiter.api.Test;
 class InventoryItemTest {
 
     @Test
+    void addQuantity_validAddition_updatesStockAtIntegerBoundary() {
+        InventoryItem item = new InventoryItem("Wire", "Components", Integer.MAX_VALUE - 2);
+        item.addQuantity(2);
+        assertEquals(Integer.MAX_VALUE, item.getQuantity());
+    }
+
+    @Test
+    void addQuantity_nonPositiveOrOverflowingAddition_preservesStock() {
+        InventoryItem item = new InventoryItem("Wire", "Components", Integer.MAX_VALUE - 2);
+        for (int quantity : new int[] {0, -1, 3, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> item.addQuantity(quantity));
+            assertEquals(Integer.MAX_VALUE - 2, item.getQuantity());
+        }
+    }
+
+    @Test
     void constructor_validArguments_success() {
         InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
 

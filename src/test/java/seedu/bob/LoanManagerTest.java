@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CategoryNotFoundException;
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.InvalidLoanIndexException;
 import seedu.bob.exception.LoanException;
 
 /**
@@ -113,6 +114,100 @@ class LoanManagerTest {
         assertEquals(0, inventory.getAvailableQuantity("Resistor", "Components"));
         assertEquals(Integer.MAX_VALUE, loans.getLoans().get(0).getQuantity());
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+    }
+
+    @Test
+    void deleteLoan_middleRecord_restoresOnlyItsQuantityAndRenumbersLoans() throws CommandException {
+        Loan first = createLoan("Wire", "Components", 2, "30 October 2099");
+        Loan second = createLoan("Wire", "Components", 3, "31 October 2099");
+        Loan third = createLoan("Wire", "Components", 1, "1 November 2099");
+        loans.addLoan(first);
+        loans.addLoan(second);
+        loans.addLoan(third);
+        output.reset();
+
+        loans.deleteLoan(2);
+
+        assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(List.of(first, third), loans.getLoans());
+        assertEquals("Successfully deleted incorrect loan: " + second + ". Inventory restored.\n",
+                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+        loans.deleteLoan(2);
+        loans.deleteLoan(1);
+        assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+        assertTrue(loans.getLoans().isEmpty());
+        assertThrows(InvalidLoanIndexException.class, () -> loans.deleteLoan(1));
+        assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+    }
+
+    @Test
+    void deleteLoan_invalidIndices_preserveStockAndLoans() throws CommandException {
+        loans.addLoan(createLoan("Wire", "Components", 2, "30 October 2099"));
+        List<Loan> before = loans.getLoans();
+        for (int index : new int[] {-1, 0, 2, Integer.MAX_VALUE}) {
+            assertThrows(InvalidLoanIndexException.class, () -> loans.deleteLoan(index));
+            assertEquals(before, loans.getLoans());
+            assertEquals(8, inventory.getAvailableQuantity("Wire", "Components"));
+        }
+    }
+
+    @Test
+    void deleteLoan_depletedCategory_recreatesStockFromLoanWithoutExtraConfirmation() throws CommandException {
+        loans.addLoan(createLoan("wire", "COMPONENTS", 10, "30 October 2099"));
+        output.reset();
+        loans.deleteLoan(1);
+
+        assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+        assertTrue(loans.getLoans().isEmpty());
+        assertEquals("Successfully deleted incorrect loan: 10x wire [COMPONENTS] to Alex (91234567),"
+                + " due 30 October 2099. Inventory restored.\n",
+                output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
+    }
+
+    @Test
+    void deleteLoan_itemReaddedWithDifferentCase_mergesStockWithoutChangingOtherCategory() throws CommandException {
+        loans.addLoan(createLoan("wire", "COMPONENTS", 10, "30 October 2099"));
+        inventory.addItem(new InventoryItem("WIRE", "Components", 4));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 5));
+        loans.deleteLoan(1);
+
+        assertEquals(14, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(5, inventory.getAvailableQuantity("Wire", "Spares"));
+        output.reset();
+        inventory.listItems();
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("1: WIRE (Qty: 14)"));
+    }
+
+    @Test
+    void deleteLoan_itemDepletedButCategorySurvives_restoresWithoutChangingSurvivingItems() throws CommandException {
+        inventory.addItem(new InventoryItem("Battery", "Components", 1));
+        loans.addLoan(createLoan("Wire", "Components", 10, "30 October 2099"));
+        loans.deleteLoan(1);
+
+        assertEquals(1, inventory.getAvailableQuantity("Battery", "Components"));
+        assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+        output.reset();
+        inventory.listItems();
+        assertTrue(output.toString(StandardCharsets.UTF_8).contains("2: Wire (Qty: 10)"));
+    }
+
+    @Test
+    void deleteLoan_restorationOverflows_preservesLoanAndStockUntilRetryIsPossible() throws CommandException {
+        Loan loan = createLoan("Wire", "Components", 10, "30 October 2099");
+        loans.addLoan(loan);
+        inventory.addItem(new InventoryItem("Wire", "Components", Integer.MAX_VALUE));
+        output.reset();
+
+        LoanException error = assertThrows(LoanException.class, () -> loans.deleteLoan(1));
+
+        assertEquals("Cannot restore 10 Wire. Inventory quantity must not exceed 2147483647.", error.getMessage());
+        assertEquals(Integer.MAX_VALUE, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(List.of(loan), loans.getLoans());
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
+        inventory.removeItem("Components", 1, 10);
+        loans.deleteLoan(1);
+        assertEquals(Integer.MAX_VALUE, inventory.getAvailableQuantity("Wire", "Components"));
+        assertTrue(loans.getLoans().isEmpty());
     }
 
     /**

@@ -129,6 +129,7 @@ Contacts
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
   list-l
+  delete-l INDEX
 Other
   help
   Bye
@@ -553,8 +554,38 @@ Loans
 
 An empty list displays `No active loans.` between the heading and closing divider.
 
-Loan deletion, returns, overdue markers, overdue-only listing, and warnings for past due dates are not
-available in this version. All loans disappear when Bob exits; persistence is planned for V2.0b.
+### Delete an incorrect loan: `delete-l`
+
+**Format:** `delete-l INDEX`
+
+Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
+from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
+This command corrects an entry; the separate command for recording actual returns is not available yet.
+Partial deletion is not supported.
+
+Continuing the Multimeter example, enter:
+
+```text
+delete-l 1
+```
+
+Expected output:
+
+```text
+Successfully deleted incorrect loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+Inventory is back to 5 Multimeters. Restoration matches item/category without regard to capitalization,
+increases existing stock, or recreates a missing item/category. Existing spelling is preserved; a recreated
+entry uses the loan's spelling and is appended to its category or the inventory category list.
+Preparation availability reflects the restored stock when next displayed. Supplier contacts and other
+loans are unaffected. An invalid index leaves everything unchanged.
+
+If re-added stock makes restoration exceed 2,147,483,647 units, Bob rejects the deletion and retains both
+the loan and stock unchanged. Check the inventory quantities before retrying the correction.
+
+Returns, overdue markers, overdue-only listing, and warnings for past due dates are not available in this
+version. All loans disappear when Bob exits; persistence is planned for V2.0b.
 
 ## Exiting Bob
 
@@ -564,7 +595,7 @@ Bob exits without a farewell message or a save prompt. All data entered during t
 ## Errors and troubleshooting
 
 Bob displays an error and continues accepting commands when input is invalid. A rejected command does not change
-inventory, sessions, or preparation. Format errors show the required command syntax.
+inventory, sessions, preparation, contacts, or loans. Format errors show the required command syntax.
 
 These are examples of the current messages:
 
@@ -583,6 +614,8 @@ These are examples of the current messages:
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
 | Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |
 | Invalid phone or email | `Phone must contain digits only.` or `Email must be a valid address, e.g. name@example.com.` | Correct the value after the prefix. |
+| Unknown loan index | `Loan index 3 is invalid. There are 2 active loan(s).` | Use the latest `list-l` to check the index. |
+| Stock restoration exceeds the limit | `Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.` | Check re-added stock before retrying; the loan remains active. |
 | Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
@@ -652,4 +685,5 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | List contacts | `list-c` |
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans | `list-l` |
+| Delete an incorrect loan and restore stock | `delete-l INDEX` |
 | Exit and discard data | `Bye` |

@@ -91,6 +91,32 @@ class ParserLoanTest {
                 execute("list-l"));
     }
 
+    @Test
+    void deleteLoan_validCommand_restoresStockAndPreservesSupplierContacts() {
+        execute("add-c n/Alex t/123 r/Supplier");
+        execute("add-l n/Red LED c/Lab Components q/2 b/Alex t/123 d/30 October 2099");
+
+        assertEquals("Successfully deleted incorrect loan: 2x Red LED [Lab Components] to Alex (123),"
+                + " due 30 October 2099. Inventory restored.\n", execute("delete-l 1"));
+        assertEquals(10, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+        assertTrue(loans.getLoans().isEmpty());
+        assertTrue(execute("list-c").contains("1. Alex (123) - Supplier"));
+    }
+
+    @Test
+    void deleteLoan_invalidSyntaxAndIndices_doesNotRestoreStock() {
+        execute("add-l n/Red LED c/Lab Components q/2 b/Alex t/123 d/30 October 2099");
+        for (String command : new String[] {"delete-l", "delete-l 1 extra", "delete-l 1 q/1"}) {
+            assertEquals("Invalid format. Use: delete-l INDEX\n", execute(command));
+        }
+        for (String index : new String[] {"0", "-1", "abc", "1.5", "2147483648", "i/1"}) {
+            assertEquals("Loan index must be a positive integer.\n", execute("delete-l " + index));
+        }
+        assertEquals("Loan index 2 is invalid. There are 1 active loan(s).\n", execute("delete-l 2"));
+        assertEquals(8, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+        assertEquals(1, loans.getLoans().size());
+    }
+
     /**
      * Executes one command and captures only its stdout, with normalized newlines.
      */

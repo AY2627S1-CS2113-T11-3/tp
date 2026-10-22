@@ -204,6 +204,45 @@ public class Inventory {
     }
 
     /**
+     * Restores a loan's stock without printing an inventory-addition confirmation.
+     * Matches existing names and categories ignoring case, or appends missing entries.
+     *
+     * @param name Item name from the loan.
+     * @param category Category from the loan.
+     * @param quantity Positive number of units to restore.
+     * @throws CommandException If the quantity is invalid or restoration would overflow existing stock.
+     */
+    void restoreStock(String name, String category, int quantity) throws CommandException {
+        if (quantity <= 0) {
+            throw new InvalidQuantityException();
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            InventoryItem restoredItem = new InventoryItem(name, category, quantity);
+            ArrayList<InventoryItem> restoredItems = new ArrayList<>();
+            restoredItems.add(restoredItem);
+            items.put(category, restoredItems);
+        } else {
+            ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+            for (InventoryItem item : itemsInCategory) {
+                if (!item.getName().equalsIgnoreCase(name)) {
+                    continue;
+                }
+                if (quantity > Integer.MAX_VALUE - item.getQuantity()) {
+                    throw new LoanException(String.format(
+                            "Cannot restore %d %s. Inventory quantity must not exceed %d.",
+                            quantity, item.getName(), Integer.MAX_VALUE));
+                }
+                item.addQuantity(quantity);
+                assert hasValidState() : "Inventory state must remain valid after restoration";
+                return;
+            }
+            itemsInCategory.add(new InventoryItem(name, storedCategory, quantity));
+        }
+        assert hasValidState() : "Inventory state must remain valid after restoration";
+    }
+
+    /**
      * Returns current stock matching a preparation item's name and category.
      * Matching is case-insensitive and does not reserve or remove stock.
      *

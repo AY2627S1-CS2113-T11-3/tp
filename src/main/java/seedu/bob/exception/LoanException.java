@@ -1,7 +1,7 @@
 package seedu.bob.exception;
 
 /**
- * Indicates that a loan cannot be recorded because its date or requested stock is invalid.
+ * Indicates that a loan operation fails because its date, requested stock, or restoration is invalid.
  */
 public class LoanException extends CommandException {
 
