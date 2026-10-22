@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CommandException;
-import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidRequestIndexException;
+import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Verifies deadline ordering, status changes, and availability display in {@link RequestManager}.
@@ -186,7 +186,7 @@ class RequestManagerTest {
         Request request = new Request("Alice", "Wire", 5, date(2));
         manager.addRequest(request);
 
-        assertThrows(CommandFormatException.class, () -> manager.markRequest(1, "pending"));
+        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "pending"));
         assertEquals("pending", request.getStatus());
     }
 
@@ -196,6 +196,16 @@ class RequestManagerTest {
 
         assertEquals(Ui.DIVIDER + "\nStudent requests\n" + Ui.DIVIDER + "\n"
                 + "No requests recorded.\n" + Ui.DIVIDER + "\n", printed());
+    }
+
+    @Test
+    void listRequests_nullInventory_exceptionThrown() {
+        RequestManager manager = new RequestManager();
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> manager.listRequests(null));
+
+        assertEquals("Inventory to check availability must not be null", exception.getMessage());
     }
 
     @Test
