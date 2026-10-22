@@ -19,7 +19,7 @@ the expected console output. The script feeds the input into Bob, saves output
 to `build/text-ui-test/ACTUAL.txt`, and compares the files. Differences or an
 application error make the test fail. Java diagnostic logs remain on stderr.
 
-The 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
+The first 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
 session, add stock, calculate preparation quantities, report shortages, remove
 a preparation item, and refresh shortages after stock changes. The final command
 is `help`, following case UI-HELP-001. The fixed future

@@ -39,13 +39,14 @@ public class Bob {
         Parser parser = new Parser();
         Inventory inventory = new Inventory();
         SessionManager sessionManager = new SessionManager();
+        ContactManager contactManager = new ContactManager();
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager);
             System.out.println();
         }
 
