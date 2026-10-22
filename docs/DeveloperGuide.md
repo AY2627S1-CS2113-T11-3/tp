@@ -385,7 +385,7 @@ Loan tracking supports recording loans (`add-l`), listing active or overdue loan
 incorrect record (`delete-l INDEX`), and recording a full return (`return INDEX`). Each accepted loan deducts available
 stock; either removal command restores the entire loan quantity before removing the record.
 
-#### Detailed loan tracking design
+### Detailed loan tracking design
 
 At startup, `Bob` creates one `LoanManager` using the same `Inventory` instance as inventory and preparation commands.
 This gives all features a consistent view of available stock. Loan tracking divides responsibilities as follows:
@@ -410,7 +410,7 @@ deducting, deleting, or restoring stock cannot change the recorded loan quantity
 strings and validated through `Contact`; borrowers are not registered in `ContactManager`. These snapshots preserve the
 details of a loan even when the source inventory entry disappears or a source contact changes.
 
-##### Key operations
+#### Key operations
 
 - `LoanManager#addLoan(Loan loan)` deducts stock, appends the loan, and returns a `LoanAdditionResult` with its addition-time
   overdue flag. The UI uses that flag for the backlog warning.
@@ -424,7 +424,7 @@ details of a loan even when the source inventory entry disappears or a source co
 - `Inventory#restoreStock(String name, String category, int quantity)` merges matching stock or recreates a missing item
   or category. It rejects integer overflow before changing stock.
 
-##### Example walkthrough
+#### Example walkthrough
 
 Start with an empty loan list and the following inventory command:
 
@@ -490,7 +490,7 @@ again, and the active loan list is empty. Neither removal command changes suppli
 Preparation queries `Inventory#getAvailableQuantity()` when displayed, so its availability and shortfall figures reflect
 each successful deduction and restoration. Preparation does not reserve stock or change a loan.
 
-##### Interactions during loan addition
+#### Interactions during loan addition
 
 The sequence below shows a successful `add-l` command after `Bob` passes the input to `Parser`. The validation reference
 frame summarizes syntax checks and construction; collection internals, routine getters, assertions, and logging are
@@ -504,7 +504,7 @@ If command parsing or domain construction fails, the manager is never called. If
 stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
 only after successful insertion; a rejected backlog request therefore produces no overdue warning.
 
-##### Interactions during a full return
+#### Interactions during a full return
 
 `returnLoan()` and `deleteLoan()` share `removeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
 and successful restoration. A correction follows the same model interaction, followed by `Ui.showLoanDeleted()`.
@@ -518,7 +518,7 @@ inventory recreates it; otherwise, the quantity is increased. If adding the quan
 restoration throws before mutation and the active loan remains available for retry. An invalid index fails before any
 stock operation. This ordering preserves state for expected validation failures in the single-threaded command loop.
 
-##### Overdue evaluation and filtered indices
+#### Overdue evaluation and filtered indices
 
 Due dates are parsed strictly with English month names using `d MMMM uuuu` internally, displayed to users as
 `d MMMM yyyy`. Impossible dates are rejected. Past dates are accepted for entering existing backlog loans. A loan is
@@ -538,7 +538,7 @@ For example, when only loans 2 and 4 are overdue, `list-l overdue` displays indi
 `return 4` therefore selects the same record in both views. After removal, later indices shift with the full list, so
 query snapshots are descriptions of a past view rather than permanent identifiers.
 
-##### Design considerations and alternatives
+#### Design considerations and alternatives
 
 **Aspect 1: Representing loan details**
 
@@ -595,7 +595,36 @@ even if the clock or active list later changes. The tradeoff is two small result
 **Alternative:** Print directly from `LoanManager`. This reduces result objects but couples state changes and queries to
 console formatting. Keeping rendering in `Ui` makes the loan model easier to reuse and test.
 
-##### Loan validation, assertions, and testing
+**Aspect 6: Restoring missing inventory entries**
+
+**Current approach:** Inventory stores available stock, while active `Loan` records separately store outstanding
+quantities. When a loan is returned, `Inventory.restoreStock()` recreates its item or category if necessary.
+
+An inventory entry can disappear simply because all available units have been lent out. Recreating the entry allows
+those units to be returned without requiring the user to manually recreate the item first. The loan's independent
+snapshot preserves the name, category, and quantity needed for restoration.
+
+Under this model, `delete-i` removes available units; it does not cancel outstanding loans or permanently retire an
+item type. For example, starting with five Multimeters, lending two leaves three available. Deleting those three
+removes the inventory entry, but the two loaned units remain recorded. Returning that loan recreates the entry with
+**two units**, without restoring the three intentionally deleted units.
+
+**Alternative:** Track total quantity and quantity on loan within each inventory entry, deriving availability as:
+
+`available quantity = total quantity − quantity on loan`
+
+This would retain entries while units remain on loan and provide a clearer view of all stock held by the lab. However,
+it would require maintaining additional quantity invariants across inventory deletion, lending, returns, and
+corrections, and changing the existing removal of zero-available entries.
+
+The current approach keeps available-stock management simple and uses individual loan records to track outstanding
+quantities.
+
+**Limitation:** The application does not distinguish removing available stock from permanently retiring an item type.
+If permanent retirement is required, explicit retirement rules and handling for outstanding loans would be needed.
+The alternative above could provide a suitable foundation for that extension.
+
+#### Loan validation, assertions, and testing
 
 | Component | Responsibility |
 | --- | --- |
@@ -614,7 +643,7 @@ timezones, midnight rollover, one clock read per query, and filtered indices. `P
 command handling and rendered results. Additional assertion, logging, and inventory-validation tests cover defensive
 checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../test/ui-test-plan.md).
 
-##### Loan tracking limitations
+#### Loan tracking limitations
 
 - Returns and corrections always restore the complete quantity. Partial returns, loan editing, and return history are
   not supported.
@@ -623,7 +652,7 @@ checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../t
 - Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
 - Loans, like all application data, exist only in memory and are discarded on exit.
 
-##### Diagram sources
+#### Diagram sources
 
 Editable PlantUML sources: [class diagram](diagrams/loan-tracking-class.puml),
 [addition sequence](diagrams/loan-add-sequence.puml), [return sequence](diagrams/loan-return-sequence.puml), and
