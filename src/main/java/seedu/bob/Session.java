@@ -67,7 +67,7 @@ public class Session implements Comparable<Session> {
             this.date = LocalDate.parse(dateText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
             throw new InvalidSessionDateException(
-                    "Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). "
+                    "Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
                             + "Ensure the month is capitalized.");
         }
         if (date.isBefore(LocalDate.now())) {
@@ -154,6 +154,7 @@ public class Session implements Comparable<Session> {
         return preparation;
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether this session overlaps another at the same date and location.
      *
@@ -179,6 +180,7 @@ public class Session implements Comparable<Session> {
                 startTime.format(TIME_FORMATTER), endTime.format(TIME_FORMATTER));
     }
 
+    //@@author gavinlimsh
     /**
      * Compares this session with another for chronological sorting.
      * Priorities: Date -> Start Time -> Alphabetical Name (Tie-breaker).
@@ -201,6 +203,7 @@ public class Session implements Comparable<Session> {
 
         return this.name.compareToIgnoreCase(other.name);
     }
+    //@@author
 
     /**
      * Returns the string representation of the session for user display.
