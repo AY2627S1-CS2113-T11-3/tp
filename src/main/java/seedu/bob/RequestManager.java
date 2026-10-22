@@ -83,6 +83,8 @@ public class RequestManager {
             LOGGER.fine(() -> "Rejected invalid request index: " + userIndex);
             throw new InvalidRequestIndexException(userIndex, requests.size());
         }
+        assert userIndex > 0 && userIndex <= requests.size()
+                : "Validated request index must be within the list";
         return requests.get(userIndex - INDEX_OFFSET);
     }
 
@@ -103,8 +105,12 @@ public class RequestManager {
      * Prints all requests in deadline order with status and current inventory availability.
      *
      * @param inventory Inventory used to check whether each requested quantity is available.
+     * @throws NullPointerException If {@code inventory} is {@code null}.
      */
     public void listRequests(Inventory inventory) {
+        Objects.requireNonNull(inventory, "Inventory to check availability must not be null");
+        LOGGER.fine(() -> "Listing " + requests.size() + " request(s)");
+
         System.out.println(Ui.DIVIDER);
         System.out.println("Student requests");
         System.out.println(Ui.DIVIDER);
