@@ -23,6 +23,15 @@ public class Parser {
 
     private static final Logger LOGGER = Logger.getLogger(Parser.class.getName());
     private static final int DEFAULT_ITEM_QUANTITY = 1;
+
+    // Positions corresponding to the add-l prefixes: n, c, q, b, t, d.
+    private static final int LOAN_ITEM_NAME_INDEX = 0;
+    private static final int LOAN_CATEGORY_INDEX = 1;
+    private static final int LOAN_QUANTITY_INDEX = 2;
+    private static final int LOAN_BORROWER_NAME_INDEX = 3;
+    private static final int LOAN_BORROWER_PHONE_INDEX = 4;
+    private static final int LOAN_DUE_DATE_INDEX = 5;
+
     private static final String UNEXPECTED_ERROR_MESSAGE =
             "An unexpected error occurred while processing the command. Please try again.";
 
@@ -248,9 +257,17 @@ public class Parser {
             return;
         }
         List<String> values = extractValues(arguments, List.of("n", "c", "q", "b", "t", "d"), ADD_LOAN_USAGE);
-        int quantity = parseQuantity(values.get(2));
-        Contact borrower = new Contact(values.get(3), values.get(4), null, null);
-        Loan loan = new Loan(values.get(0), values.get(1), quantity, borrower, values.get(5));
+        int quantity = parseQuantity(values.get(LOAN_QUANTITY_INDEX));
+        Contact borrower = new Contact(
+                values.get(LOAN_BORROWER_NAME_INDEX),
+                values.get(LOAN_BORROWER_PHONE_INDEX),
+                null, null);
+        Loan loan = new Loan(
+                values.get(LOAN_ITEM_NAME_INDEX),
+                values.get(LOAN_CATEGORY_INDEX),
+                quantity,
+                borrower,
+                values.get(LOAN_DUE_DATE_INDEX));
         Ui.showLoanAdded(loanManager.addLoan(loan));
     }
 
