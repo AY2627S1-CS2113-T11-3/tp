@@ -38,7 +38,17 @@ public class Parser {
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
+    private static final String ADD_CONTACT_USAGE = "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
+    private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
     private static final String HELP_USAGE = "Invalid format. Use: help";
+
+    /** Accepted required and optional contact prefixes, in command order. */
+    private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
+            List.of("n", "t"),
+            List.of("n", "t", "e"),
+            List.of("n", "t", "r"),
+            List.of("n", "t", "e", "r"));
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");

@@ -14,8 +14,10 @@ are retained for manual command-by-command testing.
 - Run command: `java -jar build/libs/duke.jar`
 - Comparison: exact after newline normalization, ANSI-sequence removal, and ignoring one final newline
 - Isolation: each test case starts a fresh application process
-- Command response terminator: after every expected-output block, the application must emit exactly one additional blank line; this blank line is part of the expected response
-- Startup whitespace notation: each `␠` in the startup fixture represents one literal trailing space and is decoded before comparison
+- Command response terminator: each ordinary command emits exactly one additional blank line after its expected output; EOF and `Bye` exit without a response terminator
+- Diagnostics: stderr is captured separately from exact stdout comparisons; normal INFO/WARNING logs are allowed, while nonzero exits and SEVERE failures fail the case
+- Timeout: 10 seconds per output line or process exit; missing output and unexpected extra output fail the case
+- Whitespace notation: each `␠` in the startup fixture or an input block represents one literal space and is decoded before comparison or sending input
 - Startup prompt:
 
 ```text
@@ -36,6 +38,16 @@ What is your name?
 Hello Alex, welcome to Bob!
 --------------------------------------------------------------------
 ```
+
+## Phase 0 baseline contract
+
+Expected outputs were reconciled before execution against the existing documented contact behavior and
+Java unit-test contracts. Session ordering is chronological (date, start time, then name ignoring case),
+as required by `SessionManagerTest` and `SessionTest`; validation messages follow `SessionTest`.
+The reverse-order and tie-break cases below exercise that contract explicitly. This preserves scheduling
+behavior while correcting stale documentation and UI fixtures, independently of actual test output.
+Contact cases cover optional fields, validation, duplicates, deletion, renumbering, and feature isolation.
+Loan commands, persistence, and return history are outside phase 0.
 
 ## Test cases
 
@@ -835,7 +847,7 @@ add-s n/Test Lab d/ l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM yyyy format.
+Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
 ```
 
 #### Step 9
@@ -849,7 +861,7 @@ add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/ e/1000 p/20
 **Expected output**
 
 ```text
-Start time must be a valid time in HHmm format.
+Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).
 ```
 
 #### Step 10
@@ -883,7 +895,7 @@ add-s n/Test Lab d/31 February 2099 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM yyyy format.
+Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
 ```
 
 #### Step 2
@@ -897,7 +909,7 @@ add-s n/Test Lab d/2099-01-01 l/Room-A s/0900 e/1000 p/20
 **Expected output**
 
 ```text
-Date must be a valid date in d MMMM yyyy format.
+Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.
 ```
 
 #### Step 3
@@ -925,7 +937,7 @@ add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/900 e/1000 p/20
 **Expected output**
 
 ```text
-Start time must be a valid time in HHmm format.
+Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).
 ```
 
 #### Step 5
@@ -939,7 +951,7 @@ add-s n/Test Lab d/{{TOMORROW}} l/Room-A s/0900 e/2400 p/20
 **Expected output**
 
 ```text
-End time must be a valid time in HHmm format.
+End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).
 ```
 
 #### Step 6
@@ -1354,27 +1366,13 @@ No sessions scheduled.
 --------------------------------------------------------------------
 ```
 
-### UI-SESSION-LIST-002: List sessions in full format and insertion order
+### UI-SESSION-LIST-002: List sessions in full format and chronological order
 
-**Aim:** Verify that scheduled sessions retain their insertion order and use the approved full display format.
+**Aim:** Verify that sessions added in reverse time order are displayed chronologically in the full display format.
 
 **Preconditions:** Empty schedule.
 
 #### Step 1
-
-**Input**
-
-```text
-add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
-```
-
-**Expected output**
-
-```text
-Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
-```
-
-#### Step 2
 
 **Input**
 
@@ -1386,6 +1384,20 @@ add-s n/Second Lab d/{{TOMORROW}} l/Room-B s/0930 e/1030 p/25
 
 ```text
 Successfully added: Second Lab on {{TOMORROW}} at Room-B from 0930 to 1030 for 25 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/First Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/20
+```
+
+**Expected output**
+
+```text
+Successfully added: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 20 attendees
 ```
 
 #### Step 3
@@ -2407,6 +2419,1296 @@ helps
 Invalid command
 ```
 
+
+### UI-LIFECYCLE-002: Exit using Bye
+
+**Aim:** Verify that the explicit exit command produces no stdout and exits successfully.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+```
+
+### UI-LIFECYCLE-003: Exit command ignores case and surrounding spaces
+
+**Aim:** Verify that the exit command accepts capitalization and surrounding whitespace.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+␠␠BYE␠␠
+```
+
+**Expected output (no output)**
+
+```text
+```
+
+### UI-CONTACT-ADD-001: Add contacts with every optional-field combination and duplicates
+
+**Aim:** Verify required-only, email-only, role-only, and full contacts, leading-zero phones, and independent duplicate entries.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
+```
+
+**Expected output**
+
+```text
+Successfully added: Component Supplier (91234567) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Email Only t/12345678 e/a@b.com
+```
+
+**Expected output**
+
+```text
+Successfully added: Email Only (12345678) to contacts
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Bare t/00123456
+```
+
+**Expected output**
+
+```text
+Successfully added: Bare (00123456) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-c n/Bare t/00123456
+```
+
+**Expected output**
+
+```text
+Successfully added: Bare (00123456) to contacts
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+3. Email Only (12345678, a@b.com)
+4. Bare (00123456)
+5. Bare (00123456)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-c 4
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Bare
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+3. Email Only (12345678, a@b.com)
+4. Bare (00123456)
+--------------------------------------------------------------------
+```
+
+### UI-CONTACT-ADD-002: Reject malformed contact commands without adding entries
+
+**Aim:** Verify missing, reordered, repeated, unknown, and embedded prefixes, and case-sensitive command words.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Alex
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c t/91234567 n/Alex
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 r/Role e/a@b.com
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 x/1
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-c extra n/Alex t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 r/Repairs a/b
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+```
+
+#### Step 10
+
+**Input**
+
+```text
+ADD-C n/Alex t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 11
+
+**Input**
+
+```text
+add-contact n/Alex t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+### UI-CONTACT-ADD-003: Validate contact values without changing state
+
+**Aim:** Verify nonblank values, digit-only phones, email validation, and unchanged state after rejected additions.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/ t/91234567
+```
+
+**Expected output**
+
+```text
+Contact name cannot be blank.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Alex t/
+```
+
+**Expected output**
+
+```text
+Phone cannot be blank.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Alex t/abc
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Alex t/9123 4567
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-c n/Alex t/+6591234567
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-c n/Alex t/9123-4567
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 e/
+```
+
+**Expected output**
+
+```text
+Email cannot be blank.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 e/nope
+```
+
+**Expected output**
+
+```text
+Email must be a valid address, e.g. name@example.com.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 e/a@b .com
+```
+
+**Expected output**
+
+```text
+Email must be a valid address, e.g. name@example.com.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 r/
+```
+
+**Expected output**
+
+```text
+Role cannot be blank.
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+### UI-CONTACT-LIST-001: List empty and populated contacts in insertion order
+
+**Aim:** Verify list syntax, empty output, and deterministic display independent of alphabetical order.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+list-c extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-c
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Zeta Supplier t/11111111
+```
+
+**Expected output**
+
+```text
+Successfully added: Zeta Supplier (11111111) to contacts
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Alpha Technician t/22222222 r/Repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: Alpha Technician (22222222) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Zeta Supplier (11111111)
+2. Alpha Technician (22222222) - Repairs
+--------------------------------------------------------------------
+```
+
+### UI-CONTACT-DELETE-001: Reject invalid contact deletions without changing state
+
+**Aim:** Verify single-index syntax, numeric boundaries, empty and populated list bounds, and unchanged contacts.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Contact index 1 is invalid. There are 0 contact(s).
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/First t/11111111
+```
+
+**Expected output**
+
+```text
+Successfully added: First (11111111) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-c
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-c 1 2
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c abc
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-c 0
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-c -1
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-c 1.5
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+delete-c 2147483648
+```
+
+**Expected output**
+
+```text
+Contact index must be a positive integer.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+delete-c 2
+```
+
+**Expected output**
+
+```text
+Contact index 2 is invalid. There are 1 contact(s).
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. First (11111111)
+--------------------------------------------------------------------
+```
+
+### UI-CONTACT-DELETE-002: Delete contacts and renumber the remaining entries
+
+**Aim:** Verify middle, last, and final-entry deletion without gaps or stale indices.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/First t/11111111
+```
+
+**Expected output**
+
+```text
+Successfully added: First (11111111) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Second t/22222222
+```
+
+**Expected output**
+
+```text
+Successfully added: Second (22222222) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-c n/Third t/33333333
+```
+
+**Expected output**
+
+```text
+Successfully added: Third (33333333) to contacts
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Fourth t/44444444
+```
+
+**Expected output**
+
+```text
+Successfully added: Fourth (44444444) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 2
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Second
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. First (11111111)
+2. Third (33333333)
+3. Fourth (44444444)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-c 3
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Fourth
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: First
+```
+
+#### Step 9
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Third
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Contact index 1 is invalid. There are 0 contact(s).
+```
+
+### UI-CONTACT-ISOLATION-001: Contact changes preserve inventory and preparation
+
+**Aim:** Verify supplier and technician contact operations cannot alter inventory, sessions, or preparation.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/20
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Baseline Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Technician t/91234567 r/Equipment repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: Technician (91234567) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Technician
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 20)
+--------------------------------------------------------------------
+```
+
+### UI-SESSION-LIST-003: Sort sessions by date then time then name
+
+**Aim:** Verify the chronological ordering contract, including alphabetical ties, using out-of-order additions.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/Tomorrow Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Tomorrow Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Zulu Lab d/{{TODAY}} l/Room-A s/1000 e/1100 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Zulu Lab on {{TODAY}} at Room-A from 1000 to 1100 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/alpha Lab d/{{TODAY}} l/Room-B s/1000 e/1100 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: alpha Lab on {{TODAY}} at Room-B from 1000 to 1100 for 10 attendees
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-s n/Earlier Lab d/{{TODAY}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Earlier Lab on {{TODAY}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Earlier Lab on {{TODAY}} at Room-A from 0900 to 1000 for 10 attendees
+2. alpha Lab on {{TODAY}} at Room-B from 1000 to 1100 for 10 attendees
+3. Zulu Lab on {{TODAY}} at Room-A from 1000 to 1100 for 10 attendees
+4. Tomorrow Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+```
+
+### UI-PREP-006: Keep preparation attached when an earlier session is inserted
+
+**Aim:** Verify session sorting changes indices without moving preparation between sessions.
+
+**Preconditions:** Fresh application with empty inventory, schedule, and contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-s n/Later Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 0) !! Insufficient items (Shortfall: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Earlier Lab d/{{TODAY}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Earlier Lab on {{TODAY}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Earlier Lab on {{TODAY}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+No items in preparation.
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-p s/2
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 0) !! Insufficient items (Shortfall: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: Earlier Lab
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 0) !! Insufficient items (Shortfall: 20)
+--------------------------------------------------------------------
+```
 
 <!--
 ### UI-001: Short title

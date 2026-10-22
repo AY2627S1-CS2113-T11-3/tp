@@ -45,6 +45,7 @@ class ParserHelpTest {
     private final Parser parser = new Parser();
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
+    private final ContactManager contacts = new ContactManager();
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -102,7 +103,7 @@ class ParserHelpTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions);
+        parser.handleCommand(command, inventory, sessions, contacts);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

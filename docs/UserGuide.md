@@ -262,7 +262,8 @@ Successfully added: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 f
 ### List sessions: `list-s`
 
 Displays all scheduled sessions with their indices, names, dates, locations, time ranges, and headcounts.
-Sessions are shown in insertion order, not sorted by date. No arguments are accepted.
+Sessions are sorted by date, then start time, then name alphabetically (ignoring case). No arguments are accepted.
+Adding an earlier session can change existing indices; use `list-s` before selecting a session.
 
 **Format:** `list-s`
 
@@ -511,9 +512,9 @@ These are examples of the current messages:
 | Blank item name or category | `Item name cannot be blank.` or `Category cannot be blank.` | Enter a nonblank value after the prefix. |
 | Zero, negative, non-integer, or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
 | Invalid headcount | `Headcount must be a positive integer.` | Enter a positive whole number after `p/`. |
-| Invalid date or lowercase month | `Date must be a valid date in d MMMM yyyy format.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
+| Invalid date or lowercase month | `Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
 | Past session date | `Session date cannot be before today.` | Use today's date or a future date. |
-| Invalid start or end time | `Start time must be a valid time in HHmm format.` or `End time must be a valid time in HHmm format.` | Use four digits, such as `0900`, with no colon. |
+| Invalid start or end time | `Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).` or `End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).` | Use four digits, such as `0900`, with no colon. |
 | End time at or before start time | `Start time must be earlier than end time.` | Choose a later end time on the same day. |
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
 | Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |
