@@ -43,7 +43,9 @@ class LoanLoggingTest {
     private final LoanManager loans = new LoanManager(inventory, CLOCK);
     private final List<Logger> loggers = List.of(Logger.getLogger(LoanManager.class.getName()),
             Logger.getLogger(Inventory.class.getName()), Logger.getLogger(Parser.class.getName()));
+    /** Original levels in logger order; null means the level is inherited from a parent. */
     private final ArrayList<Level> previousLevels = new ArrayList<>();
+    /** Original parent-handler flags in logger order, restored after each test. */
     private final ArrayList<Boolean> previousParentHandlers = new ArrayList<>();
     private final RecordingHandler handler = new RecordingHandler();
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -237,34 +239,46 @@ class LoanLoggingTest {
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
-    /** Creates a loan with recognizable borrower details to detect accidental logging. */
+    /**
+     * Creates a loan with recognizable borrower details to detect accidental logging.
+     */
     private Loan createLoan(String name, String category, int quantity) throws CommandException {
         return new Loan(name, category, quantity,
                 new Contact(BORROWER_NAME, BORROWER_PHONE, null, null), "30 October 2099");
     }
 
-    /** Selects diagnostic records by the component that emitted them. */
+    /**
+     * Selects diagnostic records by the component that emitted them.
+     */
     private List<LogRecord> recordsFrom(Class<?> source) {
         return handler.records.stream().filter(record -> record.getLoggerName().equals(source.getName())).toList();
     }
 
-    /** Returns only the messages from one component, preserving emission order. */
+    /**
+     * Returns only the messages from one component, preserving emission order.
+     */
     private List<String> messagesFrom(Class<?> source) {
         return recordsFrom(source).stream().map(LogRecord::getMessage).toList();
     }
 
-    /** Normalizes platform line separators for exact user-output comparisons. */
+    /**
+     * Normalizes platform line separators for exact user-output comparisons.
+     */
     private String normalizedOutput() {
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 
-    /** Checks messages and exception chains without confusing stdout confirmations with diagnostics. */
+    /**
+     * Checks messages and exception chains without confusing stdout confirmations with diagnostics.
+     */
     private void assertNoBorrowerDetails(String text) {
         assertFalse(text.contains(BORROWER_NAME));
         assertFalse(text.contains(BORROWER_PHONE));
     }
 
-    /** Collects log records without writing diagnostics to the console. */
+    /**
+     * Collects log records without writing diagnostics to the console.
+     */
     private static class RecordingHandler extends Handler {
         private final ArrayList<LogRecord> records = new ArrayList<>();
 
@@ -286,7 +300,9 @@ class LoanLoggingTest {
         }
     }
 
-    /** Simulates an unexpected runtime failure before stock is modified. */
+    /**
+     * Simulates an unexpected runtime failure before stock is modified.
+     */
     private static class FailingLendingInventory extends Inventory {
         private final RuntimeException failure;
 

@@ -49,13 +49,17 @@ class LoanAssertionsTest {
         }
     }
 
-    /** Creates a valid request whose quantity makes missing stock changes observable. */
+    /**
+     * Creates a valid request whose quantity makes missing stock changes observable.
+     */
     private Loan createLoan() throws CommandException {
         return new Loan("Wire", "Components", 3,
                 new Contact("Alex", "91234567", null, null), "30 October 2099");
     }
 
-    /** Simulates an internal bug that silently skips stock deduction. */
+    /**
+     * Simulates an internal bug that silently skips stock deduction.
+     */
     private static class NonDeductingInventory extends Inventory {
         @Override
         void lendItem(String name, String category, int quantity) {
@@ -63,7 +67,9 @@ class LoanAssertionsTest {
         }
     }
 
-    /** Simulates an internal bug that silently skips stock restoration. */
+    /**
+     * Simulates an internal bug that silently skips stock restoration.
+     */
     private static class NonRestoringInventory extends Inventory {
         @Override
         void restoreStock(String name, String category, int quantity) {

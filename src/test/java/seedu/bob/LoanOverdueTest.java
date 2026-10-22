@@ -177,17 +177,23 @@ class LoanOverdueTest {
         assertEquals(20, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
-    /** Creates a one-unit loan with a fixed borrower for date behavior tests. */
+    /**
+     * Creates a one-unit loan with a fixed borrower for date behavior tests.
+     */
     private Loan createLoan(String date) throws CommandException {
         return new Loan("Wire", "Components", 1, new Contact("Alex", "91234567", null, null), date);
     }
 
-    /** Returns captured stdout using the same newline convention as the expected fixtures. */
+    /**
+     * Returns captured stdout using the same newline convention as the expected fixtures.
+     */
     private String response() {
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 
-    /** Builds an expected list frame around independently specified rows. */
+    /**
+     * Builds an expected list frame around independently specified rows.
+     */
     private String display(String title, String... rows) {
         return Ui.DIVIDER + "\n" + title + "\n" + Ui.DIVIDER + "\n"
                 + String.join("\n", rows) + "\n" + Ui.DIVIDER + "\n";
@@ -197,25 +203,37 @@ class LoanOverdueTest {
      * Provides a controllable instant, shared by zone views, without changing system time.
      */
     private static class AdjustableClock extends Clock {
+        /** Shared by every zone view so advancing the test clock updates all views together. */
         private final AtomicReference<Instant> currentInstant;
         private final ZoneId zone;
 
-        /** Creates a clock whose time can be advanced by the test. */
+        /**
+         * Creates a clock whose time can be advanced by the test.
+         */
         AdjustableClock(Instant instant, ZoneId zone) {
             this(new AtomicReference<>(instant), zone);
         }
 
-        /** Creates a timezone view over the same controllable instant. */
+        /**
+         * Creates a timezone view over the same controllable instant.
+         */
         private AdjustableClock(AtomicReference<Instant> currentInstant, ZoneId zone) {
             this.currentInstant = currentInstant;
             this.zone = zone;
         }
 
+        /**
+         * Sets the controllable instant for this clock and every zone view sharing it.
+         *
+         * @param instant Instant used by subsequent clock reads.
+         */
         void setInstant(Instant instant) {
             currentInstant.set(instant);
         }
 
-        /** Advances every timezone view by the supplied duration. */
+        /**
+         * Advances every timezone view by the supplied duration.
+         */
         void advance(Duration duration) {
             currentInstant.updateAndGet(instant -> instant.plus(duration));
         }
@@ -225,6 +243,12 @@ class LoanOverdueTest {
             return zone;
         }
 
+        /**
+         * Returns a clock for the requested zone that shares this clock's controllable instant.
+         *
+         * @param zone Zone used to interpret the shared instant.
+         * @return Another view of the same controllable time.
+         */
         @Override
         public Clock withZone(ZoneId zone) {
             return new AdjustableClock(currentInstant, zone);

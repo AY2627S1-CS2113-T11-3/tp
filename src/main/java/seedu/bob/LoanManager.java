@@ -18,6 +18,7 @@ public class LoanManager {
     /** Records loan diagnostics without adding messages to the normal console workflow. */
     private static final Logger LOGGER = Logger.getLogger(LoanManager.class.getName());
 
+    /** Shared available stock; each active loan retains an independent item snapshot. */
     private final Inventory inventory;
     /** Supplies the local date at each operation so overdue state is never cached across days. */
     private final Clock clock;
@@ -109,6 +110,7 @@ public class LoanManager {
     /**
      * Restores stock before removing a loan so failed returns and corrections preserve both lists.
      *
+     * @param userIndex One-based position in the full active-loan list, including non-overdue loans.
      * @return Removed loan, for the operation-specific confirmation.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
@@ -133,7 +135,8 @@ public class LoanManager {
     }
 
     /**
-     * Checks active record invariants without imposing uniqueness or future-date restrictions.
+     * Returns whether dependencies and active records satisfy the manager's invariants.
+     * Duplicate records and past due dates remain valid.
      */
     private boolean hasValidState() {
         if (inventory == null || clock == null) {
@@ -173,6 +176,8 @@ public class LoanManager {
 
     /**
      * Displays loans against one current local date without mutating stock or loan records.
+     *
+     * @param isOverdueOnly Whether to exclude current loans while preserving full-list positions.
      */
     private void printLoans(boolean isOverdueOnly) {
         assert hasValidState() : "Listing requires valid loan records";

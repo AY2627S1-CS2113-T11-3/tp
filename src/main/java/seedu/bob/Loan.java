@@ -65,7 +65,7 @@ public class Loan {
     }
 
     /**
-     * Checks the immutable record invariants for constructor and manager assertions.
+     * Returns whether the immutable record satisfies its item, borrower, and due-date invariants.
      * Past dates and records matching another loan are deliberately valid.
      */
     boolean hasValidState() {
@@ -75,22 +75,47 @@ public class Loan {
                 && borrower.getPhone() != null && borrower.getPhone().matches("\\d+") && dueDate != null;
     }
 
+    /**
+     * Returns the recorded item name, preserving the spelling supplied when the loan was created.
+     *
+     * @return Loaned item name.
+     */
     public String getName() {
         return item.getName();
     }
 
+    /**
+     * Returns the recorded item category, independently of later inventory changes.
+     *
+     * @return Loaned item category.
+     */
     public String getCategory() {
         return item.getCategory();
     }
 
+    /**
+     * Returns the full quantity recorded for this loan; partial returns are not supported.
+     *
+     * @return Total units in the loan record.
+     */
     public int getQuantity() {
         return item.getQuantity();
     }
 
+    /**
+     * Returns borrower details stored with this loan, independently of the supplier contact list.
+     *
+     * @return Borrower contact stored with the loan.
+     */
     public Contact getBorrower() {
         return borrower;
     }
 
+    /**
+     * Returns the last calendar date on which this loan is considered on time.
+     *
+     * @return Inclusive due date.
+     */
     public LocalDate getDueDate() {
         return dueDate;
     }
