@@ -8,7 +8,7 @@ import seedu.bob.exception.CommandException;
 import seedu.bob.exception.InvalidLoanIndexException;
 
 /**
- * Owns active loans in insertion order and coordinates inventory deductions and corrections.
+ * Owns active loans in insertion order and coordinates inventory deductions, corrections, and full returns.
  */
 public class LoanManager {
 
@@ -49,6 +49,28 @@ public class LoanManager {
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
     public void deleteLoan(int userIndex) throws CommandException {
+        Loan loan = removeLoanAndRestoreStock(userIndex);
+        System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
+    }
+
+    /**
+     * Records a full return by restoring all units and removing the active loan without retaining history.
+     *
+     * @param userIndex One-based loan position from the latest loan list.
+     * @throws CommandException If the index is invalid or stock restoration would overflow.
+     */
+    public void returnLoan(int userIndex) throws CommandException {
+        Loan loan = removeLoanAndRestoreStock(userIndex);
+        System.out.println("Successfully returned loan: " + loan + ". Inventory restored.");
+    }
+
+    /**
+     * Restores stock before removing a loan so failed returns and corrections preserve both lists.
+     *
+     * @return Removed loan, for the operation-specific confirmation.
+     * @throws CommandException If the index is invalid or stock restoration would overflow.
+     */
+    private Loan removeLoanAndRestoreStock(int userIndex) throws CommandException {
         if (userIndex <= 0 || userIndex > loans.size()) {
             throw new InvalidLoanIndexException(userIndex, loans.size());
         }
@@ -56,7 +78,7 @@ public class LoanManager {
         Loan loan = loans.get(index);
         inventory.restoreStock(loan.getName(), loan.getCategory(), loan.getQuantity());
         loans.remove(index);
-        System.out.println("Successfully deleted incorrect loan: " + loan + ". Inventory restored.");
+        return loan;
     }
 
     /**

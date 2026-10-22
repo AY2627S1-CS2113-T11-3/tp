@@ -46,6 +46,7 @@ public class Parser {
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
+    private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Accepted required and optional contact prefixes, in command order. */
@@ -67,7 +68,7 @@ public class Parser {
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
      * @param contactManager ContactManager to add, remove, or display contacts.
-     * @param loanManager LoanManager to add, correct, or display loans.
+     * @param loanManager LoanManager to add, correct, return, or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
             ContactManager contactManager, LoanManager loanManager) {
@@ -176,7 +177,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
-            case "add-l", "list-l", "delete-l" -> {
+            case "add-l", "list-l", "delete-l", "return" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     handleLoan(command, arguments, loanManager);
@@ -209,12 +210,18 @@ public class Parser {
      * @throws CommandException If arguments, borrower details, date, or requested stock are invalid.
      */
     private void handleLoan(String command, String arguments, LoanManager loanManager) throws CommandException {
-        if (command.equals("delete-l")) {
+        if (command.equals("delete-l") || command.equals("return")) {
             String indexText = arguments.trim();
             if (indexText.isEmpty() || indexText.matches(".*\\s+.*")) {
-                throw new CommandFormatException(DELETE_LOAN_USAGE);
+                String usage = command.equals("return") ? RETURN_LOAN_USAGE : DELETE_LOAN_USAGE;
+                throw new CommandFormatException(usage);
             }
-            loanManager.deleteLoan(parseLoanIndex(indexText));
+            int index = parseLoanIndex(indexText);
+            if (command.equals("return")) {
+                loanManager.returnLoan(index);
+            } else {
+                loanManager.deleteLoan(index);
+            }
             return;
         }
         if (command.equals("list-l")) {

@@ -29,11 +29,12 @@ Known limitation: prefixes are detected by a shared pattern (a single letter fol
 word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.
 
 
-### Loan tracking (phases 1 and 2)
+### Loan tracking (phases 1 through 3)
 
 `Bob` creates one `LoanManager` bound to its `Inventory` and passes it to `Parser.handleCommand`.
 `add-l` uses the existing fixed-order prefix extraction and positive quantity parsing; `list-l` accepts
-no arguments. `delete-l` accepts one plain positive index, like `delete-c`. `Ui` documents the commands in help.
+no arguments. `delete-l` and `return` accept one plain positive index, like `delete-c`.
+`Ui` documents the commands in help.
 
 `Loan` uses composition: a private `InventoryItem` snapshot holds item details and loan quantity, and an
 immutable `Contact` holds the borrower. The item object is never exposed or shared with live stock.
@@ -47,14 +48,17 @@ items and empty categories. Preparation continues to query live available stock 
 `getAvailableQuantity` method. Missing stock or invalid input leaves all feature state unchanged.
 
 The manager stores loans in insertion order and exposes an immutable list snapshot for queries.
-`LoanManager.deleteLoan` validates the index, restores stock through `Inventory.restoreStock`, then
-removes the incorrect record and prints a correction-specific confirmation. Restoration matches
+`LoanManager.deleteLoan` and `LoanManager.returnLoan` share the private
+`removeLoanAndRestoreStock` method, which validates the index, restores stock through
+`Inventory.restoreStock`, then removes the active record. Their public methods print separate
+correction and return confirmations. No return history or partial return state is stored. Restoration matches
 case-insensitively, merges stock with checked integer bounds, or recreates missing items/categories.
-The loan is removed only after restoration succeeds, so overflow and invalid indices preserve state.
+The loan is removed only after restoration succeeds, so overflow and invalid indices preserve state
+for both corrections and returns.
 Existing inventory objects are increased through `InventoryItem.addQuantity`, keeping the positive-stock
 invariant. Remaining loan positions shift naturally with the list; no stored cross-feature index is used.
 
-Full returns, overdue behavior, history, and persistence remain later work. Past dates are accepted
+Overdue behavior, history, and persistence remain later work. Past dates are accepted
 without calculating or displaying overdue status.
 
 `LoanTest`, `LoanManagerTest`, and `ParserLoanTest` cover validation, separate records, exact output,

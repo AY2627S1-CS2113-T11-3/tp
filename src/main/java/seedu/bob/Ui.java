@@ -32,6 +32,7 @@ public class Ui {
             "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE",
             "  list-l",
             "  delete-l INDEX",
+            "  return INDEX",
             "Other",
             "  help",
             "  Bye",

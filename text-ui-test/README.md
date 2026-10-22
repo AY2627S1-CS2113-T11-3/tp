@@ -24,7 +24,9 @@ session, add stock, calculate preparation quantities, report shortages, remove
 a preparation item, and refresh shortages after stock changes. The next four commands
 record a loan, list it, refresh preparation shortages, and verify borrower isolation from
 supplier contacts, following UI-LOAN-ADD-006. Three further commands delete the incorrect
-loan, list the remaining loans, and refresh preparation availability, following UI-LOAN-DELETE-005. The final
+loan, list the remaining loans, and refresh preparation availability, following UI-LOAN-DELETE-005.
+Four more commands add another loan, record its full return, list loans, and refresh preparation,
+following UI-LOAN-RETURN-004. The final
 command is `help`, following case UI-HELP-001. The fixed future
 date, 31 December 2099, avoids a date-substitution helper. Update both files if
 that date is no longer valid. The other cases remain in the manual test plan.

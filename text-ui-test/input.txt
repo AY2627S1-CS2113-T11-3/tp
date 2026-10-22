@@ -17,5 +17,9 @@ list-c
 delete-l 1
 list-l
 list-p s/1
+add-l n/Wire c/Components q/2 b/Sam Lee t/87878787 d/31 December 2099
+return 1
+list-l
+list-p s/1
 help
 Bye

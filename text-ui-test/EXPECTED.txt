@@ -105,6 +105,23 @@ Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 1
 2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
 --------------------------------------------------------------------
 
+Successfully added loan: 2x Wire [Components] to Sam Lee (87878787), due 31 December 2099
+
+Successfully returned loan: 2x Wire [Components] to Sam Lee (87878787), due 31 December 2099. Inventory restored.
+
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 10) !! Insufficient items (Shortfall: 10)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+
 --------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------
@@ -128,6 +145,7 @@ Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
   list-l
   delete-l INDEX
+  return INDEX
 Other
   help
   Bye

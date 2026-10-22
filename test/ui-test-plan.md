@@ -69,6 +69,15 @@ item/category at the end of its insertion order using the loan spelling when no 
 Invalid indices and restoration overflow leave both loans and inventory unchanged. There is no partial
 correction. The cases below and updated help/smoke fixtures were recorded before implementation.
 
+## Phase 3 full return contract
+
+`return INDEX` records the complete return of one active loan. It restores all units, removes the active
+record, and prints a return-specific confirmation distinct from `delete-l`. It does not retain history.
+The index comes from the latest `list-l`; remaining entries are renumbered. No quantity or additional
+argument is accepted. Invalid indices and restoration overflow preserve both inventory and loans.
+Returns and corrections share the same checked stock-restoration path. Overdue behavior and persistence
+remain later work. These cases and the help/smoke output updates were recorded before implementation.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input
@@ -2352,6 +2361,7 @@ Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
   list-l
   delete-l INDEX
+  return INDEX
 Other
   help
   Bye
@@ -2392,6 +2402,7 @@ Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
   list-l
   delete-l INDEX
+  return INDEX
 Other
   help
   Bye
@@ -5949,6 +5960,1032 @@ list-l
 Loans
 --------------------------------------------------------------------
 No active loans.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-RETURN-001: Reject invalid and partial return commands
+
+**Aim:** Verify one positive plain index is required, partial/batch returns are rejected, and invalid requests preserve all state.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions.
+
+#### Step 1
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Loan index 1 is invalid. There are 0 active loan(s).
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+return
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: return INDEX
+```
+
+#### Step 5
+
+**Input**
+
+```text
+return 1 extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: return INDEX
+```
+
+#### Step 6
+
+**Input**
+
+```text
+return 1 q/1
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: return INDEX
+```
+
+#### Step 7
+
+**Input**
+
+```text
+return 1 2
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: return INDEX
+```
+
+#### Step 8
+
+**Input**
+
+```text
+return 0
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+return -1
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+return abc
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 11
+
+**Input**
+
+```text
+return 1.5
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 12
+
+**Input**
+
+```text
+return 2147483648
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 13
+
+**Input**
+
+```text
+return i/1
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 14
+
+**Input**
+
+```text
+return 2
+```
+
+**Expected output**
+
+```text
+Loan index 2 is invalid. There are 1 active loan(s).
+```
+
+#### Step 15
+
+**Input**
+
+```text
+RETURN 1
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 16
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Wire [Components] to Alex (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+#### Step 17
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 8)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-RETURN-002: Return complete loans and mix returns with corrections
+
+**Aim:** Verify independent records, shifted indices, distinct confirmations, and prevention of double restoration.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/3 b/Sam t/91234567 d/31 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Wire [Components] to Sam (91234567), due 31 October 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 5
+
+**Input**
+
+```text
+return 2
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 3x Wire [Components] to Sam (91234567), due 31 October 2099. Inventory restored.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Wire [Components] to Alex (91234567), due 30 October 2099
+2. 1x Wire [Components] to Alex (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Alex (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 1x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Loan index 1 is invalid. There are 0 active loan(s).
+```
+
+#### Step 13
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Loan index 1 is invalid. There are 0 active loan(s).
+```
+
+#### Step 14
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-RETURN-003: Restore depleted and replenished inventory on return
+
+**Aim:** Verify whole-loan returns recreate missing categories and merge case-insensitively without changing other categories.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 2x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 2)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/wire c/COMPONENTS q/2 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x wire [COMPONENTS] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Wire to the inventory
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/4
+```
+
+**Expected output**
+
+```text
+Successfully added: 4x Wire to the inventory
+```
+
+#### Step 8
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x wire [COMPONENTS] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 7)
+Spares
+1: Wire (Qty: 4)
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-RETURN-004: Refresh preparation after a full return and preserve contacts
+
+**Aim:** Verify preparation shortages disappear after a return and supplier contacts, sessions, and repeated listing remain consistent.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Return Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Return Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Return Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Alex t/91234567 r/Supplier
+```
+
+**Expected output**
+
+```text
+Successfully added: Alex (91234567) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/3 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Return Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 7) !! Insufficient items (Shortfall: 3)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 3x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Return Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Alex (91234567) - Supplier
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Return Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 13
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-RETURN-005: Preserve active loans when return restoration would overflow
+
+**Aim:** Verify a failed return changes neither stock nor loans and can be retried after inventory is reduced.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 2x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/2147483647
+```
+
+**Expected output**
+
+```text
+Successfully added: 2147483647x Wire to the inventory
+```
+
+#### Step 4
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Wire [Components] to Alex (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 2147483647)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/2
+```
+
+**Expected output**
+
+```text
+Successfully removed: 2x Wire from the inventory
+```
+
+#### Step 8
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 2147483647)
 --------------------------------------------------------------------
 ```
 

@@ -130,6 +130,7 @@ Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
   list-l
   delete-l INDEX
+  return INDEX
 Other
   help
   Bye
@@ -560,7 +561,7 @@ An empty list displays `No active loans.` between the heading and closing divide
 
 Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
 from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
-This command corrects an entry; the separate command for recording actual returns is not available yet.
+This command corrects an entry. Use `return` when the borrower has actually returned the items.
 Partial deletion is not supported.
 
 Continuing the Multimeter example, enter:
@@ -584,8 +585,40 @@ loans are unaffected. An invalid index leaves everything unchanged.
 If re-added stock makes restoration exceed 2,147,483,647 units, Bob rejects the deletion and retains both
 the loan and stock unchanged. Check the inventory quantities before retrying the correction.
 
-Returns, overdue markers, overdue-only listing, and warnings for past due dates are not available in this
-version. All loans disappear when Bob exits; persistence is planned for V2.0b.
+### Record a full return: `return`
+
+**Format:** `return INDEX`
+
+Records the return of every item in one loan, restores its full quantity to inventory, and removes it
+from the active loan list. Use the index from the latest `list-l`. Remaining loans are renumbered, so
+list again before choosing another loan. The confirmation identifies a return rather than a correction.
+
+With the Multimeter loan from the add example still active, enter:
+
+```text
+return 1
+```
+
+Expected output:
+
+```text
+Successfully returned loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+Inventory is back to 5 Multimeters, and `list-l` shows no active loans if this was the only loan.
+Preparation availability reflects the restored stock when next displayed. Returning the loan does not
+change supplier contacts, sessions, or other loans.
+
+- Returns must cover the whole loan. Do not supply a quantity or additional loan index.
+- Restoration merges matching stock without regard to capitalization, or recreates missing items/categories,
+  following the same inventory rules as correcting a loan.
+- Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
+- A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
+  always check `list-l` before the next operation.
+- Returned records are removed immediately; return history is not retained in this version.
+
+Overdue markers, overdue-only listing, and warnings for past due dates are not available in this version.
+All loans disappear when Bob exits; persistence is planned for V2.0b.
 
 ## Exiting Bob
 
@@ -686,4 +719,5 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans | `list-l` |
 | Delete an incorrect loan and restore stock | `delete-l INDEX` |
+| Record a full return and restore stock | `return INDEX` |
 | Exit and discard data | `Bye` |

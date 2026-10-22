@@ -117,6 +117,35 @@ class ParserLoanTest {
         assertEquals(1, loans.getLoans().size());
     }
 
+    @Test
+    void returnLoan_validCommand_restoresFullStockAndKeepsSupplierContacts() {
+        execute("add-c n/Alex t/123 r/Supplier");
+        execute("add-l n/Red LED c/Lab Components q/2 b/Alex t/123 d/30 October 2099");
+
+        assertEquals("Successfully returned loan: 2x Red LED [Lab Components] to Alex (123),"
+                + " due 30 October 2099. Inventory restored.\n", execute("return 1"));
+        assertEquals(10, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+        assertTrue(loans.getLoans().isEmpty());
+        assertTrue(execute("list-c").contains("1. Alex (123) - Supplier"));
+        assertEquals("Loan index 1 is invalid. There are 0 active loan(s).\n", execute("return 1"));
+        assertEquals(10, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+    }
+
+    @Test
+    void returnLoan_invalidOrPartialRequest_preservesEntireLoan() {
+        execute("add-l n/Red LED c/Lab Components q/2 b/Alex t/123 d/30 October 2099");
+        for (String command : new String[] {"return", "return 1 extra", "return 1 q/1", "return 1 2"}) {
+            assertEquals("Invalid format. Use: return INDEX\n", execute(command));
+        }
+        for (String index : new String[] {"0", "-1", "abc", "1.5", "2147483648", "i/1"}) {
+            assertEquals("Loan index must be a positive integer.\n", execute("return " + index));
+        }
+        assertEquals("Loan index 2 is invalid. There are 1 active loan(s).\n", execute("return 2"));
+        assertEquals("Invalid command\n", execute("RETURN 1"));
+        assertEquals(8, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+        assertEquals(2, loans.getLoans().get(0).getQuantity());
+    }
+
     /**
      * Executes one command and captures only its stdout, with normalized newlines.
      */
