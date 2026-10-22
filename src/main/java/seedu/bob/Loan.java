@@ -61,6 +61,18 @@ public class Loan {
             throw new LoanException(INVALID_DUE_DATE_MESSAGE, e);
         }
         item = new InventoryItem(name, category, quantity);
+        assert hasValidState() : "A constructed loan must contain valid item, borrower, and date details";
+    }
+
+    /**
+     * Checks the immutable record invariants for constructor and manager assertions.
+     * Past dates and records matching another loan are deliberately valid.
+     */
+    boolean hasValidState() {
+        return item != null && item.getName() != null && !item.getName().isBlank()
+                && item.getCategory() != null && !item.getCategory().isBlank() && item.getQuantity() > 0
+                && borrower != null && borrower.getName() != null && !borrower.getName().isBlank()
+                && borrower.getPhone() != null && borrower.getPhone().matches("\\d+") && dueDate != null;
     }
 
     public String getName() {
@@ -92,6 +104,7 @@ public class Loan {
      * @throws NullPointerException If today is null.
      */
     public boolean isOverdue(LocalDate today) {
+        assert hasValidState() : "Overdue checks require a valid loan record";
         return dueDate.isBefore(Objects.requireNonNull(today, "Today's date must not be null"));
     }
 

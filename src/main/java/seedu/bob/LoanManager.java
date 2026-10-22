@@ -40,6 +40,7 @@ public class LoanManager {
     public LoanManager(Inventory inventory, Clock clock) {
         this.inventory = Objects.requireNonNull(inventory, "Loan inventory must not be null");
         this.clock = Objects.requireNonNull(clock, "Loan clock must not be null");
+        assert hasValidState() : "A new loan manager must have valid dependencies and an empty loan list";
     }
 
     /**
@@ -52,9 +53,17 @@ public class LoanManager {
      */
     public void addLoan(Loan loan) throws CommandException {
         Objects.requireNonNull(loan, "Loan to add must not be null");
+        assert hasValidState() && loan.hasValidState() : "Adding a loan requires valid records";
         LocalDate today = LocalDate.now(clock);
+        int previousCount = loans.size();
+        int previousStock = inventory.getAvailableQuantity(loan.getName(), loan.getCategory());
         inventory.lendItem(loan.getName(), loan.getCategory(), loan.getQuantity());
+        assert inventory.getAvailableQuantity(loan.getName(), loan.getCategory())
+                == (long) previousStock - loan.getQuantity() : "Lending must deduct the exact loan quantity";
         loans.add(loan);
+        assert loans.size() == previousCount + 1 && loans.get(previousCount) == loan
+                : "Lending must append exactly one loan";
+        assert hasValidState() : "Loan records must remain valid after addition";
         System.out.println("Successfully added loan: " + loan);
         if (loan.isOverdue(today)) {
             System.out.println("Warning: this loan is already overdue.");
@@ -91,14 +100,37 @@ public class LoanManager {
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
     private Loan removeLoanAndRestoreStock(int userIndex) throws CommandException {
+        assert hasValidState() : "Removing a loan requires valid manager state";
         if (userIndex <= 0 || userIndex > loans.size()) {
             throw new InvalidLoanIndexException(userIndex, loans.size());
         }
         int index = userIndex - 1;
         Loan loan = loans.get(index);
+        int previousCount = loans.size();
+        int previousStock = inventory.getAvailableQuantity(loan.getName(), loan.getCategory());
         inventory.restoreStock(loan.getName(), loan.getCategory(), loan.getQuantity());
-        loans.remove(index);
+        assert inventory.getAvailableQuantity(loan.getName(), loan.getCategory())
+                == (long) previousStock + loan.getQuantity() : "Removal must restore the exact loan quantity";
+        Loan removedLoan = loans.remove(index);
+        assert removedLoan == loan && loans.size() == previousCount - 1
+                : "Removal must delete exactly the selected loan";
+        assert hasValidState() : "Loan records must remain valid after removal";
         return loan;
+    }
+
+    /**
+     * Checks active record invariants without imposing uniqueness or future-date restrictions.
+     */
+    private boolean hasValidState() {
+        if (inventory == null || clock == null) {
+            return false;
+        }
+        for (Loan loan : loans) {
+            if (loan == null || !loan.hasValidState()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -107,6 +139,7 @@ public class LoanManager {
      * @return Active loan records.
      */
     public List<Loan> getLoans() {
+        assert hasValidState() : "Loan snapshots require valid manager state";
         return List.copyOf(loans);
     }
 
@@ -128,6 +161,7 @@ public class LoanManager {
      * Displays loans against one current local date without mutating stock or loan records.
      */
     private void printLoans(boolean isOverdueOnly) {
+        assert hasValidState() : "Listing requires valid loan records";
         LocalDate today = LocalDate.now(clock);
         System.out.println(Ui.DIVIDER);
         System.out.println(isOverdueOnly ? "Overdue loans" : "Loans");

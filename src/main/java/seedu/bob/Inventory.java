@@ -155,8 +155,13 @@ public class Inventory {
      * Both manual deletion and lending use this path to remove depleted items and categories consistently.
      */
     private void deductQuantity(String storedCategory, int index, int quantity) {
+        assert hasValidState() : "Stock deduction requires valid inventory";
         ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        assert itemsInCategory != null && index >= 0 && index < itemsInCategory.size()
+                : "Stock deduction requires an existing category and valid item position";
         InventoryItem item = itemsInCategory.get(index);
+        assert quantity > 0 && quantity <= item.getQuantity()
+                : "Stock deduction requires a validated positive quantity within available stock";
         int remainingQuantity = item.getQuantity() - quantity;
         assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {

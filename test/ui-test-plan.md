@@ -99,6 +99,16 @@ borrower, stock, and feature-isolation cases remain mandatory regression coverag
 Unit tests verify exception causes and unchanged state, which stdout comparisons cannot inspect.
 Expected outputs are recorded before implementation and before running the affected cases.
 
+## Defensive programming: phase 2 assertion contract
+
+Assertions check loan invariants and exact stock/list-size changes during additions, corrections, and
+returns. Private deduction helpers assert their already-validated preconditions. Expected user errors
+still use checked exceptions with assertions disabled. Duplicate loans and past due dates remain valid.
+After this phase, run the full plan normally and again with `java -ea -jar build/libs/duke.jar`.
+Both runs must produce the same expected stdout. Unit tests use faulty
+inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
+The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/duke.jar`.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input

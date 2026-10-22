@@ -80,6 +80,11 @@ Loan validation uses the existing checked exception hierarchy. Invalid loan date
 their original parsing causes for debugging while preserving the existing user-facing messages. The loan stock helpers
 also validate item names, categories, and positive quantities before modifying inventory, even when called directly.
 
+Loan assertions check valid stored records and the exact inventory quantity and active-list size changes for successful
+operations. Stock restoration is checked before removing a loan. Assertions identify internal programming errors;
+expected invalid commands are always handled by exceptions. Assertion failures are not caught as recoverable user errors.
+Use `java -ea -jar build/libs/duke.jar` for debugging; Gradle tests enable assertions, while normal launch is unchanged.
+
 ## Product scope
 ### Target user profile
 
