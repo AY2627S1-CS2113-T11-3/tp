@@ -16,7 +16,14 @@ public class SessionManager {
 
     private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
     private static final int INDEX_OFFSET = 1;
+    /** Keeps chronological display order, which also defines one-based session positions. */
     private final ArrayList<Session> sessions = new ArrayList<>();
+
+    /**
+     * Creates an empty schedule whose sessions are sorted when added.
+     */
+    public SessionManager() {
+    }
 
     /**
      * Adds a session to the schedule, sorts it chronologically, and prints a confirmation.
