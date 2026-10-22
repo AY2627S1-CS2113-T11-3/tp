@@ -1,6 +1,7 @@
 package seedu.bob;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -17,7 +18,7 @@ public class SessionManager {
     private final ArrayList<Session> sessions = new ArrayList<>();
 
     /**
-     * Adds a session to the schedule and prints a confirmation.
+     * Adds a session to the schedule, sorts it chronologically, and prints a confirmation.
      *
      * @param session Session to add.
      * @throws NullPointerException If {@code session} is {@code null}.
@@ -33,9 +34,12 @@ public class SessionManager {
                 throw new SessionConflictException(existingSession.toConflictMessage());
             }
         }
+
         sessions.add(session);
+        Collections.sort(sessions);
+
         assert hasValidState() : "Schedule must remain conflict-free after addition";
-        LOGGER.info("Session successfully added to schedule.");
+        LOGGER.info("Session successfully added to schedule and sorted chronologically.");
         System.out.println("Successfully added: " + session.toString());
     }
 

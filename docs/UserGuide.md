@@ -10,6 +10,7 @@ them with the inventory.
 
 - [Quick start](#quick-start)
 - [Command format](#command-format)
+- [Viewing help](#viewing-help)
 - [Inventory management](#inventory-management)
 - [Lab session scheduling](#lab-session-scheduling)
 - [Lab session preparation](#lab-session-preparation)
@@ -88,6 +89,48 @@ them with the inventory.
   **total units** to remove for `delete-p`.
 
 The examples below show command responses without the extra blank line Bob prints after each command.
+
+## Viewing help
+
+### List all commands: `help`
+
+Displays every command with its format, grouped by feature. No arguments are accepted.
+
+**Format:** `help`
+
+```text
+help
+```
+
+Expected output:
+
+```text
+--------------------------------------------------------------------
+Available commands
+--------------------------------------------------------------------
+Inventory
+  add-i n/NAME c/CATEGORY [q/QUANTITY]
+  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
+  list-i
+Lab sessions
+  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+  delete-s INDEX
+  list-s
+Lab preparation
+  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+  list-p s/SESSION_INDEX
+Contacts
+  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+  delete-c INDEX
+  list-c
+Other
+  help
+  Bye
+--------------------------------------------------------------------
+```
+
+See the sections below for what each command does and example outputs.
 
 ## Inventory management
 
@@ -462,7 +505,8 @@ These are examples of the current messages:
 
 | Situation | Example message | What to do |
 | --- | --- | --- |
-| Unknown command, including `help` or `todo` | `Invalid command` | Use a command from the summary below, in lowercase. |
+| Unknown command, such as `todo` | `Invalid command` | Use `help` or the summary below to find the right command. |
+| `help` with extra text | `Invalid format. Use: help` | Enter `help` on its own. |
 | Missing required `add-p` arguments | `Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]` | Supply the session, item, and category in that order. |
 | Blank item name or category | `Item name cannot be blank.` or `Category cannot be blank.` | Enter a nonblank value after the prefix. |
 | Zero, negative, non-integer, or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
@@ -489,7 +533,7 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 ## Current limitations
 
 - There is no saving, loading, export, or recovery after exit. All data is held in memory.
-- `help`, `todo`, and `done` are not supported commands. Consult this guide for syntax and use `Bye` to exit.
+- `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
   have sufficient stock even if there is not enough to supply both at once.
@@ -528,6 +572,7 @@ Not in the current version. Bob has no save or import function; a new launch sta
 
 | Action | Command format |
 | --- | --- |
+| View all commands | `help` |
 | Add an inventory item | `add-i n/NAME c/CATEGORY [q/QUANTITY]` |
 | Remove inventory units | `delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY` |
 | List inventory | `list-i` |

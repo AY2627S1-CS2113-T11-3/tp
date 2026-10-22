@@ -16,7 +16,7 @@ import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses inventory, scheduling, session preparation, and contact commands and dispatches them.
+ * Parses help, inventory, scheduling, and session preparation commands and dispatches them.
  */
 public class Parser {
 
@@ -38,17 +38,7 @@ public class Parser {
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
-    private static final String ADD_CONTACT_USAGE =
-            "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
-    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
-    private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
-
-    /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
-    private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
-            List.of("n", "t"),
-            List.of("n", "t", "e"),
-            List.of("n", "t", "r"),
-            List.of("n", "t", "e", "r"));
+    private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
@@ -130,6 +120,14 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            case "help" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    showHelp(arguments);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
             case "add-p", "delete-p", "list-p" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
@@ -166,6 +164,19 @@ public class Parser {
                 System.out.println("Invalid command");
             }
         }
+    }
+
+    /**
+     * Validates and executes a help command.
+     *
+     * @param arguments Text following the {@code help} command word.
+     * @throws CommandFormatException If any arguments are supplied.
+     */
+    private void showHelp(String arguments) throws CommandFormatException {
+        if (!arguments.isBlank()) {
+            throw new CommandFormatException(HELP_USAGE);
+        }
+        System.out.println(Ui.HELP_MESSAGE);
     }
 
     /**
