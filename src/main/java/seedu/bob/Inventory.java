@@ -13,6 +13,8 @@ import seedu.bob.exception.InvalidQuantityException;
 
 /**
  * Stores inventory items grouped by category and displays inventory changes.
+ *
+ * @author Lokwx
  */
 public class Inventory {
 
@@ -175,6 +177,26 @@ public class Inventory {
             }
         }
         return 0;
+    }
+
+    /**
+     * Returns current stock for an item name across all categories.
+     * Matching is case-insensitive and does not reserve or remove stock.
+     *
+     * @param name Item name to look up.
+     * @return Total available quantity, or zero if the item is absent from inventory.
+     */
+    public int getTotalAvailableQuantity(String name) {
+        int totalQuantity = 0;
+        // Requests name an item but not a category, so stock is combined across every category.
+        for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
+            for (InventoryItem item : itemsInCategory) {
+                if (item.getName().equalsIgnoreCase(name)) {
+                    totalQuantity += item.getQuantity();
+                }
+            }
+        }
+        return totalQuantity;
     }
 
     /**
