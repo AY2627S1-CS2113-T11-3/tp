@@ -5,6 +5,7 @@ package seedu.bob;
  */
 public class Ui {
 
+    /** Separates headings, command output, and list sections in the console. */
     public static final String DIVIDER = "--------------------------------------------------------------------";
 
     /** Every command and its format, grouped by feature, as displayed by {@code help}. */
@@ -37,4 +38,10 @@ public class Ui {
             "  help",
             "  Bye",
             DIVIDER);
+
+    /**
+     * Creates an instance; display constants can also be accessed directly through the class.
+     */
+    public Ui() {
+    }
 }

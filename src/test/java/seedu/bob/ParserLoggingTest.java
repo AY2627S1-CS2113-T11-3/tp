@@ -28,7 +28,7 @@ class ParserLoggingTest {
         Logger logger = Logger.getLogger(Parser.class.getName());
         RecordingHandler handler = new RecordingHandler();
         Level originalLevel = logger.getLevel();
-        boolean originallyUsesParentHandlers = logger.getUseParentHandlers();
+        boolean wasUsingParentHandlers = logger.getUseParentHandlers();
         PrintStream originalOutput = System.out;
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
@@ -44,7 +44,7 @@ class ParserLoggingTest {
             System.setOut(originalOutput);
             logger.removeHandler(handler);
             logger.setLevel(originalLevel);
-            logger.setUseParentHandlers(originallyUsesParentHandlers);
+            logger.setUseParentHandlers(wasUsingParentHandlers);
         }
 
         assertEquals(EXPECTED_MESSAGE, output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"));
@@ -91,6 +91,9 @@ class ParserLoggingTest {
             // No resources to close.
         }
 
+        /**
+         * Returns the most recently captured log record for level and cause assertions.
+         */
         LogRecord getRecord() {
             return record;
         }

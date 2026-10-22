@@ -63,6 +63,12 @@ public class Parser {
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
+     * Creates a parser that dispatches commands to the managers supplied for each invocation.
+     */
+    public Parser() {
+    }
+
+    /**
      * Executes an inventory, scheduling, preparation, contact, or loan command, or prints a message for an
      * unknown command. Expected user errors are displayed without ending the application. Unexpected
      * runtime failures are logged and replaced with a safe user-facing message.
@@ -211,7 +217,10 @@ public class Parser {
     /**
      * Parses loan commands, validating input before the manager changes loans or stock.
      *
-     * @throws CommandException If arguments, borrower details, date, or requested stock are invalid.
+     * @param command Supported loan command word.
+     * @param arguments Text following the command word.
+     * @param loanManager Active loans and their shared inventory.
+     * @throws CommandException If syntax, borrower details, date, stock, or a loan index is invalid.
      */
     private void handleLoan(String command, String arguments, LoanManager loanManager) throws CommandException {
         if (command.equals("delete-l") || command.equals("return")) {
@@ -376,10 +385,14 @@ public class Parser {
     /**
      * Dispatches a preparation command and displays the resulting requirements against current stock.
      *
+     * @param command Supported preparation command word.
+     * @param arguments Text following the command word.
+     * @param inventory Available stock used to calculate shortages.
+     * @param sessionManager Schedule containing the selected session and its preparation.
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handlePreparation(String command, String arguments, Inventory inventory,
-                                   SessionManager sessionManager) throws CommandException {
+            SessionManager sessionManager) throws CommandException {
         Session session;
         switch (command) {
             case "add-p" -> session = addPreparation(arguments, sessionManager);
@@ -396,6 +409,8 @@ public class Parser {
     /**
      * Adds an item's per-person quantity to the selected session's preparation.
      *
+     * @param arguments Prefixed session, item, category, and optional per-attendee quantity.
+     * @param sessionManager Schedule containing the selected session.
      * @return Updated session.
      * @throws CommandException If arguments or the calculated requirement are invalid.
      */
@@ -416,6 +431,8 @@ public class Parser {
     /**
      * Removes a total quantity from an item in the selected session's preparation.
      *
+     * @param arguments Prefixed session index, preparation item index, and total quantity to remove.
+     * @param sessionManager Schedule containing the selected session.
      * @return Updated session.
      * @throws CommandException If the arguments or removal are invalid.
      */
@@ -431,6 +448,9 @@ public class Parser {
 
     /**
      * Displays required totals and current availability, including a shortfall for insufficient items.
+     *
+     * @param session Session whose preparation requirements are displayed.
+     * @param inventory Live inventory used to calculate availability and shortages.
      */
     private void listPreparation(Session session, Inventory inventory) {
         System.out.println(Ui.DIVIDER);
