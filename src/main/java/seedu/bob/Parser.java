@@ -482,6 +482,7 @@ public class Parser {
      */
     private void handleRequest(String command, String arguments, RequestManager requestManager,
             Inventory inventory) throws CommandException {
+        LOGGER.fine(() -> "Handling request command: " + command);
         switch (command) {
             case "add-r" -> addRequest(arguments, requestManager);
             case "delete-r" -> deleteRequest(arguments, requestManager);
@@ -505,6 +506,7 @@ public class Parser {
         }
 
         List<String> values = extractValues(arguments, expectedPrefixes, ADD_REQUEST_USAGE);
+        assert values.size() == expectedPrefixes.size() : "Request values must match the prefixes";
         int quantity = parseQuantity(values.get(2));
         requestManager.addRequest(new Request(values.get(0), values.get(1), quantity, values.get(3)));
     }
@@ -553,6 +555,7 @@ public class Parser {
         if (parts.length != 2) {
             throw new CommandFormatException(MARK_REQUEST_USAGE);
         }
+        assert parts.length == 2 : "Validated mark-r command must have an index and a status";
         requestManager.markRequest(parseRequestIndex(parts[0]), parts[1]);
     }
 
