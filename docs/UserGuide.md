@@ -4,7 +4,7 @@ Bob is a command-line application for lab technicians to manage inventory, sched
 materials for each session. Preparation uses the session's headcount to calculate required quantities and compare
 them with the inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, and preparations.
+**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations, and contacts.
 
 ## Contents
 
@@ -14,6 +14,7 @@ them with the inventory.
 - [Inventory management](#inventory-management)
 - [Lab session scheduling](#lab-session-scheduling)
 - [Lab session preparation](#lab-session-preparation)
+- [Contact management](#contact-management)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -405,6 +406,91 @@ Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 
 --------------------------------------------------------------------
 ```
 
+## Contact management
+
+Keep a list of people to call for repairs and procurement, such as facilities staff or component suppliers.
+
+### Add a contact: `add-c`
+
+Adds a contact with a name and phone number, and optionally an email and a role describing what they handle.
+
+**Format:** `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]`
+
+- `n/` and `t/` are required. `e/` and `r/` are optional, but must appear in this order if used.
+- Use `r/` to note why you would contact this person, for example what they repair or supply.
+- `PHONE` must contain digits only, with no length limit. Spaces, `+`, and `-` are not accepted, so write
+  `6561234567` rather than `+65 6123 4567`.
+- `EMAIL` is only checked loosely: it must contain an `@` and no spaces. It is not checked against real addresses.
+- A value you include must not be blank. Leave the whole prefix out instead.
+- Duplicates are allowed. Adding the same name or number twice creates two separate contacts.
+- A word in a value that is a single letter followed by `/` (for example `a/b`) is read as a new prefix, so the
+  command is rejected as invalid format. Words such as `and/or` are fine.
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+Expected output:
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+```text
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
+```
+
+Expected output:
+
+```text
+Successfully added: Component Supplier (91234567) to contacts
+```
+
+### List contacts: `list-c`
+
+Displays all contacts with their indices. No arguments are accepted.
+
+**Format:** `list-c`
+
+With the two contacts above:
+
+```text
+list-c
+```
+
+Expected output:
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+```
+
+An empty contact list displays `No contacts saved.` between the contacts heading and the closing divider.
+
+### Delete a contact: `delete-c`
+
+Deletes a contact from the list.
+
+**Format:** `delete-c INDEX`
+
+Use the index from `list-c`. Like `delete-s`, this command takes a plain number, without a prefix.
+
+```text
+delete-c 1
+```
+
+Expected output:
+
+```text
+Successfully removed contact: NUS Infrastructure
+```
+
+Remaining contacts are renumbered. Run `list-c` to check the updated indices before the next command.
+
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
@@ -430,6 +516,9 @@ These are examples of the current messages:
 | Invalid start or end time | `Start time must be a valid time in HHmm format.` or `End time must be a valid time in HHmm format.` | Use four digits, such as `0900`, with no colon. |
 | End time at or before start time | `Start time must be earlier than end time.` | Choose a later end time on the same day. |
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
+| Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |
+| Invalid phone or email | `Phone must contain digits only.` or `Email must be a valid address, e.g. name@example.com.` | Correct the value after the prefix. |
+| Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
 | Removal exceeds stock | `Cannot remove 20 Wire. Only 15 are available.` | Remove no more than the available quantity. |
@@ -493,4 +582,7 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a preparation requirement | `add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]` |
 | Remove preparation units | `delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY` |
 | List a session's preparation | `list-p s/SESSION_INDEX` |
+| Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
+| Delete a contact | `delete-c INDEX` |
+| List contacts | `list-c` |
 | Exit and discard data | `Bye` |
