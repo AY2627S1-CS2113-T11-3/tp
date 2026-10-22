@@ -2280,6 +2280,134 @@ Lab preparation: First Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 at
 --------------------------------------------------------------------
 ```
 
+### UI-HELP-001: List all commands
+
+**Aim:** Verify that help prints every command and its format, grouped by feature.
+
+**Preconditions:** None.
+
+#### Step 1
+
+**Input**
+
+```text
+help
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Available commands
+--------------------------------------------------------------------
+Inventory
+  add-i n/NAME c/CATEGORY [q/QUANTITY]
+  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
+  list-i
+Lab sessions
+  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+  delete-s INDEX
+  list-s
+Lab preparation
+  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+  list-p s/SESSION_INDEX
+Contacts
+  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+  delete-c INDEX
+  list-c
+Other
+  help
+  Bye
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+help
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Available commands
+--------------------------------------------------------------------
+Inventory
+  add-i n/NAME c/CATEGORY [q/QUANTITY]
+  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
+  list-i
+Lab sessions
+  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+  delete-s INDEX
+  list-s
+Lab preparation
+  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+  list-p s/SESSION_INDEX
+Contacts
+  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+  delete-c INDEX
+  list-c
+Other
+  help
+  Bye
+--------------------------------------------------------------------
+```
+
+
+### UI-HELP-002: Reject help arguments and wrong command words
+
+**Aim:** Verify that help accepts no arguments and is case-sensitive.
+
+**Preconditions:** None.
+
+#### Step 1
+
+**Input**
+
+```text
+help me
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: help
+```
+
+#### Step 2
+
+**Input**
+
+```text
+HELP
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 3
+
+**Input**
+
+```text
+helps
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+
 <!--
 ### UI-001: Short title
 
