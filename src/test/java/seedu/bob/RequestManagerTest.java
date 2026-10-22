@@ -68,6 +68,37 @@ class RequestManagerTest {
     }
 
     @Test
+    void addRequest_sameDeadline_sortsByStudentName() throws CommandException {
+        RequestManager manager = new RequestManager();
+        String deadline = date(2);
+        Request charlie = new Request("Charlie", "Wire", 1, deadline);
+        Request alice = new Request("Alice", "Battery", 1, deadline);
+        Request bob = new Request("Bob", "Red LED", 1, deadline);
+
+        manager.addRequest(charlie);
+        manager.addRequest(alice);
+        manager.addRequest(bob);
+
+        assertSame(alice, manager.getRequest(1));
+        assertSame(bob, manager.getRequest(2));
+        assertSame(charlie, manager.getRequest(3));
+    }
+
+    @Test
+    void addRequest_sameDeadlineAndStudent_sortsByItemName() throws CommandException {
+        RequestManager manager = new RequestManager();
+        String deadline = date(2);
+        Request wire = new Request("Alice", "Wire", 1, deadline);
+        Request battery = new Request("Alice", "Battery", 1, deadline);
+
+        manager.addRequest(wire);
+        manager.addRequest(battery);
+
+        assertSame(battery, manager.getRequest(1));
+        assertSame(wire, manager.getRequest(2));
+    }
+
+    @Test
     void getRequest_invalidIndex_exceptionThrown() {
         RequestManager manager = new RequestManager();
 
@@ -102,6 +133,33 @@ class RequestManagerTest {
 
         assertThrows(InvalidRequestIndexException.class, () -> manager.deleteRequest(2));
         assertSame(only, manager.getRequest(1));
+    }
+
+    @Test
+    void deleteRequest_secondOfThree_renumbersRemainingRequests() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Request first = new Request("Alice", "Wire", 1, date(2));
+        Request second = new Request("Bob", "Battery", 1, date(3));
+        Request third = new Request("Charlie", "Red LED", 1, date(4));
+        manager.addRequest(first);
+        manager.addRequest(second);
+        manager.addRequest(third);
+
+        manager.deleteRequest(2);
+
+        assertSame(first, manager.getRequest(1));
+        assertSame(third, manager.getRequest(2));
+        assertThrows(InvalidRequestIndexException.class, () -> manager.getRequest(3));
+    }
+
+    @Test
+    void markRequest_invalidIndex_exceptionThrown() {
+        RequestManager manager = new RequestManager();
+
+        assertThrows(InvalidRequestIndexException.class,
+                () -> manager.markRequest(0, "prepared"));
+        assertThrows(InvalidRequestIndexException.class,
+                () -> manager.markRequest(1, "prepared"));
     }
 
     @Test
