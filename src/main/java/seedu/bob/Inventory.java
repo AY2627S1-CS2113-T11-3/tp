@@ -187,6 +187,7 @@ public class Inventory {
      * @return Total available quantity, or zero if the item is absent from inventory.
      */
     public int getTotalAvailableQuantity(String name) {
+        assert name != null : "Item name to look up must not be null";
         int totalQuantity = 0;
         // Requests name an item but not a category, so stock is combined across every category.
         for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
@@ -196,7 +197,9 @@ public class Inventory {
                 }
             }
         }
-        return totalQuantity;
+        final int total = totalQuantity;
+        LOGGER.fine(() -> "Checked total availability for " + name + ": " + total);
+        return total;
     }
 
     /**
