@@ -1,0 +1,22 @@
+@startuml
+!include loan-style.puml
+skinparam conditionStyle diamond
+
+start
+:Receive a listing query\n(all loans or overdue only);
+:Read today's local date once\nfrom the manager's Clock;
+:Create an empty result list;
+while (Another\nactive loan?) is ([yes])
+    :Take the next loan and its\nfull-list position i + 1;
+    :isOverdue = loan.isOverdue(today);
+    if (Overdue-only query\nand loan is not overdue?) then ([yes])
+        :Skip this loan;
+    else ([no])
+        :Append LoanListEntry\n(i + 1, loan, isOverdue);
+    endif
+endwhile ([no])
+:Return an immutable list snapshot;
+:Parser passes rows to Ui.showLoans();
+:Ui renders supplied indices and flags;
+stop
+@enduml

@@ -361,42 +361,278 @@ preparation availability.
 
 ### Contact management
 
-`ContactManager` owns an insertion-ordered list of contacts. A contact requires a nonblank name and a digits-only phone
-number; email and role are optional. Email validation checks for `@` and rejects whitespace. Duplicate contacts are
-allowed because different suppliers or service providers may share a name or phone number.
+`add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
+`ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
+single index on the command line, like `delete-s`.
 
-`add-c`, `list-c`, and `delete-c` follow the same manager-and-parser structure as sessions. Contact indices are one-based
-and are renumbered after deletion.
+The user guide did not specify the rules below. They are design decisions made when implementing the feature and
+can be changed in `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
+
+| Decision | Rule | Rationale |
+| --- | --- | --- |
+| Phone format | Digits only, no length check | Accepts local and international numbers. Rejecting separators keeps one canonical form. A length check would wrongly reject some valid numbers. |
+| Email format | Contains `@`, no whitespace | Catches obvious typos without a full email grammar. |
+| Duplicate contacts | Allowed | Two suppliers can share a name or switchboard number. Unlike `add-i`, a contact has no natural unique key. |
+| Optional fields | `e/` before `r/`; a supplied value must not be blank | Matches the fixed prefix order used by every other command. |
+| Empty list | `list-c` shows `No contacts saved.` | Matches `list-s`, which shows `No sessions scheduled.` |
+
+Known limitation: prefixes are detected by a shared pattern (a single letter followed by `/` at the start of a
+word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.
 
 ### Loan tracking
 
-`LoanManager` is created with the shared `Inventory`. `add-l` validates the complete command before calling
-`Inventory.lendItem`, so invalid input or insufficient stock leaves both inventory and loans unchanged. Lending all
-available units removes the depleted inventory entry.
+Loan tracking supports recording loans (`add-l`), listing active or overdue loans (`list-l [overdue]`), correcting an
+incorrect record (`delete-l INDEX`), and recording a full return (`return INDEX`). Each accepted loan deducts available
+stock; either removal command restores the entire loan quantity before removing the record.
 
-Each `Loan` contains an item snapshot and final borrower name/phone strings captured at construction. The existing
-`Contact` validates the captured values, but the loan neither retains nor exposes the supplied contact reference.
-Changes to a source contact therefore cannot rewrite an earlier loan's borrower details. Borrowers are not added to
-`ContactManager`, and each successful command creates a separate loan record. Due dates use strict English
-`d MMMM yyyy` parsing. Past due
-dates are accepted as backlog entries and produce a warning; a loan due today is not overdue.
+#### Detailed loan tracking design
 
-`list-l` displays active loans in insertion order and calculates overdue status using an injected `Clock`. The default
-clock uses the computer's timezone, while tests can inject a fixed or adjustable clock. `list-l overdue` filters the
-display but keeps the original active-list indices so that `return` and `delete-l` always refer to the full list.
+At startup, `Bob` creates one `LoanManager` using the same `Inventory` instance as inventory and preparation commands.
+This gives all features a consistent view of available stock. Loan tracking divides responsibilities as follows:
 
-`return` and `delete-l` share a restoration path. The path restores stock first, then removes the loan. Existing matching
-items and categories are updated case-insensitively; missing entries are recreated. Integer overflow or an invalid index
-therefore leaves the loan and inventory unchanged.
+- **Parser** validates command syntax, constructs domain objects, invokes the manager, and passes results to the UI.
+- **Loan** captures item details, quantity, borrower name and phone, and a strictly parsed due date.
+- **LoanManager** maintains active loans, coordinates stock changes, and evaluates overdue status using its `Clock`.
+- **Inventory** locates items case-insensitively, validates stock changes, and removes or recreates depleted entries.
+- **Ui** renders successful results, warnings, listing rows, and empty states.
 
-Loan mutations return domain results without printing. `addLoan` returns an immutable `LoanAdditionResult` containing
-the loan and overdue status evaluated with the manager's clock at addition. Corrections and returns return the removed
-`Loan`. `Parser` passes these successful results to `Ui`, which owns their distinct confirmations and backlog warning.
-`getLoanEntries` and `getOverdueLoanEntries` return immutable `LoanListEntry` rows containing the loan, full-list index,
-and overdue flag. Each query resolves one local date for all rows; filtered rows preserve their full-list positions.
-`Parser` passes rows to `Ui.showLoans`, which renders headings, markers, and empty states without querying the clock.
-`LoanManager` has no console-printing calls or dependency on `Ui`. Its state, results, and diagnostics can be tested
-independently of presentation. Later clock or loan-list changes do not alter an earlier query's captured indices/flags.
+`LoanManager` stores an `ArrayList<Loan>` in insertion order. Each addition creates an independent record, even when its
+item and borrower match another loan. The displayed index is a one-based position in the full active list.
+
+![Loan tracking class diagram](images/loan-tracking-class.png)
+
+*Figure 4: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
+snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
+result classes, constructors, routine getters, and inventory internals are omitted.*
+
+The `InventoryItem` owned by a loan is a separate object from live inventory stock. `Loan` exposes only its values, so
+deducting, deleting, or restoring stock cannot change the recorded loan quantity. Borrower values are copied into final
+strings and validated through `Contact`; borrowers are not registered in `ContactManager`. These snapshots preserve the
+details of a loan even when the source inventory entry disappears or a source contact changes.
+
+##### Key operations
+
+- `LoanManager#addLoan(Loan loan)` deducts stock, appends the loan, and returns a `LoanAdditionResult` with its addition-time
+  overdue flag. The UI uses that flag for the backlog warning.
+- `Inventory#lendItem(String name, String category, int quantity)` validates and deducts available units. It shares the
+  private deduction path with `delete-i`, including cleanup of depleted items and empty categories.
+- `LoanManager#getLoanEntries()` and `getOverdueLoanEntries()` return immutable `LoanListEntry` rows containing a loan,
+  its full-list index, and its query-time overdue flag.
+- `Loan#isOverdue(LocalDate today)` returns whether its due date is strictly before the supplied date.
+- `LoanManager#returnLoan(int userIndex)` and `deleteLoan(int userIndex)` delegate to the private
+  `removeLoanAndRestoreStock()` method and return the removed loan for their distinct UI confirmations.
+- `Inventory#restoreStock(String name, String category, int quantity)` merges matching stock or recreates a missing item
+  or category. It rejects integer overflow before changing stock.
+
+##### Example walkthrough
+
+Start with an empty loan list and the following inventory command:
+
+```text
+add-i n/Multimeter c/Equipment q/5
+```
+
+**Step 1: Record the first loan**
+
+```text
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+`Parser` validates the prefixes and quantity, constructs a borrower `Contact`, and constructs a `Loan`. The loan copies
+the borrower's values, parses the due date, and creates its item snapshot. Construction does not alter stock.
+`LoanManager#addLoan()` then asks inventory to deduct two units before appending the record. Inventory now holds three
+units, while loan 1 independently records two.
+
+**Step 2: Keep a repeated loan separate**
+
+```text
+add-l n/Multimeter c/Equipment q/1 b/Alex Tan t/91234567 d/31 October 2099
+```
+
+The second addition creates loan 2 with its own quantity and due date. The manager does not merge it into loan 1.
+
+**Step 3: Reject an excessive request**
+
+```text
+add-l n/Multimeter c/Equipment q/3 b/Sam Lee t/92345678 d/31 October 2099
+```
+
+Only two units are available. `Inventory#lendItem()` rejects the request before deduction, and the manager never appends
+the candidate loan. `Parser` displays the error; no success confirmation or overdue warning is displayed.
+
+**Step 4: Return a loan and renumber the list**
+
+```text
+return 1
+```
+
+The manager restores the first loan's two units before removing that record. The second loan becomes index 1 without
+changing its recorded quantity or due date. Users should refresh `list-l` after removal before choosing another index.
+
+**Step 5: Correct an incorrect record**
+
+```text
+delete-l 1
+```
+
+This uses the same restoration path as a return but displays a correction confirmation. All five units are available
+again, and the active loan list is empty. Neither removal command changes supplier contacts or session requirements.
+
+| After operation | Available Multimeters | Active loans, in displayed order |
+| --- | --- | --- |
+| Initial inventory addition | 5 | None |
+| First loan | 3 | 1: two units, due 30 October 2099 |
+| Second loan | 2 | 1: two units; 2: one unit, due 31 October 2099 |
+| Rejected three-unit request | 2 | Unchanged |
+| `return 1` | 4 | 1: one unit, due 31 October 2099 |
+| `delete-l 1` | 5 | None |
+
+Preparation queries `Inventory#getAvailableQuantity()` when displayed, so its availability and shortfall figures reflect
+each successful deduction and restoration. Preparation does not reserve stock or change a loan.
+
+##### Interactions during loan addition
+
+The sequence below shows a successful `add-l` command after `Bob` passes the input to `Parser`. The validation reference
+frame summarizes syntax checks and construction; collection internals, routine getters, assertions, and logging are
+omitted. `Ui` is shown by its class name because its display methods are static.
+
+![Successful loan addition sequence diagram](images/loan-add-sequence.png)
+
+*Figure 5: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
+
+If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
+stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
+only after successful insertion; a rejected backlog request therefore produces no overdue warning.
+
+##### Interactions during a full return
+
+`returnLoan()` and `deleteLoan()` share `removeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
+and successful restoration. A correction follows the same model interaction, followed by `Ui.showLoanDeleted()`.
+
+![Successful full loan return sequence diagram](images/loan-return-sequence.png)
+
+*Figure 6: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+
+Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
+inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
+restoration throws before mutation and the active loan remains available for retry. An invalid index fails before any
+stock operation. This ordering preserves state for expected validation failures in the single-threaded command loop.
+
+##### Overdue evaluation and filtered indices
+
+Due dates are parsed strictly with English month names using `d MMMM uuuu` internally, displayed to users as
+`d MMMM yyyy`. Impossible dates are rejected. Past dates are accepted for entering existing backlog loans. A loan is
+overdue only when `dueDate.isBefore(today)`; a loan due today remains on time.
+
+`LoanManager` uses `Clock.systemDefaultZone()` by default and accepts an injected clock for tests. Each addition or
+listing query reads one local date. The immutable `Loan` stores its due date, while each `LoanListEntry` captures the
+overdue status and position for that query. A later query recalculates the flags, including after midnight, without
+rewriting an earlier snapshot. `Ui` renders supplied flags rather than consulting the clock again.
+
+![Loan listing and overdue filtering activity diagram](images/loan-overdue-activity.png)
+
+*Figure 7: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
+active records.*
+
+For example, when only loans 2 and 4 are overdue, `list-l overdue` displays indices **2** and **4**, rather than 1 and 2.
+`return 4` therefore selects the same record in both views. After removal, later indices shift with the full list, so
+query snapshots are descriptions of a past view rather than permanent identifiers.
+
+##### Design considerations and alternatives
+
+**Aspect 1: Representing loan details**
+
+**Current approach:** Keep separate loan records with private item snapshots and copied borrower values.
+
+This preserves quantities and borrower details when live inventory or source contacts change. Repeated loans can have
+different due dates and be returned independently. The cost is storing some duplicate values.
+
+**Alternative:** Retain live item/contact references or merge loans by item and borrower. References use less duplicate
+data but couple recorded details to later changes. Merging also needs rules for different due dates and partial returns.
+Independent snapshots are simpler for the supported full-return workflow.
+
+**Aspect 2: Coordinating inventory and loan changes**
+
+**Current approach:** `LoanManager` coordinates both operations, deducting before insertion and restoring before removal.
+Inventory owns matching, quantity validation, and cleanup. Both return and correction reuse one restoration path.
+
+This prevents expected stock errors from leaving an accepted record without a matching stock change. It also avoids
+duplicating inventory rules in the parser.
+
+**Alternative:** Change the loan list first and roll back on a stock error. That adds rollback paths and another source
+of state inconsistency. A database transaction would offer stronger guarantees if persistence or concurrent access is
+introduced, but the application currently processes commands sequentially in memory.
+
+**Aspect 3: Identifying loans in filtered views**
+
+**Current approach:** Keep an insertion-ordered list and carry its one-based positions into filtered result rows.
+
+The same index selects the same active record in either view, without maintaining a second index map. Positions can
+change after removal, so users must obtain a fresh listing.
+
+**Alternative:** Assign permanent loan IDs and store records in a map. IDs remain stable after deletion but require ID
+generation and a different command/display convention. Full-list positions match the project's session and contact
+commands and are sufficient for this version.
+
+**Aspect 4: Determining overdue status**
+
+**Current approach:** Recalculate status at each query using an injected `Clock`, then capture it in immutable results.
+
+This handles date rollover and makes boundary tests deterministic. Evaluating once per query also prevents rows in one
+listing from being compared against different dates if midnight occurs during rendering.
+
+**Alternative:** Store a permanent overdue flag inside each loan, or let the UI read the system date for each row. A
+stored flag needs scheduled updates; UI evaluation mixes date rules with presentation and makes tests depend on wall
+clock time. Query snapshots keep time decisions in the manager.
+
+**Aspect 5: Displaying command results**
+
+**Current approach:** Return `LoanAdditionResult`, `Loan`, or `List<LoanListEntry>` to `Parser`, which calls `Ui`.
+
+The model can be tested without capturing console output, and the UI can render the same captured flags and positions
+even if the clock or active list later changes. The tradeoff is two small result classes.
+
+**Alternative:** Print directly from `LoanManager`. This reduces result objects but couples state changes and queries to
+console formatting. Keeping rendering in `Ui` makes the loan model easier to reuse and test.
+
+##### Loan validation, assertions, and testing
+
+| Component | Responsibility |
+| --- | --- |
+| `Parser` | Exact prefix order, positive integer conversion, plain removal indices, and the optional lowercase `overdue` filter. |
+| `Loan` / `Contact` | Nonblank item and borrower details, digits-only phone, positive quantity, and a valid due date. |
+| `LoanManager` | Nonnull dependencies/records, valid full-list indices, clock-based overdue queries, and operation ordering. |
+| `Inventory` | Valid identifiers, matching stock, positive quantities, sufficient available stock, and overflow-safe restoration. |
+
+Assertions check valid records and the exact stock and list-size changes after successful mutations. User-input checks
+use exceptions and remain active when assertions are disabled. The existing validation/error-handling and logging
+sections below describe the shared failure boundary and diagnostic configuration.
+
+`LoanTest` covers domain validation and snapshot isolation. `LoanManagerTest` covers separate records, immutable query
+results, full returns, corrections, replenished stock, and overflow preservation. `LoanOverdueTest` covers date boundaries,
+timezones, midnight rollover, one clock read per query, and filtered indices. `ParserLoanTest` and `LoanUiTest` cover
+command handling and rendered results. Additional assertion, logging, and inventory-validation tests cover defensive
+checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../test/ui-test-plan.md).
+
+##### Loan tracking limitations
+
+- Returns and corrections always restore the complete quantity. Partial returns, loan editing, and return history are
+  not supported.
+- Loan indices are list positions, so previously captured indices can become stale after removal.
+- Stock is matched by case-insensitive name/category, without a permanent item identifier.
+- Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
+- Loans, like all application data, exist only in memory and are discarded on exit.
+
+##### Diagram sources
+
+Editable PlantUML sources: [class diagram](diagrams/loan-tracking-class.puml),
+[addition sequence](diagrams/loan-add-sequence.puml), [return sequence](diagrams/loan-return-sequence.puml), and
+[listing activity](diagrams/loan-overdue-activity.puml). They share [loan-style.puml](diagrams/loan-style.puml).
+
+The section follows the walkthrough and design-alternatives format of the
+[AB3 implementation example](https://se-education.org/addressbook-level3/DeveloperGuide.html#proposed-implementation).
+See the [SE-EDU PlantUML tutorial](https://se-education.org/guides/tutorials/plantUml.html) for editing and image export.
+Export PNGs into `docs/images/` after changing a source so the guide's images remain in sync.
 
 ### Validation and error handling
 

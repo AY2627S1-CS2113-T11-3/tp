@@ -1,0 +1,49 @@
+@startuml
+!include loan-style.puml
+hide footbox
+skinparam maxMessageSize 240
+
+participant ":Parser" as Parser
+participant ":LoanManager" as Manager
+participant ":Inventory" as Inventory
+participant "loans:ArrayList<Loan>" as Loans
+participant "Ui" as Ui
+
+[-> Parser : handleCommand("add-l ...", ...)
+activate Parser
+ref over Parser
+    Validate command and construct
+    the borrower Contact and Loan
+end ref
+Parser -> Manager : addLoan(loan)
+activate Manager
+note over Manager
+    Capture today using the clock.
+    Create LoanAdditionResult with
+    loan.isOverdue(today).
+end note
+Manager -> Inventory : lendItem(name, category, quantity)
+activate Inventory
+note right of Inventory
+    Validate stock, then deduct.
+    Remove depleted entries.
+end note
+Inventory --> Manager : completed
+deactivate Inventory
+Manager -> Loans : add(loan)
+activate Loans
+Loans --> Manager : true
+deactivate Loans
+Manager --> Parser : result: LoanAdditionResult
+deactivate Manager
+Parser -> Ui : showLoanAdded(result)
+activate Ui
+note right of Ui
+    Print confirmation.
+    Warn if result.isOverdue().
+end note
+Ui --> Parser : completed
+deactivate Ui
+[<-- Parser
+deactivate Parser
+@enduml
