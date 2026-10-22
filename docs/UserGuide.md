@@ -1,10 +1,11 @@
 # Bob User Guide
 
-Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, and prepare
-materials for each session. Preparation uses the session's headcount to calculate required quantities and compare
-them with the inventory.
+Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, prepare
+materials, and track resources loaned to students. Preparation uses the session's headcount to calculate
+required quantities and compare them with the inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations, and contacts.
+**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
+contacts, and loans.
 
 ## Contents
 
@@ -15,6 +16,7 @@ them with the inventory.
 - [Lab session scheduling](#lab-session-scheduling)
 - [Lab session preparation](#lab-session-preparation)
 - [Contact management](#contact-management)
+- [Loan tracking](#loan-tracking)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -124,6 +126,9 @@ Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
   list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l
 Other
   help
   Bye
@@ -492,6 +497,65 @@ Successfully removed contact: NUS Infrastructure
 
 Remaining contacts are renumbered. Run `list-c` to check the updated indices before the next command.
 
+## Loan tracking
+
+Record student loans separately from supplier and technician contacts. Each loan contains one inventory
+item, its quantity, borrower name and phone number, and explicit due date. Borrowers are entered directly;
+adding or deleting a supplier contact does not change a loan's borrower details.
+
+### Add a loan: `add-l`
+
+**Format:** `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE`
+
+- All six arguments are required, in the displayed order. Quantity is the total number of units lent.
+- Item name and category must already exist in inventory. Matching ignores capitalization, while the loan
+  retains the spelling entered in the command.
+- Quantity must be a positive integer and cannot exceed available inventory. Successful additions deduct
+  stock immediately; preparation availability and shortage checks reflect that deduction.
+- Lending all available units removes the depleted inventory entry and its category if empty. The loan
+  retains its item details and quantity independently.
+- Borrower name cannot be blank. Phone numbers use the existing contact rule: digits only, with leading
+  zeros preserved. No entry is added to `list-c`.
+- Due dates use a full, capitalized English month in `d MMMM yyyy` format, for example `30 October 2099`.
+  Today and past dates are accepted so existing loans can be entered as a backlog.
+- Every successful command creates a separate record, including repeated loans to the same borrower.
+- Rejected commands leave inventory, loans, and supplier contacts unchanged.
+
+In a fresh application, enter:
+
+```text
+add-i n/Multimeter c/Equipment q/5
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+The loan command prints:
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+```
+
+There are now 3 Multimeters available in inventory.
+
+### List active loans: `list-l`
+
+**Format:** `list-l`
+
+Displays loans in insertion order with one-based indices. Listing loans does not change inventory.
+After the example above:
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+An empty list displays `No active loans.` between the heading and closing divider.
+
+Loan deletion, returns, overdue markers, overdue-only listing, and warnings for past due dates are not
+available in this version. All loans disappear when Bob exits; persistence is planned for V2.0b.
+
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
@@ -586,4 +650,6 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
 | Delete a contact | `delete-c INDEX` |
 | List contacts | `list-c` |
+| Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
+| List active loans | `list-l` |
 | Exit and discard data | `Bye` |

@@ -40,13 +40,14 @@ public class Bob {
         Inventory inventory = new Inventory();
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
+        LoanManager loanManager = new LoanManager(inventory);
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, loanManager);
             System.out.println();
         }
 

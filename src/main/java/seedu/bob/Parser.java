@@ -16,7 +16,7 @@ import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses help, inventory, scheduling, and session preparation commands and dispatches them.
+ * Parses help, inventory, scheduling, preparation, contact, and loan commands and dispatches them.
  */
 public class Parser {
 
@@ -41,6 +41,9 @@ public class Parser {
     private static final String ADD_CONTACT_USAGE = "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
     private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
+    private static final String ADD_LOAN_USAGE =
+            "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
+    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l";
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Accepted required and optional contact prefixes, in command order. */
@@ -54,7 +57,7 @@ public class Parser {
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
-     * Executes an inventory, scheduling, preparation, or contact command, or prints a message for an
+     * Executes an inventory, scheduling, preparation, contact, or loan command, or prints a message for an
      * unknown command. Expected user errors are displayed without ending the application. Unexpected
      * runtime failures are logged and replaced with a safe user-facing message.
      *
@@ -62,11 +65,12 @@ public class Parser {
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
      * @param contactManager ContactManager to add, remove, or display contacts.
+     * @param loanManager LoanManager to add or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager) {
+            ContactManager contactManager, LoanManager loanManager) {
         try {
-            handleCommandInternal(input, inventory, sessionManager, contactManager);
+            handleCommandInternal(input, inventory, sessionManager, contactManager, loanManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
@@ -77,7 +81,7 @@ public class Parser {
      * Parses and dispatches one command after the public failure boundary has been established.
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager) {
+            ContactManager contactManager, LoanManager loanManager) {
         String[] parts = input.trim().split("\\s+", 2);
         String command = parts[0];
 
@@ -170,6 +174,14 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            case "add-l", "list-l" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    handleLoan(command, arguments, loanManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
             default -> {
                 System.out.println("Invalid command");
             }
@@ -187,6 +199,26 @@ public class Parser {
             throw new CommandFormatException(HELP_USAGE);
         }
         System.out.println(Ui.HELP_MESSAGE);
+    }
+
+    /**
+     * Parses loan commands, validating every field before asking the manager to deduct stock.
+     *
+     * @throws CommandException If arguments, borrower details, date, or requested stock are invalid.
+     */
+    private void handleLoan(String command, String arguments, LoanManager loanManager) throws CommandException {
+        if (command.equals("list-l")) {
+            if (!arguments.isBlank()) {
+                throw new CommandFormatException(LIST_LOAN_USAGE);
+            }
+            loanManager.listLoans();
+            return;
+        }
+        List<String> values = extractValues(arguments, List.of("n", "c", "q", "b", "t", "d"), ADD_LOAN_USAGE);
+        int quantity = parseQuantity(values.get(2));
+        Contact borrower = new Contact(values.get(3), values.get(4), null, null);
+        Loan loan = new Loan(values.get(0), values.get(1), quantity, borrower, values.get(5));
+        loanManager.addLoan(loan);
     }
 
     /**

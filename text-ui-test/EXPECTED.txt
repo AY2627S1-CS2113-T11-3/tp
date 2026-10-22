@@ -69,6 +69,27 @@ Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 1
 2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
 --------------------------------------------------------------------
 
+Successfully added loan: 3x Wire [Components] to Alex Tan (91234567), due 31 December 2099
+
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 3x Wire [Components] to Alex Tan (91234567), due 31 December 2099
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 7) !! Insufficient items (Shortfall: 13)
+2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+
 --------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------
@@ -88,6 +109,9 @@ Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
   list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l
 Other
   help
   Bye

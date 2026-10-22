@@ -6,10 +6,12 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
+import seedu.bob.exception.CommandException;
 import seedu.bob.exception.DuplicateItemException;
 import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
+import seedu.bob.exception.LoanException;
 
 /**
  * Stores inventory items grouped by category and displays inventory changes.
@@ -139,6 +141,22 @@ public class Inventory {
         }
 
         int remainingQuantity = item.getQuantity() - quantity;
+        deductQuantity(storedCategory, index, quantity);
+
+        assert hasValidState() : "Inventory state must remain valid after removal";
+        LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
+                + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
+        System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
+    }
+
+    /**
+     * Deducts a validated quantity without displaying an inventory-deletion confirmation.
+     * Both manual deletion and lending use this path to remove depleted items and categories consistently.
+     */
+    private void deductQuantity(String storedCategory, int index, int quantity) {
+        ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        InventoryItem item = itemsInCategory.get(index);
+        int remainingQuantity = item.getQuantity() - quantity;
         assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {
             itemsInCategory.remove(index);
@@ -149,10 +167,40 @@ public class Inventory {
             item.removeQuantity(quantity);
         }
 
-        assert hasValidState() : "Inventory state must remain valid after removal";
-        LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
-                + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
-        System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
+        assert hasValidState() : "Inventory state must remain valid after deduction";
+    }
+
+    /**
+     * Deducts loaned units by case-insensitive item name and category without printing a confirmation.
+     * All validation completes before stock changes. Missing items cannot be loaned.
+     *
+     * @param name Item name to locate.
+     * @param category Category containing the item.
+     * @param quantity Positive total units to lend.
+     * @throws CommandException If the quantity is invalid, the item is absent, or stock is insufficient.
+     */
+    void lendItem(String name, String category, int quantity) throws CommandException {
+        if (quantity <= 0) {
+            throw new InvalidQuantityException();
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            throw new CategoryNotFoundException(category);
+        }
+        ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        for (int i = 0; i < itemsInCategory.size(); i++) {
+            InventoryItem item = itemsInCategory.get(i);
+            if (!item.getName().equalsIgnoreCase(name)) {
+                continue;
+            }
+            if (quantity > item.getQuantity()) {
+                throw new LoanException(String.format("Cannot loan %d %s. Only %d are available.",
+                        quantity, item.getName(), item.getQuantity()));
+            }
+            deductQuantity(storedCategory, i, quantity);
+            return;
+        }
+        throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
     }
 
     /**

@@ -29,6 +29,31 @@ Known limitation: prefixes are detected by a shared pattern (a single letter fol
 word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.
 
 
+### Loan tracking (phase 1)
+
+`Bob` creates one `LoanManager` bound to its `Inventory` and passes it to `Parser.handleCommand`.
+`add-l` uses the existing fixed-order prefix extraction and positive quantity parsing; `list-l` accepts
+no arguments. `Ui` documents both commands in help.
+
+`Loan` uses composition: a private `InventoryItem` snapshot holds item details and loan quantity, and an
+immutable `Contact` holds the borrower. The item object is never exposed or shared with live stock.
+Borrowers are never registered in `ContactManager`. Due dates are parsed strictly as English
+`d MMMM uuuu` dates, with past dates permitted. Every loan is independent; no duplicate merging occurs.
+
+Validation finishes before `LoanManager.addLoan` calls `Inventory.lendItem`. The inventory locates an
+item by case-insensitive name/category, checks available stock, then deducts it without an inventory
+confirmation. Lending and `delete-i` share the private deduction method, including removal of depleted
+items and empty categories. Preparation continues to query live available stock through the existing
+`getAvailableQuantity` method. Missing stock or invalid input leaves all feature state unchanged.
+
+The manager stores loans in insertion order and exposes an immutable list snapshot for queries.
+Deletion, full returns, overdue behavior, history, and persistence remain later work. In particular,
+phase 1 accepts past dates without calculating or displaying overdue status.
+
+`LoanTest`, `LoanManagerTest`, and `ParserLoanTest` cover validation, separate records, exact output,
+stock invariants, and immutable snapshots. `UI-LOAN-*` in `test/ui-test-plan.md` records console checks,
+including preparation availability and supplier-contact isolation. Run the cumulative plan after each phase.
+
 ## Product scope
 ### Target user profile
 

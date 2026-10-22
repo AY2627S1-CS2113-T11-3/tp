@@ -49,6 +49,16 @@ behavior while correcting stale documentation and UI fixtures, independently of 
 Contact cases cover optional fields, validation, duplicates, deletion, renumbering, and feature isolation.
 Loan commands, persistence, and return history are outside phase 0.
 
+## Phase 1 loan contract
+
+`add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` requires every field.
+`list-l` shows active loans in insertion order with independent one-based indices. Each accepted command
+creates a separate loan and deducts available stock once. Item/category matching ignores case; loan rows
+retain the spelling entered by the user. Borrower details belong to the loan, not supplier contacts.
+All input and stock checks happen before mutation. Due dates use strict full English month names and may
+be in the past. Deletion, returns, overdue warnings/markers/filtering, and persistence remain later phases.
+Expected outputs below were recorded before implementing the feature.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input
@@ -2328,6 +2338,9 @@ Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
   list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l
 Other
   help
   Bye
@@ -2364,6 +2377,9 @@ Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
   list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l
 Other
   help
   Bye
@@ -3707,6 +3723,1159 @@ list-p s/1
 Lab preparation: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
 --------------------------------------------------------------------
 1. Wire [Components] (Required: 20, Available: 0) !! Insufficient items (Shortfall: 20)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-LIST-001: Validate loan listing and show an empty list
+
+**Aim:** Verify empty output and reject arguments until the overdue-only list is implemented in phase 4.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-l extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l
+```
+
+#### Step 4
+
+**Input**
+
+```text
+LIST-L
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+### UI-LOAN-ADD-001: Add independent loans and deduct available stock
+
+**Aim:** Verify complete details, separate repeated loans, multiple borrowers/due dates, and live available inventory.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex Tan (91234567), due {{TOMORROW}}
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex Tan t/91234567 d/{{TODAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Alex Tan (91234567), due {{TODAY}}
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/3 b/Sam Lee t/00123456 d/1 January 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Wire [Components] to Sam Lee (00123456), due 1 January 2099
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Wire [Components] to Alex Tan (91234567), due {{TOMORROW}}
+2. 1x Wire [Components] to Alex Tan (91234567), due {{TODAY}}
+3. 3x Wire [Components] to Sam Lee (00123456), due 1 January 2099
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 4)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-ADD-002: Reject malformed loan commands without changing state
+
+**Aim:** Verify required fixed-order prefixes, missing, repeated, embedded and unexpected arguments, and case sensitivity.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components b/Alex t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l c/Components n/Wire q/1 b/Alex t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}} q/1
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}} x/extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l extra n/Wire c/Components q/1 b/Alex t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex t/91234567
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex a/b t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+```
+
+#### Step 10
+
+**Input**
+
+```text
+ADD-L n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Invalid command
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-ADD-003: Reject invalid quantities and borrower details
+
+**Aim:** Verify all invalid loan fields leave stock, active loans, and supplier contacts unchanged.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/ c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Item name cannot be blank.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/ q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Category cannot be blank.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/ b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/0 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/-1 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/abc b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1.5 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2147483648 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/ t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Contact name cannot be blank.
+```
+
+#### Step 11
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/ d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Phone cannot be blank.
+```
+
+#### Step 12
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/+6591234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 13
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/9123 4567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 14
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/abc d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Phone must contain digits only.
+```
+
+#### Step 15
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 16
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 17
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-ADD-004: Validate dates and accept backlog loans
+
+**Aim:** Verify strict dates, today, future dates and past dates; overdue notifications are deliberately deferred to phase 4.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/31 February 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/2099-10-30
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/30 october 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/30 Oct 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/29 February 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 8
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Wire [Components] to Alex Tan (91234567), due {{YESTERDAY}}
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Wire [Components] to Alex Tan (91234567), due {{YESTERDAY}}
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 8)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-ADD-005: Reject missing items and insufficient stock
+
+**Aim:** Verify exact name/category selection, case-insensitive matching, full depletion, and independent loan quantities.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/3
+```
+
+**Expected output**
+
+```text
+Successfully added: 3x Wire to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Unknown q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Category "Unknown" does not exist.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Battery c/Components q/2 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Item "Battery" does not exist in category "Components".
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/11 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Cannot loan 11 Wire. Only 10 are available.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-l n/Wire c/Spares q/4 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Cannot loan 4 Wire. Only 3 are available.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/wire c/COMPONENTS q/10 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 10x wire [COMPONENTS] to Alex Tan (91234567), due {{TOMORROW}}
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Spares
+1: Wire (Qty: 3)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/1
+```
+
+**Expected output**
+
+```text
+Successfully added: 1x Wire to the inventory
+```
+
+#### Step 10
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/1
+```
+
+**Expected output**
+
+```text
+Successfully removed: 1x Wire from the inventory
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 10x wire [COMPONENTS] to Alex Tan (91234567), due {{TOMORROW}}
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-ADD-006: Refresh preparation availability and isolate borrower contacts
+
+**Aim:** Verify lending affects preparation availability, supplier contact deletion does not affect borrowers, and listing never deducts twice.
+
+**Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Loan Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Loan Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Loan Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-c n/Alex Tan t/91234567 r/Supplier
+```
+
+**Expected output**
+
+```text
+Successfully added: Alex Tan (91234567) to contacts
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/3 b/Alex Tan t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Wire [Components] to Alex Tan (91234567), due {{TOMORROW}}
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Loan Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 10, Available: 7) !! Insufficient items (Shortfall: 3)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Alex Tan
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 3x Wire [Components] to Alex Tan (91234567), due {{TOMORROW}}
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 3x Wire [Components] to Alex Tan (91234567), due {{TOMORROW}}
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Loan Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
 --------------------------------------------------------------------
 ```
 

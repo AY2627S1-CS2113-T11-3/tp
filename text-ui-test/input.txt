@@ -10,5 +10,9 @@ list-i
 delete-p s/1 i/3 q/10
 delete-i c/Components i/1 q/10
 list-p s/1
+add-l n/Wire c/Components q/3 b/Alex Tan t/91234567 d/31 December 2099
+list-l
+list-p s/1
+list-c
 help
 Bye
