@@ -226,53 +226,91 @@ The stock is now 10 Wire. Run `list-i` to see the updated inventory; `delete-i` 
 
 ## Lab session scheduling
 
+Use these commands to add, view, and delete lab sessions.
+
+After starting Bob and entering your name, type a complete command on one line and press Enter.
+Bob processes the command immediately; it does not prompt separately for the session details or index.
+
+The examples below show command responses, omitting diagnostic log messages.
+
 ### Add a session: `add-s`
 
-Creates a lab session with its date, location, time range, and headcount.
+Creates a lab session with its name, date, location, time range, and headcount.
 
 **Format:** `add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT`
 
-All arguments are required:
+Include every prefix exactly once, in the order shown, with a value after each prefix.
 
 | Argument | Accepted value |
 | --- | --- |
-| `n/NAME` | A nonblank session name, which can contain spaces. |
-| `d/DATE` | A valid date in `d MMMM yyyy` format, such as `8 October 2099`. Use a full English month name with an initial capital: `October`, not `october` or `Oct`. The date must be today or later. |
-| `l/LOCATION` | A nonblank location, which can contain spaces. |
+| `n/NAME` | A nonblank session name. Spaces are allowed. |
+| `d/DATE` | A valid date in `d MMMM yyyy` format, such as `8 October 2099`. Use a full English month name with an initial capital, such as `October`. The date must be today or later. |
+| `l/LOCATION` | A nonblank location. Spaces are allowed. |
 | `s/STARTTIME` | A four-digit, 24-hour time in `HHmm` format, such as `0900`. |
-| `e/ENDTIME` | A four-digit, 24-hour time later than the start time, such as `1200`. |
-| `p/HEADCOUNT` | A positive integer giving the number of attendees. |
+| `e/ENDTIME` | A four-digit, 24-hour time in `HHmm` format, such as `1200`. It must be later than the start time. |
+| `p/HEADCOUNT` | A whole number from `1` to `2147483647`, representing the number of attendees. |
 
-Times must fall between `0000` and `2359`. A session cannot end at or before its start time or span midnight.
-Two sessions cannot overlap on the same date at the same location. A session may start exactly when another ends.
-Overlapping times at different locations are allowed. Session names do not have to be unique.
+The following scheduling rules apply:
 
-Example in an empty schedule:
+- Times must be between `0000` and `2359`. Sessions cannot span midnight.
+- Sessions cannot overlap on the same date at the same location. Location comparisons ignore
+  capitalization, so `Room-A` and `room-a` are treated as the same location.
+- A session may start exactly when another session ends.
+- Overlapping sessions at different locations are allowed.
+- Session names do not have to be unique.
+
+For a session dated today, Bob does not check whether its start time has already passed.
+
+**Example:** Starting with an empty schedule, enter:
 
 ```text
 add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
 ```
 
-Expected output:
+Expected response:
 
 ```text
 Successfully added: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
 ```
 
+The new session is placed in chronological order. Adding a session can change the indices of
+existing sessions. Use `list-s` to check the current indices before using a command that requires one.
+
+**Example of a conflict:** With Practice Lab still scheduled, enter:
+
+```text
+add-s n/Circuit Lab d/8 October 2099 l/Room-A s/0930 e/1030 p/15
+```
+
+Expected response:
+
+```text
+Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.
+```
+
+Circuit Lab is not added. Change its date, location, or time range to avoid the conflict, then
+submit the complete command again.
+
 ### List sessions: `list-s`
 
-Displays all scheduled sessions with their indices, names, dates, locations, time ranges, and headcounts.
-Sessions are shown in insertion order, not sorted by date. No arguments are accepted.
+Displays all scheduled sessions with their indices, names, dates, locations, time ranges,
+and headcounts.
 
 **Format:** `list-s`
 
-With only the session above:
+This command takes no arguments.
+
+Sessions are sorted by date, with earlier dates first. Sessions on the same date are sorted
+by start time. If both the date and start time match, they are sorted alphabetically by name,
+ignoring capitalization.
+
+**Example:** With only Practice Lab scheduled, enter:
 
 ```text
 list-s
 ```
 
-Expected output:
+Expected response:
 
 ```text
 --------------------------------------------------------------------
@@ -282,28 +320,59 @@ Sessions
 --------------------------------------------------------------------
 ```
 
-An empty schedule displays `No sessions scheduled.` between the sessions heading and the closing divider.
+If there are no scheduled sessions, the response is:
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+No sessions scheduled.
+--------------------------------------------------------------------
+```
+
+Indices begin at `1` and represent positions in the current list. They are not permanent
+session identifiers and may change after a session is added or deleted.
 
 ### Delete a session: `delete-s`
 
-Deletes a session and its preparation list. Inventory is unaffected.
+Deletes the selected session and its preparation list. Inventory quantities are unaffected.
 
 **Format:** `delete-s INDEX`
 
-Use the index from `list-s`. Unlike preparation commands, this command takes a plain number, without `s/`.
+Replace `INDEX` with the session's current index from `list-s`. Enter the index as a plain
+positive whole number, without the `s/` prefix.
+
+Deletion happens immediately, without a confirmation prompt. Check the current list before
+submitting the command.
+
+**Example:** With Practice Lab at index `1`, enter:
 
 ```text
 delete-s 1
 ```
 
-For the session above, the expected output is:
+Expected response:
 
 ```text
 Successfully removed session: Practice Lab
 ```
 
-Remaining sessions are renumbered. Their preparation lists stay attached to the correct sessions. Run `list-s`
-to check the updated indices before the next command.
+Remaining sessions are renumbered. Their preparation lists stay attached to the correct sessions.
+Run `list-s` again before using another command that requires a session index.
+
+**Example of an invalid index:** If only one session is scheduled, entering `delete-s 2` produces:
+
+```text
+Session index 2 is invalid. There are 1 scheduled session(s).
+```
+
+No session is deleted. Use `list-s` to find a valid index.
+
+Entering `delete-s` without an index produces:
+
+```text
+Invalid format. Use: delete-s INDEX
+```
 
 ## Lab session preparation
 
@@ -511,9 +580,9 @@ These are examples of the current messages:
 | Blank item name or category | `Item name cannot be blank.` or `Category cannot be blank.` | Enter a nonblank value after the prefix. |
 | Zero, negative, non-integer, or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
 | Invalid headcount | `Headcount must be a positive integer.` | Enter a positive whole number after `p/`. |
-| Invalid date or lowercase month | `Date must be a valid date in d MMMM yyyy format.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
+| Invalid date or lowercase month | `Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). Ensure the month is capitalized.` | Use a real date such as `8 October 2099`, with a capitalized full English month name. |
 | Past session date | `Session date cannot be before today.` | Use today's date or a future date. |
-| Invalid start or end time | `Start time must be a valid time in HHmm format.` or `End time must be a valid time in HHmm format.` | Use four digits, such as `0900`, with no colon. |
+| Invalid start or end time | `Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).` or `End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).` | Enter four digits between `0000` and `2359`, such as `0900`, with no colon. |
 | End time at or before start time | `Start time must be earlier than end time.` | Choose a later end time on the same day. |
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
 | Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |

@@ -1,3 +1,4 @@
+//@@author gavinlimsh
 package seedu.bob;
 
 import java.util.ArrayList;
@@ -63,6 +64,7 @@ public class SessionManager {
         System.out.println("Successfully removed session: " + removedSession.getName());
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether the schedule contains only nonnull, mutually compatible sessions.
      */
@@ -83,6 +85,7 @@ public class SessionManager {
         return true;
     }
 
+    //@@author
     /**
      * Returns the session at the position shown by {@code list-s}.
      *
@@ -99,6 +102,7 @@ public class SessionManager {
         return sessions.get(userIndex - INDEX_OFFSET);
     }
 
+    //@@author gavinlimsh
     /**
      * Prints all scheduled sessions with one-based positions.
      */
@@ -116,4 +120,5 @@ public class SessionManager {
         }
         System.out.println(Ui.DIVIDER);
     }
+    //@@author
 }
