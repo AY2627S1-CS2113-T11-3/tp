@@ -25,15 +25,18 @@ public class Parser {
     private static final int DEFAULT_ITEM_QUANTITY = 1;
     private static final String UNEXPECTED_ERROR_MESSAGE =
             "An unexpected error occurred while processing the command. Please try again.";
+
     private static final String ADD_ITEM_USAGE =
             "Invalid format. Use: add-i n/NAME c/CATEGORY [q/QUANTITY]";
     private static final String DELETE_ITEM_USAGE =
             "Invalid format. Use: delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY";
     private static final String LIST_ITEM_USAGE = "Invalid format. Use: list-i";
+
     private static final String ADD_SESSION_USAGE = "Invalid format. Use: add-s n/NAME d/DATE "
             + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
     private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
     private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
+
     private static final String ADD_PREPARATION_USAGE =
             "Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]";
     private static final String DELETE_PREPARATION_USAGE =
@@ -376,7 +379,7 @@ public class Parser {
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handlePreparation(String command, String arguments, Inventory inventory,
-            SessionManager sessionManager) throws CommandException {
+                                   SessionManager sessionManager) throws CommandException {
         Session session;
         switch (command) {
             case "add-p" -> session = addPreparation(arguments, sessionManager);
@@ -525,7 +528,7 @@ public class Parser {
     }
 
     /**
-     * Extracts values between an already validated sequence of prefixes.
+     * Validates the prefix sequence and extracts the values between prefixes.
      *
      * @param arguments Command arguments containing the prefixes.
      * @param expectedPrefixes Prefixes expected in the arguments.

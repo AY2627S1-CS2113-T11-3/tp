@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  */
 class ParserHelpTest {
 
-    /** Typed out in full, as written in the user guide, so that a typo in the application is caught. */
+    /** Defines the expected output independently so changes to the application text are detected. */
     private static final String EXPECTED_HELP =
             "--------------------------------------------------------------------\n"
             + "Available commands\n"
@@ -55,6 +55,9 @@ class ParserHelpTest {
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
+    /**
+     * Redirects standard output so each test can inspect command responses.
+     */
     @BeforeEach
     void setUp() {
         originalOutput = System.out;
@@ -62,6 +65,9 @@ class ParserHelpTest {
         System.setOut(capturedOutput);
     }
 
+    /**
+     * Restores standard output and closes the stream created for the test.
+     */
     @AfterEach
     void tearDown() {
         System.setOut(originalOutput);
@@ -106,6 +112,9 @@ class ParserHelpTest {
 
     /**
      * Executes one command and returns only that command's normalized console output.
+     *
+     * @param command Command to execute.
+     * @return Command output with Windows line endings converted to newline characters.
      */
     private String execute(String command) {
         output.reset();
