@@ -14,6 +14,7 @@ import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidRequestDeadlineException;
+import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Verifies validation, status changes, and ordering of the {@link Request} model.
@@ -106,13 +107,13 @@ class RequestTest {
     void markAs_invalidStatus_throwsAndPreservesCurrentStatus() throws CommandException {
         Request request = new Request("Alice", "Wire", 1, date(2));
 
-        CommandFormatException exception = assertThrows(CommandFormatException.class,
+        InvalidRequestStatusException exception = assertThrows(InvalidRequestStatusException.class,
                 () -> request.markAs("pending"));
         assertEquals("Status must be \"prepared\" or \"fulfilled\".", exception.getMessage());
         assertEquals("pending", request.getStatus());
 
         request.markAs("prepared");
-        assertThrows(CommandFormatException.class, () -> request.markAs("done"));
+        assertThrows(InvalidRequestStatusException.class, () -> request.markAs("done"));
         assertEquals("prepared", request.getStatus());
     }
 
