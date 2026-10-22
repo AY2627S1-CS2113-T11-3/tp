@@ -53,7 +53,7 @@ class ParserLoanTest {
                 + " due 30 October 2099\n", execute(
                         "add-l n/Red LED c/Lab Components q/2 b/Alex Tan t/00123456 d/30 October 2099"));
         assertEquals(8, inventory.getAvailableQuantity("Red LED", "Lab Components"));
-        assertEquals("00123456", loans.getLoans().get(0).getBorrower().getPhone());
+        assertEquals("00123456", loans.getLoans().get(0).getBorrowerPhone());
         assertTrue(execute("list-c").contains("No contacts saved."));
     }
 
@@ -162,7 +162,7 @@ class ParserLoanTest {
         execute("return 2");
         assertEquals(Ui.DIVIDER + "\nOverdue loans\n" + Ui.DIVIDER + "\nNo overdue loans.\n"
                 + Ui.DIVIDER + "\n", execute("list-l overdue"));
-        assertEquals("Current", loans.getLoans().get(0).getBorrower().getName());
+        assertEquals("Current", loans.getLoans().get(0).getBorrowerName());
         assertEquals(9, inventory.getAvailableQuantity("Red LED", "Lab Components"));
     }
 

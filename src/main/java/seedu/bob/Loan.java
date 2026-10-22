@@ -25,8 +25,9 @@ public class Loan {
 
     /** Private item snapshot, never shared with mutable inventory stock or exposed to callers. */
     private final InventoryItem item;
-    /** Borrower details belong to this loan and are independent of the supplier contact manager. */
-    private final Contact borrower;
+    /** Captured values never refer back to a contact that may later change elsewhere. */
+    private final String borrowerName;
+    private final String borrowerPhone;
     private final LocalDate dueDate;
 
     /**
@@ -35,7 +36,7 @@ public class Loan {
      * @param name Item name.
      * @param category Item category.
      * @param quantity Total units being loaned.
-     * @param borrower Borrower details, validated by {@link Contact}.
+     * @param borrower Contact whose name and phone are captured and validated for this loan.
      * @param dueDateText Due date in {@code d MMMM uuuu} format.
      * @throws CommandException If the item details, quantity, or due date are invalid.
      * @throws NullPointerException If the borrower is null.
@@ -51,7 +52,13 @@ public class Loan {
         if (quantity <= 0) {
             throw new InvalidQuantityException();
         }
-        this.borrower = Objects.requireNonNull(borrower, "Loan borrower must not be null");
+        Objects.requireNonNull(borrower, "Loan borrower must not be null");
+        String capturedName = borrower.getName();
+        String capturedPhone = borrower.getPhone();
+        // Reuse contact validation, including when a mutable subclass supplies the captured values.
+        new Contact(capturedName, capturedPhone, null, null);
+        borrowerName = capturedName;
+        borrowerPhone = capturedPhone;
         if (dueDateText == null) {
             throw new LoanException(INVALID_DUE_DATE_MESSAGE);
         }
@@ -71,8 +78,8 @@ public class Loan {
     boolean hasValidState() {
         return item != null && item.getName() != null && !item.getName().isBlank()
                 && item.getCategory() != null && !item.getCategory().isBlank() && item.getQuantity() > 0
-                && borrower != null && borrower.getName() != null && !borrower.getName().isBlank()
-                && borrower.getPhone() != null && borrower.getPhone().matches("\\d+") && dueDate != null;
+                && borrowerName != null && !borrowerName.isBlank()
+                && borrowerPhone != null && borrowerPhone.matches("\\d+") && dueDate != null;
     }
 
     /**
@@ -103,12 +110,21 @@ public class Loan {
     }
 
     /**
-     * Returns borrower details stored with this loan, independently of the supplier contact list.
+     * Returns the borrower name captured when this loan was constructed.
      *
-     * @return Borrower contact stored with the loan.
+     * @return Immutable borrower name snapshot.
      */
-    public Contact getBorrower() {
-        return borrower;
+    public String getBorrowerName() {
+        return borrowerName;
+    }
+
+    /**
+     * Returns the borrower phone captured when this loan was constructed, preserving leading zeros.
+     *
+     * @return Immutable borrower phone snapshot.
+     */
+    public String getBorrowerPhone() {
+        return borrowerPhone;
     }
 
     /**
@@ -139,6 +155,6 @@ public class Loan {
     @Override
     public String toString() {
         return String.format("%dx %s [%s] to %s (%s), due %s", getQuantity(), getName(), getCategory(),
-                borrower.getName(), borrower.getPhone(), dueDate.format(DATE_FORMATTER));
+                borrowerName, borrowerPhone, dueDate.format(DATE_FORMATTER));
     }
 }

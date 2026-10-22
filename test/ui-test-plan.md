@@ -125,6 +125,16 @@ normal/debug UI runs. Each UI run passed 58 cases, 481 steps, and 480 commands (
 All three Gradle `check shadowJar` builds passed both Checkstyle checks. Per-step results and full
 chronological transcripts are retained in `test/ui-test-session.md` as local session records.
 
+## Loan review fixes: phase 1 borrower snapshots
+
+Each loan captures its borrower name and phone as immutable values when constructed. Contact validation
+is reused, but the source contact is not retained or exposed. Existing command syntax, confirmations,
+phone spelling (including leading zeros), borrower isolation, and list output remain unchanged.
+UI-LOAN-ADD-001, UI-LOAN-ADD-006, and the full existing plan retain their recorded expected outputs.
+JUnit tests use a mutable Contact test double to verify source edits cannot change an earlier loan.
+After committing this phase, execute the complete UI regression plan with assertions enabled before
+starting the next phase. Expected outputs are preserved before implementation and execution.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input

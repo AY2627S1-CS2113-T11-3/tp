@@ -206,7 +206,9 @@ and are renumbered after deletion.
 `Inventory.lendItem`, so invalid input or insufficient stock leaves both inventory and loans unchanged. Lending all
 available units removes the depleted inventory entry.
 
-Each `Loan` contains an item snapshot and an immutable borrower `Contact`. Borrowers are not added to `ContactManager`,
+Each `Loan` contains an item snapshot and final borrower name/phone strings captured at construction. The existing
+`Contact` validates the captured values, but the loan neither retains nor exposes the supplied contact reference.
+Changes to a source contact therefore cannot rewrite an earlier loan's borrower details. Borrowers are not added to `ContactManager`,
 and each successful command creates a separate loan record. Due dates use strict English `d MMMM yyyy` parsing. Past due
 dates are accepted as backlog entries and produce a warning; a loan due today is not overdue.
 

@@ -30,10 +30,38 @@ class LoanTest {
         assertEquals("Red LED", loan.getName());
         assertEquals("Lab Components", loan.getCategory());
         assertEquals(3, loan.getQuantity());
-        assertEquals(borrower, loan.getBorrower());
+        assertEquals("Alex Tan", loan.getBorrowerName());
+        assertEquals("00123456", loan.getBorrowerPhone());
         assertEquals(LocalDate.of(2096, 2, 29), loan.getDueDate());
         assertEquals("3x Red LED [Lab Components] to Alex Tan (00123456), due 29 February 2096",
                 loan.toString());
+    }
+
+    @Test
+    void constructor_sourceContactChanges_preservesEarlierLoanAndCapturesNewValues() throws CommandException {
+        MutableContact borrower = new MutableContact("Alex", "00123456");
+        Loan original = new Loan("Wire", "Components", 1, borrower, "30 October 2099");
+
+        borrower.update("Sam", "00987654");
+        Loan subsequent = new Loan("Wire", "Components", 2, borrower, "31 October 2099");
+
+        assertEquals("Alex", original.getBorrowerName());
+        assertEquals("00123456", original.getBorrowerPhone());
+        assertEquals("1x Wire [Components] to Alex (00123456), due 30 October 2099", original.toString());
+        assertEquals("Sam", subsequent.getBorrowerName());
+        assertEquals("00987654", subsequent.getBorrowerPhone());
+        assertEquals("2x Wire [Components] to Sam (00987654), due 31 October 2099", subsequent.toString());
+    }
+
+    @Test
+    void constructor_invalidCapturedContactValues_reusesContactValidation() throws CommandException {
+        MutableContact borrower = new MutableContact("Alex", "00123456");
+        borrower.update(" ", "00123456");
+        assertThrows(CommandFormatException.class,
+                () -> new Loan("Wire", "Components", 1, borrower, "30 October 2099"));
+        borrower.update("Alex", "invalid phone");
+        assertThrows(CommandFormatException.class,
+                () -> new Loan("Wire", "Components", 1, borrower, "30 October 2099"));
     }
 
     @Test
@@ -78,5 +106,35 @@ class LoanTest {
                 () -> new Loan("Wire", "Components", -1, borrower, "30 October 2099"));
         assertThrows(NullPointerException.class,
                 () -> new Loan("Wire", "Components", 1, null, "30 October 2099"));
+    }
+    /**
+     * Simulates a contact whose observable values can change after a loan captures them.
+     */
+    private static class MutableContact extends Contact {
+        private String currentName;
+        private String currentPhone;
+
+        MutableContact(String name, String phone) throws CommandException {
+            super(name, phone, null, null);
+            update(name, phone);
+        }
+
+        /**
+         * Changes the source values without altering any loan snapshots.
+         */
+        void update(String name, String phone) {
+            currentName = name;
+            currentPhone = phone;
+        }
+
+        @Override
+        public String getName() {
+            return currentName;
+        }
+
+        @Override
+        public String getPhone() {
+            return currentPhone;
+        }
     }
 }
