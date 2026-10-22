@@ -16,7 +16,7 @@ import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses help, inventory, scheduling, and session preparation commands and dispatches them.
+ * Parses and dispatches help, inventory, scheduling, preparation, and contact commands.
  */
 public class Parser {
 
@@ -24,37 +24,52 @@ public class Parser {
     private static final int DEFAULT_ITEM_QUANTITY = 1;
     private static final String UNEXPECTED_ERROR_MESSAGE =
             "An unexpected error occurred while processing the command. Please try again.";
+
     private static final String ADD_ITEM_USAGE =
             "Invalid format. Use: add-i n/NAME c/CATEGORY [q/QUANTITY]";
     private static final String DELETE_ITEM_USAGE =
             "Invalid format. Use: delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY";
     private static final String LIST_ITEM_USAGE = "Invalid format. Use: list-i";
+
     private static final String ADD_SESSION_USAGE = "Invalid format. Use: add-s n/NAME d/DATE "
             + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
     private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
     private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
+
     private static final String ADD_PREPARATION_USAGE =
             "Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]";
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
+
+    private static final String ADD_CONTACT_USAGE =
+            "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
+    private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
     private static final String HELP_USAGE = "Invalid format. Use: help";
+
+    /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
+    private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
+            List.of("n", "t"),
+            List.of("n", "t", "e"),
+            List.of("n", "t", "r"),
+            List.of("n", "t", "e", "r"));
 
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
-     * Executes an inventory, scheduling, preparation, or contact command, or prints a message for an
-     * unknown command. Expected user errors are displayed without ending the application. Unexpected
+     * Executes a supported command or prints a message for an unknown command.
+     * Expected user errors are displayed without ending the application. Unexpected
      * runtime failures are logged and replaced with a safe user-facing message.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
-     * @param sessionManager SessionManager to schedule or modify lab sessions.
-     * @param contactManager ContactManager to add, remove, or display contacts.
+     * @param sessionManager Session manager to schedule or modify lab sessions.
+     * @param contactManager Contact manager to add, remove, or display contacts.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager) {
+                              ContactManager contactManager) {
         try {
             handleCommandInternal(input, inventory, sessionManager, contactManager);
         } catch (RuntimeException e) {
@@ -67,7 +82,7 @@ public class Parser {
      * Parses and dispatches one command after the public failure boundary has been established.
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager) {
+                                       ContactManager contactManager) {
         String[] parts = input.trim().split("\\s+", 2);
         String command = parts[0];
 
@@ -313,7 +328,7 @@ public class Parser {
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handlePreparation(String command, String arguments, Inventory inventory,
-            SessionManager sessionManager) throws CommandException {
+                                   SessionManager sessionManager) throws CommandException {
         Session session;
         switch (command) {
             case "add-p" -> session = addPreparation(arguments, sessionManager);
@@ -462,7 +477,7 @@ public class Parser {
     }
 
     /**
-     * Extracts values between an already validated sequence of prefixes.
+     * Validates the prefix sequence and extracts the values between prefixes.
      *
      * @param arguments Command arguments containing the prefixes.
      * @param expectedPrefixes Prefixes expected in the arguments.

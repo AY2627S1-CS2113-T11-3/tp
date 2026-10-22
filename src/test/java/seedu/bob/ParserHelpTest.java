@@ -15,39 +15,43 @@ import org.junit.jupiter.api.Test;
  */
 class ParserHelpTest {
 
-    /** Typed out in full, as written in the user guide, so that a typo in the application is caught. */
+    /** Defines the expected output independently so changes to the application text are detected. */
     private static final String EXPECTED_HELP =
             "--------------------------------------------------------------------\n"
-            + "Available commands\n"
-            + "--------------------------------------------------------------------\n"
-            + "Inventory\n"
-            + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
-            + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
-            + "  list-i\n"
-            + "Lab sessions\n"
-            + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
-            + "  delete-s INDEX\n"
-            + "  list-s\n"
-            + "Lab preparation\n"
-            + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
-            + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
-            + "  list-p s/SESSION_INDEX\n"
-            + "Contacts\n"
-            + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
-            + "  delete-c INDEX\n"
-            + "  list-c\n"
-            + "Other\n"
-            + "  help\n"
-            + "  Bye\n"
-            + "--------------------------------------------------------------------\n";
+                    + "Available commands\n"
+                    + "--------------------------------------------------------------------\n"
+                    + "Inventory\n"
+                    + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
+                    + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
+                    + "  list-i\n"
+                    + "Lab sessions\n"
+                    + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
+                    + "  delete-s INDEX\n"
+                    + "  list-s\n"
+                    + "Lab preparation\n"
+                    + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
+                    + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
+                    + "  list-p s/SESSION_INDEX\n"
+                    + "Contacts\n"
+                    + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
+                    + "  delete-c INDEX\n"
+                    + "  list-c\n"
+                    + "Other\n"
+                    + "  help\n"
+                    + "  Bye\n"
+                    + "--------------------------------------------------------------------\n";
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Parser parser = new Parser();
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
+    private final ContactManager contacts = new ContactManager();
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
+    /**
+     * Redirects standard output so each test can inspect command responses.
+     */
     @BeforeEach
     void setUp() {
         originalOutput = System.out;
@@ -55,6 +59,9 @@ class ParserHelpTest {
         System.setOut(capturedOutput);
     }
 
+    /**
+     * Restores standard output and closes the stream created for the test.
+     */
     @AfterEach
     void tearDown() {
         System.setOut(originalOutput);
@@ -99,10 +106,13 @@ class ParserHelpTest {
 
     /**
      * Executes one command and returns only that command's normalized console output.
+     *
+     * @param command Command to execute.
+     * @return Command output with Windows line endings converted to newline characters.
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions);
+        parser.handleCommand(command, inventory, sessions, contacts);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }
