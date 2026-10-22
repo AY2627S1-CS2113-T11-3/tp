@@ -5,6 +5,8 @@ import java.util.logging.Logger;
 
 /**
  * Runs the interactive Bob inventory and scheduling application.
+ *
+ * @author Lokwx
  */
 public class Bob {
 
@@ -40,13 +42,14 @@ public class Bob {
         Inventory inventory = new Inventory();
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
+        RequestManager requestManager = new RequestManager();
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager);
             System.out.println();
         }
 
