@@ -59,7 +59,9 @@ class InventoryLoanValidationTest {
         assertEquals(5, inventory.getAvailableQuantity("Battery", "Spares"));
     }
 
-    /** Checks affected and unrelated stock after each rejected operation. */
+    /**
+     * Checks affected and unrelated stock after each rejected operation.
+     */
     private void assertOriginalStock() {
         assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
         assertEquals(5, inventory.getAvailableQuantity("Battery", "Spares"));

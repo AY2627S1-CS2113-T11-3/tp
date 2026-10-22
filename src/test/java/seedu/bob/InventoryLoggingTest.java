@@ -26,12 +26,12 @@ class InventoryLoggingTest {
     private final Logger logger = Logger.getLogger(Inventory.class.getName());
     private final RecordingHandler handler = new RecordingHandler();
     private Level originalLevel;
-    private boolean originallyUsesParentHandlers;
+    private boolean wasUsingParentHandlers;
 
     @BeforeEach
     void captureLogs() {
         originalLevel = logger.getLevel();
-        originallyUsesParentHandlers = logger.getUseParentHandlers();
+        wasUsingParentHandlers = logger.getUseParentHandlers();
         logger.setLevel(Level.FINE);
         logger.setUseParentHandlers(false);
         handler.setLevel(Level.FINE);
@@ -42,7 +42,7 @@ class InventoryLoggingTest {
     void restoreLogger() {
         logger.removeHandler(handler);
         logger.setLevel(originalLevel);
-        logger.setUseParentHandlers(originallyUsesParentHandlers);
+        logger.setUseParentHandlers(wasUsingParentHandlers);
     }
 
     @Test

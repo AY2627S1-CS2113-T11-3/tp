@@ -26,7 +26,14 @@ public class Inventory {
      */
     private static final Logger LOGGER = Logger.getLogger(Inventory.class.getName());
 
+    /** Preserves category and item insertion order for display and category-specific deletion indices. */
     private final LinkedHashMap<String, ArrayList<InventoryItem>> items = new LinkedHashMap<>();
+
+    /**
+     * Creates an empty inventory with categories and items kept in insertion order.
+     */
+    public Inventory() {
+    }
 
     /**
      * Adds an item to its category and prints a confirmation.
@@ -153,6 +160,10 @@ public class Inventory {
     /**
      * Deducts a validated quantity without displaying an inventory-deletion confirmation.
      * Both manual deletion and lending use this path to remove depleted items and categories consistently.
+     *
+     * @param storedCategory Existing category's stored display name.
+     * @param index Zero-based position within the category.
+     * @param quantity Positive units to deduct, not exceeding the item's available stock.
      */
     private void deductQuantity(String storedCategory, int index, int quantity) {
         assert hasValidState() : "Stock deduction requires valid inventory";
@@ -270,6 +281,8 @@ public class Inventory {
      * Validates loan item identifiers before either stock path can modify inventory.
      * Direct domain calls receive the same checked errors as loan construction.
      *
+     * @param name Loan item name.
+     * @param category Loan item category.
      * @throws CommandFormatException If the name or category is null or blank.
      */
     private void validateLoanItemDetails(String name, String category) throws CommandFormatException {
