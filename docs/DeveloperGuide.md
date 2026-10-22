@@ -109,8 +109,8 @@ loans and preparations to query or update inventory.
 
 The UI is implemented by [`Bob`](../src/main/java/seedu/bob/Bob.java) and [`Ui`](../src/main/java/seedu/bob/Ui.java).
 
-- `Bob` displays the banner, reads input using `Scanner`, and prints command results.
-- `Ui` stores the divider and the complete `help` message.
+- `Bob` displays the banner and greeting, reads input using `Scanner`, and separates command responses.
+- `Ui` renders loan confirmations and listings and stores the divider and complete `help` message.
 - The UI does not contain business rules; it delegates command handling to `Parser`.
 - The application exits when the user enters `Bye` in any letter case.
 
@@ -123,8 +123,9 @@ For every input line, `Parser`:
 1. separates the command word from its arguments;
 2. selects the command handler;
 3. checks prefixes, argument order, and value formats;
-4. constructs domain objects where necessary; and
-5. invokes the relevant model manager.
+4. constructs domain objects where necessary;
+5. invokes the relevant model manager; and
+6. passes loan operation results and listing rows to `Ui` for rendering.
 
 Commands use fixed prefix orders, such as `n/NAME c/CATEGORY q/QUANTITY`. A shared prefix matcher separates values from
 later arguments. Consequently, a value containing a standalone token such as `a/b` is currently interpreted as another
@@ -143,7 +144,8 @@ The model is composed of domain objects and managers:
 - [`Preparation`](../src/main/java/seedu/bob/Preparation.java) stores per-session requirements through `PreparationItem`.
 - [`ContactManager`](../src/main/java/seedu/bob/ContactManager.java) stores contacts.
 - [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
-- [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower, and due date.
+- [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
+- `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
 
 Managers expose operations rather than their mutable internal collections. Where a collection is returned for querying,
 the implementation returns an immutable snapshot. Domain classes maintain invariants such as positive quantities,
@@ -208,8 +210,9 @@ available units removes the depleted inventory entry.
 
 Each `Loan` contains an item snapshot and final borrower name/phone strings captured at construction. The existing
 `Contact` validates the captured values, but the loan neither retains nor exposes the supplied contact reference.
-Changes to a source contact therefore cannot rewrite an earlier loan's borrower details. Borrowers are not added to `ContactManager`,
-and each successful command creates a separate loan record. Due dates use strict English `d MMMM yyyy` parsing. Past due
+Changes to a source contact therefore cannot rewrite an earlier loan's borrower details. Borrowers are not added to
+`ContactManager`, and each successful command creates a separate loan record. Due dates use strict English
+`d MMMM yyyy` parsing. Past due
 dates are accepted as backlog entries and produce a warning; a loan due today is not overdue.
 
 `list-l` displays active loans in insertion order and calculates overdue status using an injected `Clock`. The default
@@ -223,7 +226,11 @@ therefore leaves the loan and inventory unchanged.
 Loan mutations return domain results without printing. `addLoan` returns an immutable `LoanAdditionResult` containing
 the loan and overdue status evaluated with the manager's clock at addition. Corrections and returns return the removed
 `Loan`. `Parser` passes these successful results to `Ui`, which owns their distinct confirmations and backlog warning.
-Loan listing still prints through the manager until the query/rendering phase is completed.
+`getLoanEntries` and `getOverdueLoanEntries` return immutable `LoanListEntry` rows containing the loan, full-list index,
+and overdue flag. Each query resolves one local date for all rows; filtered rows preserve their full-list positions.
+`Parser` passes rows to `Ui.showLoans`, which renders headings, markers, and empty states without querying the clock.
+`LoanManager` has no console-printing calls or dependency on `Ui`. Its state, results, and diagnostics can be tested
+independently of presentation. Later clock or loan-list changes do not alter an earlier query's captured indices/flags.
 
 ### Validation and error handling
 

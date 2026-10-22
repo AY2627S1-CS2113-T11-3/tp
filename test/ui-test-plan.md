@@ -145,6 +145,16 @@ All existing add/delete/return and overdue-warning expected outputs remain uncha
 silent manager mutations and independently verify Ui confirmations. Commit this phase, then run the
 complete existing UI plan with assertions enabled before changing list rendering in phase 3.
 
+## Loan review fixes: phase 3 listing queries and rendering
+
+LoanManager returns immutable listing rows containing the loan, its full active-list index, and its
+overdue status evaluated against one local date per query. Queries neither print nor mutate state.
+Parser passes the selected rows to Ui; Ui owns headings, dividers, original indices, markers, and empty
+messages. The overdue view preserves full-list indices rather than renumbering filtered results.
+UI-LOAN-LIST-001 and UI-LOAN-OVERDUE-001 through UI-LOAN-OVERDUE-004 keep their exact recorded outputs,
+as do all earlier cases. Unit tests cover query immutability, clock read count, rollover/time zones,
+and independent list rendering. Commit this phase, then run the full plan with assertions enabled.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import seedu.bob.exception.CommandException;
  */
 class LoanUiTest {
 
+    private static final String DIVIDER = "--------------------------------------------------------------------\n";
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
@@ -65,6 +67,42 @@ class LoanUiTest {
                 + " due 30 October 2099. Inventory restored.\n"
                 + "Successfully returned loan: 3x Wire [Components] to Alex (00123456),"
                 + " due 30 October 2099. Inventory restored.\n", response());
+    }
+
+    @Test
+    void showLoans_emptyViews_printsDistinctEmptyMessages() {
+        Ui.showLoans(List.of(), false);
+        assertEquals(DIVIDER + "Loans\n" + DIVIDER + "No active loans.\n" + DIVIDER, response());
+
+        output.reset();
+        Ui.showLoans(List.of(), true);
+        assertEquals(DIVIDER + "Overdue loans\n" + DIVIDER + "No overdue loans.\n" + DIVIDER, response());
+    }
+
+    @Test
+    void showLoans_mixedRows_rendersSuppliedFlagsWithoutConsultingTheClock() throws CommandException {
+        // These rows represent a manager query in 2100, independently of the computer's date.
+        Loan current = createLoan("1 January 2101");
+        Loan overdue = createLoan("30 October 2099");
+
+        Ui.showLoans(List.of(new LoanListEntry(1, current, false), new LoanListEntry(2, overdue, true)), false);
+
+        assertEquals(DIVIDER + "Loans\n" + DIVIDER
+                + "1. 3x Wire [Components] to Alex (00123456), due 1 January 2101\n"
+                + "2. 3x Wire [Components] to Alex (00123456), due 30 October 2099 [OVERDUE]\n"
+                + DIVIDER, response());
+    }
+
+    @Test
+    void showLoans_overdueRows_preservesGapsInFullListPositions() throws CommandException {
+        Loan loan = createLoan("1 January 2000");
+
+        Ui.showLoans(List.of(new LoanListEntry(2, loan, true), new LoanListEntry(4, loan, true)), true);
+
+        assertEquals(DIVIDER + "Overdue loans\n" + DIVIDER
+                + "2. 3x Wire [Components] to Alex (00123456), due 1 January 2000 [OVERDUE]\n"
+                + "4. 3x Wire [Components] to Alex (00123456), due 1 January 2000 [OVERDUE]\n"
+                + DIVIDER, response());
     }
 
     /**

@@ -239,9 +239,9 @@ public class Parser {
         }
         if (command.equals("list-l")) {
             if (arguments.isBlank()) {
-                loanManager.listLoans();
+                Ui.showLoans(loanManager.getLoanEntries(), false);
             } else if (arguments.trim().equals("overdue")) {
-                loanManager.listOverdueLoans();
+                Ui.showLoans(loanManager.getOverdueLoanEntries(), true);
             } else {
                 throw new CommandFormatException(LIST_LOAN_USAGE);
             }

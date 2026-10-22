@@ -99,8 +99,8 @@ class LoanLoggingTest {
         loans.deleteLoan(1);
         loans.addLoan(createLoan("Wire", "Components", 3));
         loans.returnLoan(1);
-        loans.listLoans();
-        loans.listOverdueLoans();
+        loans.getLoanEntries();
+        loans.getOverdueLoanEntries();
 
         assertEquals(List.of(
                 "Recorded loan: Wire in category Components, quantity=2, due=2099-10-30, overdue=false, active=1",

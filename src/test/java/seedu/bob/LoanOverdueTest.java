@@ -2,12 +2,10 @@ package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,7 +15,6 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +22,7 @@ import seedu.bob.exception.CommandException;
 import seedu.bob.exception.LoanException;
 
 /**
- * Verifies overdue boundaries, filtering, and live date rollover without using the computer's clock.
+ * Verifies query snapshots, overdue boundaries, and live date rollover without console rendering.
  */
 class LoanOverdueTest {
 
@@ -33,23 +30,10 @@ class LoanOverdueTest {
     private final AdjustableClock clock = new AdjustableClock(
             Instant.parse("2026-10-22T04:00:00Z"), ZoneId.of("Asia/Singapore"));
     private final LoanManager loans = new LoanManager(inventory, clock);
-    private final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    private PrintStream originalOutput;
-    private PrintStream capturedOutput;
 
     @BeforeEach
     void setUp() throws CommandException {
-        originalOutput = System.out;
-        capturedOutput = new PrintStream(output, true, StandardCharsets.UTF_8);
-        System.setOut(capturedOutput);
         inventory.addItem(new InventoryItem("Wire", "Components", 20));
-        output.reset();
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.setOut(originalOutput);
-        capturedOutput.close();
     }
 
     @Test
@@ -71,84 +55,91 @@ class LoanOverdueTest {
     }
 
     @Test
-    void addLoan_pastDate_returnsOverdueResultWithoutPrinting() throws CommandException {
-        LoanAdditionResult result = loans.addLoan(createLoan("21 October 2026"));
+    void addLoan_pastDate_returnsOverdueResult() throws CommandException {
+        Loan loan = createLoan("21 October 2026");
+        LoanAdditionResult result = loans.addLoan(loan);
+
         assertTrue(result.isOverdue());
-        assertEquals(LocalDate.of(2026, 10, 21), result.getLoan().getDueDate());
-        assertEquals("", response());
+        assertSame(loan, result.getLoan());
         assertEquals(19, inventory.getAvailableQuantity("Wire", "Components"));
-        assertEquals(1, loans.getLoans().size());
+        assertEquals(List.of(loan), loans.getLoans());
     }
 
     @Test
-    void addLoan_dueTodayOrTomorrow_returnsCurrentResultsWithoutPrinting() throws CommandException {
+    void addLoan_dueTodayOrTomorrow_returnsCurrentResults() throws CommandException {
         assertFalse(loans.addLoan(createLoan("22 October 2026")).isOverdue());
         assertFalse(loans.addLoan(createLoan("23 October 2026")).isOverdue());
-        assertEquals("", response());
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans", "No overdue loans."), response());
+
+        assertTrue(loans.getOverdueLoanEntries().isEmpty());
     }
 
     @Test
-    void listLoans_mixedDates_preservesFullIndicesAndDoesNotMutateState() throws CommandException {
+    void getLoanEntries_mixedDates_preservesFullIndicesAndDoesNotMutateState() throws CommandException {
         loans.addLoan(createLoan("22 October 2026"));
         loans.addLoan(createLoan("21 October 2026"));
         loans.addLoan(createLoan("23 October 2026"));
         loans.addLoan(createLoan("20 October 2026"));
         List<Loan> before = loans.getLoans();
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans",
-                "2. 1x Wire [Components] to Alex (91234567), due 21 October 2026 [OVERDUE]",
-                "4. 1x Wire [Components] to Alex (91234567), due 20 October 2026 [OVERDUE]"), response());
-        output.reset();
-        loans.listLoans();
-        assertEquals(display("Loans",
-                "1. 1x Wire [Components] to Alex (91234567), due 22 October 2026",
-                "2. 1x Wire [Components] to Alex (91234567), due 21 October 2026 [OVERDUE]",
-                "3. 1x Wire [Components] to Alex (91234567), due 23 October 2026",
-                "4. 1x Wire [Components] to Alex (91234567), due 20 October 2026 [OVERDUE]"), response());
+
+        List<LoanListEntry> overdue = loans.getOverdueLoanEntries();
+        List<LoanListEntry> all = loans.getLoanEntries();
+
+        assertEquals(List.of(2, 4), overdue.stream().map(LoanListEntry::getIndex).toList());
+        assertEquals(List.of(before.get(1), before.get(3)),
+                overdue.stream().map(LoanListEntry::getLoan).toList());
+        assertTrue(overdue.stream().allMatch(LoanListEntry::isOverdue));
+        assertEquals(List.of(1, 2, 3, 4), all.stream().map(LoanListEntry::getIndex).toList());
+        assertEquals(before, all.stream().map(LoanListEntry::getLoan).toList());
+        assertEquals(List.of(false, true, false, true), all.stream().map(LoanListEntry::isOverdue).toList());
+        assertThrows(UnsupportedOperationException.class, overdue::clear);
         assertEquals(before, loans.getLoans());
         assertEquals(16, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
     @Test
-    void listLoans_clockCrossesMidnight_recomputesStatusWithoutRestart() throws CommandException {
+    void getLoanEntries_clockCrossesMidnight_recomputesStatusAndPreservesOldResults() throws CommandException {
         clock.setInstant(Instant.parse("2026-10-22T15:59:59Z"));
         LoanAdditionResult addition = loans.addLoan(createLoan("22 October 2026"));
+        List<LoanListEntry> previous = loans.getLoanEntries();
         assertFalse(addition.isOverdue());
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans", "No overdue loans."), response());
+        assertFalse(previous.get(0).isOverdue());
+        assertTrue(loans.getOverdueLoanEntries().isEmpty());
 
         clock.advance(Duration.ofSeconds(1));
+        List<LoanListEntry> current = loans.getOverdueLoanEntries();
+
         assertFalse(addition.isOverdue());
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans",
-                "1. 1x Wire [Components] to Alex (91234567), due 22 October 2026 [OVERDUE]"), response());
-        output.reset();
-        loans.listLoans();
-        assertTrue(response().contains("[OVERDUE]"));
+        assertFalse(previous.get(0).isOverdue());
+        assertEquals(1, current.size());
+        assertEquals(1, current.get(0).getIndex());
+        assertTrue(current.get(0).isOverdue());
+        assertTrue(loans.getLoanEntries().get(0).isOverdue());
         assertEquals(19, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
     @Test
-    void listOverdueLoans_sameInstantInDifferentZones_usesTheClockLocalDate() throws CommandException {
+    void getLoanEntries_multipleRows_readsClockOncePerQuery() throws CommandException {
+        loans.addLoan(createLoan("21 October 2026"));
+        loans.addLoan(createLoan("22 October 2026"));
+        int before = clock.getReadCount();
+
+        assertEquals(2, loans.getLoanEntries().size());
+        assertEquals(before + 1, clock.getReadCount());
+        assertEquals(1, loans.getOverdueLoanEntries().size());
+        assertEquals(before + 2, clock.getReadCount());
+    }
+
+    @Test
+    void getOverdueLoanEntries_sameInstantInDifferentZones_usesTheClockLocalDate() throws CommandException {
         clock.setInstant(Instant.parse("2026-10-22T16:00:00Z"));
         LoanManager utcLoans = new LoanManager(inventory, clock.withZone(ZoneOffset.UTC));
         assertFalse(utcLoans.addLoan(createLoan("22 October 2026")).isOverdue());
-        assertEquals("", response());
-        output.reset();
         assertTrue(loans.addLoan(createLoan("22 October 2026")).isOverdue());
-        assertEquals("", response());
-        output.reset();
-        utcLoans.listOverdueLoans();
-        assertEquals(display("Overdue loans", "No overdue loans."), response());
-        output.reset();
-        loans.listOverdueLoans();
-        assertTrue(response().contains("due 22 October 2026 [OVERDUE]"));
+
+        assertTrue(utcLoans.getOverdueLoanEntries().isEmpty());
+        assertEquals(1, loans.getOverdueLoanEntries().size());
+        assertTrue(loans.getOverdueLoanEntries().get(0).isOverdue());
+        assertEquals(18, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
     @Test
@@ -158,25 +149,28 @@ class LoanOverdueTest {
         loans.addLoan(createLoan("21 October 2026"));
         loans.addLoan(createLoan("20 October 2026"));
         loans.returnLoan(2);
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans",
-                "2. 1x Wire [Components] to Alex (91234567), due 20 October 2026 [OVERDUE]"), response());
+
+        List<LoanListEntry> overdue = loans.getOverdueLoanEntries();
+        assertEquals(1, overdue.size());
+        assertEquals(2, overdue.get(0).getIndex());
+        assertEquals(LocalDate.of(2026, 10, 20), overdue.get(0).getLoan().getDueDate());
+
         loans.deleteLoan(2);
-        output.reset();
-        loans.listOverdueLoans();
-        assertEquals(display("Overdue loans", "No overdue loans."), response());
+        assertTrue(loans.getOverdueLoanEntries().isEmpty());
         assertEquals(List.of(current), loans.getLoans());
         assertEquals(19, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
     @Test
-    void addLoan_rejectedBacklog_doesNotWarnOrChangeStock() throws CommandException {
+    void addLoan_rejectedBacklog_preservesStockAndQueryResults() throws CommandException {
         Loan tooLarge = new Loan("Wire", "Components", 21,
                 new Contact("Alex", "91234567", null, null), "21 October 2026");
+
         assertThrows(LoanException.class, () -> loans.addLoan(tooLarge));
-        assertEquals("", response());
+
         assertTrue(loans.getLoans().isEmpty());
+        assertTrue(loans.getLoanEntries().isEmpty());
+        assertTrue(loans.getOverdueLoanEntries().isEmpty());
         assertEquals(20, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
@@ -188,27 +182,14 @@ class LoanOverdueTest {
     }
 
     /**
-     * Returns captured stdout using the same newline convention as the expected fixtures.
-     */
-    private String response() {
-        return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
-    }
-
-    /**
-     * Builds an expected list frame around independently specified rows.
-     */
-    private String display(String title, String... rows) {
-        return Ui.DIVIDER + "\n" + title + "\n" + Ui.DIVIDER + "\n"
-                + String.join("\n", rows) + "\n" + Ui.DIVIDER + "\n";
-    }
-
-    /**
      * Provides a controllable instant, shared by zone views, without changing system time.
      */
     private static class AdjustableClock extends Clock {
         /** Shared by every zone view so advancing the test clock updates all views together. */
         private final AtomicReference<Instant> currentInstant;
         private final ZoneId zone;
+        /** Counts instant reads so a query can be checked for a single reference date. */
+        private int readCount;
 
         /**
          * Creates a clock whose time can be advanced by the test.
@@ -257,8 +238,16 @@ class LoanOverdueTest {
             return new AdjustableClock(currentInstant, zone);
         }
 
+        /**
+         * Returns the number of instant reads performed through this zone view.
+         */
+        int getReadCount() {
+            return readCount;
+        }
+
         @Override
         public Instant instant() {
+            readCount++;
             return currentInstant.get();
         }
     }

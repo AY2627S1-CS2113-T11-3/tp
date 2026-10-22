@@ -56,8 +56,9 @@ class LoanManagerTest {
         assertSame(loan, result.getLoan());
         assertFalse(result.isOverdue());
         assertEquals("", output.toString(StandardCharsets.UTF_8));
-        loans.listLoans();
-        loans.listLoans();
+        loans.getLoanEntries();
+        loans.getOverdueLoanEntries();
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
         assertEquals(7, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
@@ -108,6 +109,27 @@ class LoanManagerTest {
         loans.addLoan(createLoan("Wire", "Components", 1, "30 October 2099"));
         assertTrue(before.isEmpty());
         assertThrows(UnsupportedOperationException.class, () -> loans.getLoans().clear());
+    }
+
+    @Test
+    void getLoanEntries_snapshot_preservesRowsAfterRemovalAndRejectsListMutation() throws CommandException {
+        List<LoanListEntry> empty = loans.getLoanEntries();
+        assertTrue(loans.getOverdueLoanEntries().isEmpty());
+        Loan loan = createLoan("Wire", "Components", 2, "30 October 2099");
+        loans.addLoan(loan);
+        List<LoanListEntry> snapshot = loans.getLoanEntries();
+
+        assertThrows(UnsupportedOperationException.class, snapshot::clear);
+        loans.returnLoan(1);
+
+        assertTrue(empty.isEmpty());
+        assertEquals(1, snapshot.size());
+        assertEquals(1, snapshot.get(0).getIndex());
+        assertSame(loan, snapshot.get(0).getLoan());
+        assertFalse(snapshot.get(0).isOverdue());
+        assertTrue(loans.getLoanEntries().isEmpty());
+        assertEquals(10, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals("", output.toString(StandardCharsets.UTF_8));
     }
 
     @Test

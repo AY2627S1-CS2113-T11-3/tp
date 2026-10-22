@@ -162,45 +162,43 @@ public class LoanManager {
     }
 
     /**
-     * Prints active loans with one-based positions and markers for overdue records.
+     * Returns all active loans with their positions and overdue status at query time.
+     *
+     * @return Immutable rows in active-loan insertion order.
      */
-    public void listLoans() {
-        printLoans(false);
+    public List<LoanListEntry> getLoanEntries() {
+        return buildLoanEntries(false);
     }
 
     /**
-     * Prints only overdue loans, preserving their indices from the full active loan list.
+     * Returns overdue loans with their original positions in the full active-loan list.
+     *
+     * @return Immutable overdue rows, whose positions may contain gaps.
      */
-    public void listOverdueLoans() {
-        printLoans(true);
+    public List<LoanListEntry> getOverdueLoanEntries() {
+        return buildLoanEntries(true);
     }
 
     /**
-     * Displays loans against one current local date without mutating stock or loan records.
+     * Selects loan rows against one current local date without printing or mutating feature state.
      *
      * @param isOverdueOnly Whether to exclude current loans while preserving full-list positions.
+     * @return Immutable rows whose overdue flags share the same reference date.
      */
-    private void printLoans(boolean isOverdueOnly) {
+    private List<LoanListEntry> buildLoanEntries(boolean isOverdueOnly) {
         assert hasValidState() : "Listing requires valid loan records";
         LocalDate today = LocalDate.now(clock);
         LOGGER.fine(() -> "Listing loans: overdueOnly=" + isOverdueOnly + ", active=" + loans.size()
                 + ", date=" + today);
-        System.out.println(Ui.DIVIDER);
-        System.out.println(isOverdueOnly ? "Overdue loans" : "Loans");
-        System.out.println(Ui.DIVIDER);
-        boolean hasDisplayedLoans = false;
+        List<LoanListEntry> entries = new ArrayList<>();
         for (int i = 0; i < loans.size(); i++) {
             Loan loan = loans.get(i);
             boolean isOverdue = loan.isOverdue(today);
             if (isOverdueOnly && !isOverdue) {
                 continue;
             }
-            System.out.printf("%d. %s%s%n", i + 1, loan, isOverdue ? " [OVERDUE]" : "");
-            hasDisplayedLoans = true;
+            entries.add(new LoanListEntry(i + 1, loan, isOverdue));
         }
-        if (!hasDisplayedLoans) {
-            System.out.println(isOverdueOnly ? "No overdue loans." : "No active loans.");
-        }
-        System.out.println(Ui.DIVIDER);
+        return List.copyOf(entries);
     }
 }

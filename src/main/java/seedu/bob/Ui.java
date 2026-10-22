@@ -1,9 +1,10 @@
 package seedu.bob;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Displays loan operation results and provides shared constants for console output.
+ * Displays loan results and listings and provides shared constants for console output.
  */
 public class Ui {
 
@@ -81,5 +82,28 @@ public class Ui {
     public static void showLoanReturned(Loan loan) {
         Objects.requireNonNull(loan, "Returned loan must not be null");
         System.out.println("Successfully returned loan: " + loan + ". Inventory restored.");
+    }
+
+    /**
+     * Prints a loan listing using the positions and overdue flags supplied by the manager.
+     * Does not filter rows or recalculate overdue status.
+     *
+     * @param entries Rows already selected by a manager query.
+     * @param isOverdueOnly Whether the query selected the overdue-only view.
+     * @throws NullPointerException If entries is null or contains a null row.
+     */
+    public static void showLoans(List<LoanListEntry> entries, boolean isOverdueOnly) {
+        Objects.requireNonNull(entries, "Loan listing rows must not be null");
+        System.out.println(DIVIDER);
+        System.out.println(isOverdueOnly ? "Overdue loans" : "Loans");
+        System.out.println(DIVIDER);
+        for (LoanListEntry entry : entries) {
+            System.out.printf("%d. %s%s%n", entry.getIndex(), entry.getLoan(),
+                    entry.isOverdue() ? " [OVERDUE]" : "");
+        }
+        if (entries.isEmpty()) {
+            System.out.println(isOverdueOnly ? "No overdue loans." : "No active loans.");
+        }
+        System.out.println(DIVIDER);
     }
 }
