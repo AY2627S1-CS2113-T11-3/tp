@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.DuplicateItemException;
 import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidItemIndexException;
@@ -180,6 +181,7 @@ public class Inventory {
      * @throws CommandException If the quantity is invalid, the item is absent, or stock is insufficient.
      */
     void lendItem(String name, String category, int quantity) throws CommandException {
+        validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             throw new InvalidQuantityException();
         }
@@ -213,6 +215,7 @@ public class Inventory {
      * @throws CommandException If the quantity is invalid or restoration would overflow existing stock.
      */
     void restoreStock(String name, String category, int quantity) throws CommandException {
+        validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             throw new InvalidQuantityException();
         }
@@ -243,7 +246,22 @@ public class Inventory {
     }
 
     /**
-     * Returns current stock matching a preparation item's name and category.
+     * Validates loan item identifiers before either stock path can modify inventory.
+     * Direct domain calls receive the same checked errors as loan construction.
+     *
+     * @throws CommandFormatException If the name or category is null or blank.
+     */
+    private void validateLoanItemDetails(String name, String category) throws CommandFormatException {
+        if (name == null || name.isBlank()) {
+            throw new CommandFormatException("Item name cannot be blank.");
+        }
+        if (category == null || category.isBlank()) {
+            throw new CommandFormatException("Category cannot be blank.");
+        }
+    }
+
+    /**
+     * Returns current stock matching a preparation or loan item's name and category.
      * Matching is case-insensitive and does not reserve or remove stock.
      *
      * @param name Item name to look up.

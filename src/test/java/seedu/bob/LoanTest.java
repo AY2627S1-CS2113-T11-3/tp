@@ -1,10 +1,13 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
@@ -53,6 +56,12 @@ class LoanTest {
                     () -> new Loan("Wire", "Components", 1, borrower, date));
             assertEquals("Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).",
                     error.getMessage());
+            if (date == null) {
+                assertNull(error.getCause());
+            } else {
+                DateTimeParseException cause = assertInstanceOf(DateTimeParseException.class, error.getCause());
+                assertEquals(date, cause.getParsedString());
+            }
         }
     }
 

@@ -13,6 +13,15 @@ public class InvalidLoanIndexException extends CommandException {
     }
 
     /**
+     * Creates an invalid-index error while retaining the integer parsing failure.
+     *
+     * @param cause Original failure, retained for debugging.
+     */
+    public InvalidLoanIndexException(NumberFormatException cause) {
+        super("Loan index must be a positive integer.", cause);
+    }
+
+    /**
      * Creates an error for a position outside the active loan list.
      *
      * @param index Requested one-based position.

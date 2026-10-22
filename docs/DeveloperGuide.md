@@ -74,6 +74,12 @@ filter syntax, and marker behavior. History, partial returns, and persistence re
 stock invariants, and immutable snapshots. `UI-LOAN-*` in `test/ui-test-plan.md` records console checks,
 including preparation availability and supplier-contact isolation. Run the cumulative plan after each phase.
 
+### Loan defensive programming
+
+Loan validation uses the existing checked exception hierarchy. Invalid loan dates and malformed loan indices retain
+their original parsing causes for debugging while preserving the existing user-facing messages. The loan stock helpers
+also validate item names, categories, and positive quantities before modifying inventory, even when called directly.
+
 ## Product scope
 ### Target user profile
 

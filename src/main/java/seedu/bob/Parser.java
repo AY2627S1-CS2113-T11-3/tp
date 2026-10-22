@@ -652,7 +652,7 @@ public class Parser {
             }
             return index;
         } catch (NumberFormatException e) {
-            throw new InvalidLoanIndexException();
+            throw new InvalidLoanIndexException(e);
         }
     }
 

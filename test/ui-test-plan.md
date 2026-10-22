@@ -89,6 +89,16 @@ full active-list index; remaining indices shift normally after removal. Earlier 
 are updated for this approved behavior before implementation, and unrelated cases are preserved.
 Clock-controlled unit tests cover midnight rollover, calendar boundaries, and timezone behavior.
 
+## Defensive programming: phase 1 exception contract
+
+Loan command syntax and stdout remain unchanged. Invalid dates and non-integer loan indices retain
+their parsing causes in checked exceptions without exposing stack traces to the user. Loan inventory
+helpers reject invalid names, categories, and quantities before mutation, including direct domain calls.
+UI-LOAN-DEFENSIVE-001 records recovery after rejected commands; the existing overflow, date, index,
+borrower, stock, and feature-isolation cases remain mandatory regression coverage after every phase.
+Unit tests verify exception causes and unchanged state, which stdout comparisons cannot inspect.
+Expected outputs are recorded before implementation and before running the affected cases.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input
@@ -7626,6 +7636,198 @@ No active loans.
 ```
 
 #### Step 6
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-DEFENSIVE-001: Recover after rejected loans and prevent repeated restoration
+
+**Aim:** Preserve stock and active records after invalid dates, insufficient stock, invalid indices, and a repeated return; continue accepting valid commands.
+
+**Preconditions:** Fresh application with empty inventory and loans. Expected stdout remains identical with assertions enabled or disabled.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex t/91234567 d/31 February 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/11 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Cannot loan 11 Wire. Only 10 are available.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+return 999999999999999999999
+```
+
+**Expected output**
+
+```text
+Loan index must be a positive integer.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/3 b/Alex t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Wire [Components] to Alex (91234567), due 30 October 2099
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-l 2
+```
+
+**Expected output**
+
+```text
+Loan index 2 is invalid. There are 1 active loan(s).
+```
+
+#### Step 9
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 3x Wire [Components] to Alex (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 10
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Loan index 1 is invalid. There are 0 active loan(s).
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 12
 
 **Input**
 

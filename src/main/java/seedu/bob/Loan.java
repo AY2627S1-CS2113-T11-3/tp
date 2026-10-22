@@ -17,6 +17,8 @@ import seedu.bob.exception.LoanException;
  */
 public class Loan {
 
+    private static final String INVALID_DUE_DATE_MESSAGE =
+            "Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
             .ofPattern("d MMMM uuuu", Locale.ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
@@ -51,12 +53,12 @@ public class Loan {
         }
         this.borrower = Objects.requireNonNull(borrower, "Loan borrower must not be null");
         if (dueDateText == null) {
-            throw new LoanException("Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).");
+            throw new LoanException(INVALID_DUE_DATE_MESSAGE);
         }
         try {
             dueDate = LocalDate.parse(dueDateText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
-            throw new LoanException("Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).");
+            throw new LoanException(INVALID_DUE_DATE_MESSAGE, e);
         }
         item = new InventoryItem(name, category, quantity);
     }

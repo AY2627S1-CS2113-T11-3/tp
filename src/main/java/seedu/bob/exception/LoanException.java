@@ -13,4 +13,14 @@ public class LoanException extends CommandException {
     public LoanException(String message) {
         super(message);
     }
+
+    /**
+     * Creates a loan error without losing the original parsing failure.
+     *
+     * @param message Explanation shown to the user.
+     * @param cause Original failure, retained for debugging.
+     */
+    public LoanException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
