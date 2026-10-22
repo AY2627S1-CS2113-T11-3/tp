@@ -34,4 +34,25 @@ class InventoryAvailabilityTest {
         inventory.removeItem("Components", 1, 15);
         assertEquals(0, inventory.getAvailableQuantity("Wire", "Components"));
     }
+
+    @Test
+    void getTotalAvailableQuantity_caseVaries_sumsAllCategories() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 20));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 100));
+
+        assertEquals(120, inventory.getTotalAvailableQuantity("wIrE"));
+        assertEquals(0, inventory.getTotalAvailableQuantity("Battery"));
+    }
+
+    @Test
+    void getTotalAvailableQuantity_inventoryChanges_returnsCurrentTotal() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 20));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 100));
+
+        inventory.removeItem("Spares", 1, 40);
+
+        assertEquals(80, inventory.getTotalAvailableQuantity("Wire"));
+    }
 }
