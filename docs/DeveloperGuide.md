@@ -174,6 +174,10 @@ Inventory operations validate all inputs before changing state. Loan deductions 
 path as `delete-i`, ensuring depleted items and categories are handled consistently. Inventory listing uses one-based item
 indices within each category.
 
+![Inventory categories](images/item-management.png)
+
+*Figure 1: Inventory categories and their stored items.*
+
 ### Session scheduling
 
 `Session` parses dates in `d MMMM yyyy` format and times in `HHmm` format. Dates cannot be in the past, times must be
@@ -182,6 +186,168 @@ location, ignoring location capitalization, but permits overlapping sessions at 
 
 Sessions are sorted by date, start time, and name. Because sorting can change positions, users should run `list-s` before
 using a session index. Deleting a session also discards its preparation.
+
+#### Detailed scheduling design
+
+Lab session scheduling supports adding, listing, and deleting sessions through the `add-s`, `list-s`, and `delete-s`
+commands. Responsibilities are divided between three classes:
+
+- **Parser** validates command syntax, extracts arguments, and dispatches scheduling operations.
+- **Session** validates individual session details and defines ordering and conflict detection.
+- **SessionManager** maintains the schedule, rejects conflicting additions, and retrieves or removes sessions using
+  displayed indices.
+
+`SessionManager` stores sessions in an `ArrayList<Session>`, sorted after each successful addition. Displayed indices are
+one-based list positions and can change after additions or deletions. Each `Session` owns a `Preparation` object, so
+preparation remains associated with the same session when its position changes.
+
+![Lab session scheduling class diagram](images/lab-session-scheduling-dg.png)
+
+*Figure 2: Main scheduling classes and relationships. Selected members are shown; constructors, routine getters, and
+preparation internals are omitted.*
+
+##### Key operations
+
+- `SessionManager#addSession(Session session)` rejects conflicts before insertion, then adds the session and sorts the schedule.
+- `Session#conflictsWith(Session other)` checks for overlapping times on the same date at the same location.
+- `Session#compareTo(Session other)` orders sessions by date, then start time, then name ignoring capitalization.
+- `SessionManager#getSession(int userIndex)` validates a displayed index and retrieves its session.
+- `SessionManager#deleteSession(int userIndex)` validates and retrieves the session through `getSession()` before removing it.
+- `SessionManager#listSessions()` displays numbered sessions in stored order, or an empty-schedule message.
+
+##### Example walkthrough
+
+Assume that 5 November 2099 is a future date.
+
+**Step 1: Initialize an empty schedule**
+
+At startup, `Bob` creates a `SessionManager` containing an empty `ArrayList<Session>`. Calling `list-s` displays the
+empty-schedule message.
+
+**Step 2: Add an afternoon session**
+
+The user enters:
+
+`add-s n/Embedded Systems Lab d/5 November 2099 l/Room-A s/1300 e/1500 p/18`
+
+`Parser` checks the prefixes, extracts values, converts the headcount, and constructs a validated `Session`. The manager
+finds no existing sessions, inserts the candidate, sorts the list, and prints confirmation. Embedded Systems Lab receives
+index 1.
+
+**Step 3: Add an earlier session and reorder the schedule**
+
+The user enters:
+
+`add-s n/Digital Design Lab d/5 November 2099 l/Room-A s/0900 e/1100 p/24`
+
+The sessions share a date and location, but their times do not overlap. The manager accepts the addition and calls
+`Collections.sort()`, which uses `Session#compareTo()`.
+
+| Displayed index | Session | Time |
+| --- | --- | --- |
+| 1 | Digital Design Lab | 0900–1100 |
+| 2 | Embedded Systems Lab | 1300–1500 |
+
+Embedded Systems Lab moves to index 2; its session and preparation objects remain unchanged.
+
+**Step 4: Reject a conflicting session**
+
+The user enters:
+
+`add-s n/Circuit Lab d/5 November 2099 l/Room-A s/1000 e/1200 p/12`
+
+Construction succeeds, but `Session#conflictsWith()` detects a conflict with Digital Design Lab because:
+
+- Their dates match.
+- Their locations match, ignoring capitalization.
+- Each session starts before the other ends.
+
+The manager throws `SessionConflictException` before insertion. `Parser` displays the error, and the schedule remains
+unchanged. These time comparisons are strict, so sessions meeting exactly at an endpoint are allowed.
+
+**Step 5: Associate preparation with a session**
+
+The user enters:
+
+`add-p s/2 i/Breadboard c/Equipments q/2`
+
+`Parser` retrieves Embedded Systems Lab through `getSession(2)` and accesses its `Preparation` object. With 18 attendees,
+the requirement is 36 breadboards. This records a requirement without reserving inventory. Preparation calculates required
+quantities, while Parser compares these requirements with inventory availability.
+
+**Step 6: Delete another session without losing preparation**
+
+The user enters:
+
+`delete-s 1`
+
+`deleteSession()` retrieves Digital Design Lab through `getSession(1)`, converts the displayed index to a zero-based
+position, and removes it.
+
+Embedded Systems Lab becomes index 1 while retaining its requirement of 36 breadboards. Calling `list-p s/1` accesses
+that same preparation. Calling `delete-s 2` now fails because only one session remains.
+
+##### Interactions during session addition
+
+The sequence diagram shows successful addition. Construction precedes conflict checking; every comparison returns `false`
+before insertion and sorting. Descriptive labels summarize routine implementation details.
+
+![Successful session addition sequence diagram](images/add-session-sequence.png)
+
+*Figure 3: Successful session addition. The loop checks each stored session and is skipped when the schedule is empty.*
+
+If parsing or construction fails, the manager is not asked to add the session. If a conflict is detected, addition stops
+before insertion, sorting, and success confirmation.
+
+##### Design considerations
+
+**Aspect 1: Representing and ordering the schedule**
+
+**Current approach:** Store sessions in an `ArrayList` and sort after each successful addition.
+
+Stored and displayed positions remain consistent, simplifying retrieval and deletion. The tradeoff is scanning existing
+sessions for conflicts and sorting after insertion, which is sufficient for a small schedule.
+
+**Alternative:** Preserve insertion order and sort a separate copy for display.
+
+This avoids sorting the stored list, but displayed indices would require mapping back to the original collection. Keeping the
+stored list sorted avoids this additional mapping.
+
+**Aspect 2: Associating preparation with sessions**
+
+**Current approach:** Each `Session` owns its `Preparation` object.
+
+Sorting moves session references without changing their associated preparation. Deleting another session therefore cannot
+transfer requirements to the wrong session. This intentionally couples a session with its preparation.
+
+**Alternative:** Maintain preparation separately using session indices.
+
+Both collections would require synchronization after sorting or deletion. Storing preparation inside the session avoids
+this dependency on changing positions.
+
+##### Scheduling validation, assertions, and logging
+
+| Component | Responsibility |
+| --- | --- |
+| `Parser` | Command structure, required prefix order, numeric conversion, and positive numeric arguments. |
+| `Session` | Nonblank name and location, positive headcount, valid date and time values, date not before today, and start time before end time. |
+| `SessionManager` | Rejecting null additions, checking scheduling conflicts, and validating indices against the current schedule. |
+
+Expected command errors are reported through exceptions before the relevant insertion or deletion occurs.
+
+When Java assertions are enabled, `hasValidState()` checks for nonnull sessions and pairwise absence of conflicts after
+additions and deletions. It does not verify sorting. Assertions supplement ordinary validation; user-input checks do not
+depend on them.
+
+`SessionManager` uses `java.util.logging.Logger` to record attempted and successful additions and deletions at `INFO`
+level, and conflicts or invalid indices at `WARNING` level.
+
+##### Scheduling limitations
+
+- Sessions cannot span midnight. Date checks occur during construction; sessions are not automatically removed afterward,
+  and today's start time is not compared with the current clock time.
+- There is no command to edit a session. Deleting and recreating one produces a new session with empty preparation.
+- The schedule exists only in memory and is not preserved after the application exits.
 
 ### Session preparation
 
