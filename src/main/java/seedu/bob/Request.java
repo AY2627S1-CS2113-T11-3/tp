@@ -5,11 +5,13 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Locale;
+import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidRequestDeadlineException;
+import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Represents a student's request for a quantity of an item by a deadline.
@@ -23,13 +25,14 @@ public class Request implements Comparable<Request> {
     private static final String STATUS_PENDING = "pending";
     private static final String STATUS_PREPARED = "prepared";
     private static final String STATUS_FULFILLED = "fulfilled";
-    private static final String INVALID_STATUS_MESSAGE =
-            "Status must be \"prepared\" or \"fulfilled\".";
 
     /** Strict English format used for both parsing and displaying the deadline. */
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
             .ofPattern("d MMMM uuuu", Locale.ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
+
+    /** Records request diagnostics at FINE level so normal console output stays unchanged. */
+    private static final Logger LOGGER = Logger.getLogger(Request.class.getName());
 
     private final String studentName;
     private final String itemName;
@@ -57,6 +60,7 @@ public class Request implements Comparable<Request> {
             throw new CommandFormatException("Item name cannot be blank.");
         }
         if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected request quantity: " + quantity);
             throw new InvalidQuantityException();
         }
 
@@ -64,11 +68,13 @@ public class Request implements Comparable<Request> {
         try {
             parsedDeadline = LocalDate.parse(deadlineText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
+            LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
                     "Deadline must be a valid date in d MMMM yyyy format.");
         }
         // A deadline is a calendar date, so requests due today are still accepted.
         if (parsedDeadline.isBefore(LocalDate.now())) {
+            LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException("Request deadline cannot be before today.");
         }
 
@@ -76,6 +82,13 @@ public class Request implements Comparable<Request> {
         this.itemName = itemName;
         this.quantity = quantity;
         this.deadline = parsedDeadline;
+
+        assert studentName != null && !studentName.isBlank()
+                : "Validated student name must not be blank";
+        assert itemName != null && !itemName.isBlank() : "Validated item name must not be blank";
+        assert quantity > 0 : "Validated quantity must be positive";
+        assert deadline != null : "Validated deadline must not be null";
+        LOGGER.fine(() -> "Created request for " + studentName + " for " + itemName);
     }
 
     public String getStudentName() {
@@ -102,15 +115,20 @@ public class Request implements Comparable<Request> {
      * Marks this request as prepared or fulfilled.
      *
      * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
-     * @throws CommandFormatException If the status is not one of the two accepted values.
+     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
      */
-    public void markAs(String newStatus) throws CommandFormatException {
+    public void markAs(String newStatus) throws InvalidRequestStatusException {
         // Normalize once so callers may type prepared, Prepared, or PREPARED.
         String normalizedStatus = newStatus == null ? "" : newStatus.trim().toLowerCase(Locale.ENGLISH);
         if (!STATUS_PREPARED.equals(normalizedStatus) && !STATUS_FULFILLED.equals(normalizedStatus)) {
-            throw new CommandFormatException(INVALID_STATUS_MESSAGE);
+            LOGGER.fine(() -> "Rejected request status: " + newStatus);
+            throw new InvalidRequestStatusException();
         }
         this.status = normalizedStatus;
+
+        assert STATUS_PREPARED.equals(status) || STATUS_FULFILLED.equals(status)
+                : "Validated request status must be prepared or fulfilled";
+        LOGGER.fine(() -> "Marked request for " + studentName + " as " + status);
     }
 
     /**
