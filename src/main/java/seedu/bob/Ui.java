@@ -30,7 +30,7 @@ public class Ui {
             "  list-c",
             "Loans",
             "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE",
-            "  list-l",
+            "  list-l [overdue]",
             "  delete-l INDEX",
             "  return INDEX",
             "Other",

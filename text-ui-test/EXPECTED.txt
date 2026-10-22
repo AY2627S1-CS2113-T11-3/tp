@@ -122,6 +122,29 @@ Lab preparation: First Lab on 31 December 2099 at Room-A from 0900 to 1000 for 1
 2. Red LED [Components] (Required: 10, Available: 3) !! Insufficient items (Shortfall: 7)
 --------------------------------------------------------------------
 
+Successfully added loan: 1x Wire [Components] to Backlog Student (91234567), due 1 January 2000
+Warning: this loan is already overdue.
+
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Backlog Student (91234567), due 1 January 2000 [OVERDUE]
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Backlog Student (91234567), due 1 January 2000 [OVERDUE]
+--------------------------------------------------------------------
+
+Successfully returned loan: 1x Wire [Components] to Backlog Student (91234567), due 1 January 2000. Inventory restored.
+
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
+
 --------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------
@@ -143,7 +166,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l
+  list-l [overdue]
   delete-l INDEX
   return INDEX
 Other

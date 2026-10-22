@@ -128,7 +128,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l
+  list-l [overdue]
   delete-l INDEX
   return INDEX
 Other
@@ -519,7 +519,8 @@ adding or deleting a supplier contact does not change a loan's borrower details.
 - Borrower name cannot be blank. Phone numbers use the existing contact rule: digits only, with leading
   zeros preserved. No entry is added to `list-c`.
 - Due dates use a full, capitalized English month in `d MMMM yyyy` format, for example `30 October 2099`.
-  Today and past dates are accepted so existing loans can be entered as a backlog.
+  Today and past dates are accepted so existing loans can be entered as a backlog. A past due date
+  produces an immediate warning after the success confirmation; it does not reject the loan.
 - Every successful command creates a separate record, including repeated loans to the same borrower.
 - Rejected commands leave inventory, loans, and supplier contacts unchanged.
 
@@ -542,7 +543,8 @@ There are now 3 Multimeters available in inventory.
 
 **Format:** `list-l`
 
-Displays loans in insertion order with one-based indices. Listing loans does not change inventory.
+Displays loans in insertion order with one-based indices. Overdue loans have an `[OVERDUE]` marker.
+Listing loans does not change inventory. A loan due today is not overdue.
 After the example above:
 
 ```text
@@ -617,8 +619,44 @@ change supplier contacts, sessions, or other loans.
   always check `list-l` before the next operation.
 - Returned records are removed immediately; return history is not retained in this version.
 
-Overdue markers, overdue-only listing, and warnings for past due dates are not available in this version.
-All loans disappear when Bob exits; persistence is planned for V2.0b.
+### Track overdue loans: `list-l overdue`
+
+**Format:** `list-l overdue`
+
+Shows only active loans whose due date is before today's date on the computer running Bob. A loan becomes
+overdue on the day after its due date. Status is checked again each time you list loans, so a running
+application reflects the new date after midnight without restarting. `list-l` also marks overdue rows.
+
+The overdue-only list keeps each loan's index from the full active list. For example, if only loan 2 is
+overdue, it is still displayed as `2.`. Use that index for `return` or `delete-l`. After removal, indices
+shift in both lists; list again before the next operation.
+
+With an overdue Multimeter loan at position 2 and other current loans, the output looks like:
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 2x Multimeter [Equipment] to Alex Tan (91234567), due 1 January 2000 [OVERDUE]
+--------------------------------------------------------------------
+```
+
+When no loans are overdue, Bob displays `No overdue loans.`. The filter is case-sensitive: enter
+`overdue` in lowercase. Extra or unsupported arguments are rejected. Filtering never changes stock,
+loan order, borrower details, or preparation requirements.
+
+Adding an existing loan with a past due date succeeds and prints this additional line:
+
+```text
+Warning: this loan is already overdue.
+```
+
+Loans due today or in the future do not produce this warning. Invalid or insufficient-stock additions
+are rejected without adding a loan or printing an overdue warning. Returned and corrected records
+are removed from both active and overdue lists.
+
+All loans disappear when Bob exits; persistence is planned for V2.0b. Return history and partial returns
+remain unsupported.
 
 ## Exiting Bob
 
@@ -717,7 +755,8 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Delete a contact | `delete-c INDEX` |
 | List contacts | `list-c` |
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
-| List active loans | `list-l` |
+| List active loans with overdue markers | `list-l` |
+| List overdue loans only | `list-l overdue` |
 | Delete an incorrect loan and restore stock | `delete-l INDEX` |
 | Record a full return and restore stock | `return INDEX` |
 | Exit and discard data | `Bye` |

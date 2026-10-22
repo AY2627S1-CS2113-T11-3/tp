@@ -78,6 +78,17 @@ argument is accepted. Invalid indices and restoration overflow preserve both inv
 Returns and corrections share the same checked stock-restoration path. Overdue behavior and persistence
 remain later work. These cases and the help/smoke output updates were recorded before implementation.
 
+## Phase 4 overdue contract
+
+A loan is overdue only when its due date is before today's local calendar date; due today is not overdue.
+Accepted past-date additions print `Warning: this loan is already overdue.` after the success confirmation.
+`list-l` appends `[OVERDUE]` to overdue rows. `list-l overdue` shows only overdue records with the same
+indices as the full active list, and uses `No overdue loans.` when none match. Status is recomputed from
+the current date on each display, without changing stock or loans. Returns/corrections still use the
+full active-list index; remaining indices shift normally after removal. Earlier loan/list/date fixtures
+are updated for this approved behavior before implementation, and unrelated cases are preserved.
+Clock-controlled unit tests cover midnight rollover, calendar boundaries, and timezone behavior.
+
 ## Test cases
 
 ### UI-LIFECYCLE-001: Exit cleanly at end of input
@@ -2359,7 +2370,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l
+  list-l [overdue]
   delete-l INDEX
   return INDEX
 Other
@@ -2400,7 +2411,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l
+  list-l [overdue]
   delete-l INDEX
   return INDEX
 Other
@@ -3751,7 +3762,7 @@ Lab preparation: Later Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 at
 
 ### UI-LOAN-LIST-001: Validate loan listing and show an empty list
 
-**Aim:** Verify empty output and reject arguments until the overdue-only list is implemented in phase 4.
+**Aim:** Verify empty active/overdue output, reject unsupported arguments, and retain case-sensitive commands.
 
 **Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
 
@@ -3784,7 +3795,7 @@ list-l extra
 **Expected output**
 
 ```text
-Invalid format. Use: list-l
+Invalid format. Use: list-l [overdue]
 ```
 
 #### Step 3
@@ -3798,7 +3809,11 @@ list-l overdue
 **Expected output**
 
 ```text
-Invalid format. Use: list-l
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
 ```
 
 #### Step 4
@@ -4376,7 +4391,7 @@ No contacts saved.
 
 ### UI-LOAN-ADD-004: Validate dates and accept backlog loans
 
-**Aim:** Verify strict dates, today, future dates and past dates; overdue notifications are deliberately deferred to phase 4.
+**Aim:** Verify strict dates and backlog acceptance, including the phase 4 warning and marker for past due dates.
 
 **Preconditions:** Fresh application with empty inventory, loans, sessions, and supplier contacts.
 
@@ -4490,6 +4505,7 @@ add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/{{YESTERDAY}}
 
 ```text
 Successfully added loan: 2x Wire [Components] to Alex Tan (91234567), due {{YESTERDAY}}
+Warning: this loan is already overdue.
 ```
 
 #### Step 9
@@ -4506,7 +4522,7 @@ list-l
 --------------------------------------------------------------------
 Loans
 --------------------------------------------------------------------
-1. 2x Wire [Components] to Alex Tan (91234567), due {{YESTERDAY}}
+1. 2x Wire [Components] to Alex Tan (91234567), due {{YESTERDAY}} [OVERDUE]
 --------------------------------------------------------------------
 ```
 
@@ -6986,6 +7002,645 @@ Inventory
 --------------------------------------------------------------------
 Components
 1: Wire (Qty: 2147483647)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-OVERDUE-001: Detect overdue boundaries and retain full-list indices
+
+**Aim:** Verify yesterday is overdue while today/tomorrow are not, past-date warning is immediate, and filtered rows keep active-list indices.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions. Date placeholders are resolved once at session start.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Today t/91234567 d/{{TODAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Today (91234567), due {{TODAY}}
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Yesterday t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Yesterday (91234567), due {{YESTERDAY}}
+Warning: this loan is already overdue.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Tomorrow t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Tomorrow (91234567), due {{TOMORROW}}
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Older backlog t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Older backlog (91234567), due {{YESTERDAY}}
+Warning: this loan is already overdue.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Today (91234567), due {{TODAY}}
+2. 1x Wire [Components] to Yesterday (91234567), due {{YESTERDAY}} [OVERDUE]
+3. 1x Wire [Components] to Tomorrow (91234567), due {{TOMORROW}}
+4. 1x Wire [Components] to Older backlog (91234567), due {{YESTERDAY}} [OVERDUE]
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 1x Wire [Components] to Yesterday (91234567), due {{YESTERDAY}} [OVERDUE]
+4. 1x Wire [Components] to Older backlog (91234567), due {{YESTERDAY}} [OVERDUE]
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 1x Wire [Components] to Yesterday (91234567), due {{YESTERDAY}} [OVERDUE]
+4. 1x Wire [Components] to Older backlog (91234567), due {{YESTERDAY}} [OVERDUE]
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 6)
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+No contacts saved.
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-OVERDUE-002: Return and correct overdue loans using displayed active indices
+
+**Aim:** Verify filtered indices select the correct full-list loan, renumbering is reflected after changes, and removed loans disappear.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions. Date placeholders are resolved once at session start.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Current t/91234567 d/{{TODAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Current (91234567), due {{TODAY}}
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/First overdue t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to First overdue (91234567), due {{YESTERDAY}}
+Warning: this loan is already overdue.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Second overdue t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Second overdue (91234567), due {{YESTERDAY}}
+Warning: this loan is already overdue.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 1x Wire [Components] to First overdue (91234567), due {{YESTERDAY}} [OVERDUE]
+3. 1x Wire [Components] to Second overdue (91234567), due {{YESTERDAY}} [OVERDUE]
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+return 2
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 1x Wire [Components] to First overdue (91234567), due {{YESTERDAY}}. Inventory restored.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 1x Wire [Components] to Second overdue (91234567), due {{YESTERDAY}} [OVERDUE]
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-l 2
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 1x Wire [Components] to Second overdue (91234567), due {{YESTERDAY}}. Inventory restored.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Current (91234567), due {{TODAY}}
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 9)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-OVERDUE-003: Show no overdue loans for empty and current-only lists
+
+**Aim:** Verify due-today and future loans do not trigger warnings/markers, and malformed filters are rejected without state changes.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions. Date placeholders are resolved once at session start.
+
+#### Step 1
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Today t/91234567 d/{{TODAY}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Today (91234567), due {{TODAY}}
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Future t/91234567 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Wire [Components] to Future (91234567), due {{TOMORROW}}
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l OVERDUE
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue]
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-l overdue extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue]
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-l overdue overdue
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue]
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l d/{{TODAY}}
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue]
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Wire [Components] to Today (91234567), due {{TODAY}}
+2. 1x Wire [Components] to Future (91234567), due {{TOMORROW}}
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 8)
+--------------------------------------------------------------------
+```
+
+### UI-LOAN-OVERDUE-004: Reject invalid backlog additions without false warnings
+
+**Aim:** Verify invalid dates and insufficient stock do not create loans, emit overdue warnings, or deduct inventory.
+
+**Preconditions:** Fresh application with empty inventory, loans, supplier contacts, and sessions. Date placeholders are resolved once at session start.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/11 b/Alex t/91234567 d/{{YESTERDAY}}
+```
+
+**Expected output**
+
+```text
+Cannot loan 11 Wire. Only 10 are available.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/1 b/Alex t/91234567 d/31 February 2099
+```
+
+**Expected output**
+
+```text
+Due date must be a valid date in d MMMM yyyy format (e.g., 30 October 2099).
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+No overdue loans.
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
 --------------------------------------------------------------------
 ```
 

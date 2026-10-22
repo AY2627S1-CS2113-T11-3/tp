@@ -82,6 +82,18 @@ public class Loan {
     }
 
     /**
+     * Returns whether this loan's due date is before the supplied local calendar date.
+     * A loan due today remains on time until the next day.
+     *
+     * @param today Local date against which to evaluate the loan.
+     * @return Whether the loan is overdue.
+     * @throws NullPointerException If today is null.
+     */
+    public boolean isOverdue(LocalDate today) {
+        return dueDate.isBefore(Objects.requireNonNull(today, "Today's date must not be null"));
+    }
+
+    /**
      * Returns the item, quantity, borrower details, and due date for a confirmation or list row.
      */
     @Override

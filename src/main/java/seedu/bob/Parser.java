@@ -44,7 +44,7 @@ public class Parser {
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
     private static final String ADD_LOAN_USAGE =
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
-    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l";
+    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
     private static final String HELP_USAGE = "Invalid format. Use: help";
@@ -225,10 +225,13 @@ public class Parser {
             return;
         }
         if (command.equals("list-l")) {
-            if (!arguments.isBlank()) {
+            if (arguments.isBlank()) {
+                loanManager.listLoans();
+            } else if (arguments.trim().equals("overdue")) {
+                loanManager.listOverdueLoans();
+            } else {
                 throw new CommandFormatException(LIST_LOAN_USAGE);
             }
-            loanManager.listLoans();
             return;
         }
         List<String> values = extractValues(arguments, List.of("n", "c", "q", "b", "t", "d"), ADD_LOAN_USAGE);

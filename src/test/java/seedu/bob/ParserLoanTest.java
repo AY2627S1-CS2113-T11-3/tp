@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +26,8 @@ class ParserLoanTest {
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
-    private final LoanManager loans = new LoanManager(inventory);
+    private final LoanManager loans = new LoanManager(inventory,
+            Clock.fixed(Instant.parse("2026-10-22T04:00:00Z"), ZoneId.of("Asia/Singapore")));
     private final Parser parser = new Parser();
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private PrintStream originalOutput;
@@ -85,7 +89,7 @@ class ParserLoanTest {
 
     @Test
     void listLoans_argumentsOrUnknownCommand_rejectsWithoutMutation() {
-        assertEquals("Invalid format. Use: list-l\n", execute("list-l overdue"));
+        assertEquals("Invalid format. Use: list-l [overdue]\n", execute("list-l extra"));
         assertEquals("Invalid command\n", execute("LIST-L"));
         assertEquals(Ui.DIVIDER + "\nLoans\n" + Ui.DIVIDER + "\nNo active loans.\n" + Ui.DIVIDER + "\n",
                 execute("list-l"));
@@ -144,6 +148,31 @@ class ParserLoanTest {
         assertEquals("Invalid command\n", execute("RETURN 1"));
         assertEquals(8, inventory.getAvailableQuantity("Red LED", "Lab Components"));
         assertEquals(2, loans.getLoans().get(0).getQuantity());
+    }
+
+    @Test
+    void listOverdueLoans_backlogAndCurrentLoans_warnsAndPreservesFullIndices() {
+        execute("add-l n/Red LED c/Lab Components q/1 b/Current t/123 d/22 October 2026");
+        assertEquals("Successfully added loan: 1x Red LED [Lab Components] to Backlog (123),"
+                + " due 21 October 2026\nWarning: this loan is already overdue.\n", execute(
+                        "add-l n/Red LED c/Lab Components q/1 b/Backlog t/123 d/21 October 2026"));
+        assertEquals(Ui.DIVIDER + "\nOverdue loans\n" + Ui.DIVIDER
+                + "\n2. 1x Red LED [Lab Components] to Backlog (123), due 21 October 2026 [OVERDUE]\n"
+                + Ui.DIVIDER + "\n", execute("list-l overdue"));
+        execute("return 2");
+        assertEquals(Ui.DIVIDER + "\nOverdue loans\n" + Ui.DIVIDER + "\nNo overdue loans.\n"
+                + Ui.DIVIDER + "\n", execute("list-l overdue"));
+        assertEquals("Current", loans.getLoans().get(0).getBorrower().getName());
+        assertEquals(9, inventory.getAvailableQuantity("Red LED", "Lab Components"));
+    }
+
+    @Test
+    void listOverdueLoans_unsupportedFilters_rejectsWithoutMutation() {
+        for (String command : new String[] {"list-l OVERDUE", "list-l overdue extra", "list-l overdue overdue"}) {
+            assertEquals("Invalid format. Use: list-l [overdue]\n", execute(command));
+        }
+        assertTrue(loans.getLoans().isEmpty());
+        assertEquals(10, inventory.getAvailableQuantity("Red LED", "Lab Components"));
     }
 
     /**

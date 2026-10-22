@@ -38,7 +38,7 @@ class ParserHelpTest {
             + "  list-c\n"
             + "Loans\n"
             + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
-            + "  list-l\n"
+            + "  list-l [overdue]\n"
             + "  delete-l INDEX\n"
             + "  return INDEX\n"
             + "Other\n"

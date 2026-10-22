@@ -29,11 +29,11 @@ Known limitation: prefixes are detected by a shared pattern (a single letter fol
 word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.
 
 
-### Loan tracking (phases 1 through 3)
+### Loan tracking (phases 1 through 4)
 
 `Bob` creates one `LoanManager` bound to its `Inventory` and passes it to `Parser.handleCommand`.
-`add-l` uses the existing fixed-order prefix extraction and positive quantity parsing; `list-l` accepts
-no arguments. `delete-l` and `return` accept one plain positive index, like `delete-c`.
+`add-l` uses the existing fixed-order prefix extraction and positive quantity parsing. `list-l` accepts
+either no argument or the single lowercase filter `overdue`. `delete-l` and `return` accept one plain positive index, like `delete-c`.
 `Ui` documents the commands in help.
 
 `Loan` uses composition: a private `InventoryItem` snapshot holds item details and loan quantity, and an
@@ -58,8 +58,17 @@ for both corrections and returns.
 Existing inventory objects are increased through `InventoryItem.addQuantity`, keeping the positive-stock
 invariant. Remaining loan positions shift naturally with the list; no stored cross-feature index is used.
 
-Overdue behavior, history, and persistence remain later work. Past dates are accepted
-without calculating or displaying overdue status.
+`Loan.isOverdue(LocalDate)` uses a strict before-date comparison, so a due-today loan is not overdue.
+`LoanManager` uses an injected `Clock`, defaulting to the computer's timezone, and resolves one local
+date per addition/display. Overdue status is calculated at display time rather than stored, so midnight
+rollover cannot leave a cached flag stale. Successful past-date additions print a warning; rejected
+additions do not. `listLoans` marks overdue rows, while `listOverdueLoans` filters them without changing
+the original active-list indices. The filtered view is never used to resolve return/deletion indices.
+
+`LoanOverdueTest` uses an adjustable clock to cover midnight rollover, timezone views, calendar boundaries,
+and state preservation without sleeping or changing system time. `ParserLoanTest` fixes its loan clock
+for reproducible overdue fixtures. Earlier UI fixtures are updated for the new approved backlog warning,
+filter syntax, and marker behavior. History, partial returns, and persistence remain future work.
 
 `LoanTest`, `LoanManagerTest`, and `ParserLoanTest` cover validation, separate records, exact output,
 stock invariants, and immutable snapshots. `UI-LOAN-*` in `test/ui-test-plan.md` records console checks,

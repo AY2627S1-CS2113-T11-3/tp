@@ -26,7 +26,9 @@ record a loan, list it, refresh preparation shortages, and verify borrower isola
 supplier contacts, following UI-LOAN-ADD-006. Three further commands delete the incorrect
 loan, list the remaining loans, and refresh preparation availability, following UI-LOAN-DELETE-005.
 Four more commands add another loan, record its full return, list loans, and refresh preparation,
-following UI-LOAN-RETURN-004. The final
+following UI-LOAN-RETURN-004. Five further commands add a historical backlog loan, show
+its marker in both list views, return it, and verify the overdue list is empty, covering
+UI-LOAN-OVERDUE-001 and UI-LOAN-OVERDUE-002. The final
 command is `help`, following case UI-HELP-001. The fixed future
 date, 31 December 2099, avoids a date-substitution helper. Update both files if
 that date is no longer valid. The other cases remain in the manual test plan.

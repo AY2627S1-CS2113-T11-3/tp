@@ -1,5 +1,7 @@
 package seedu.bob;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -13,6 +15,8 @@ import seedu.bob.exception.InvalidLoanIndexException;
 public class LoanManager {
 
     private final Inventory inventory;
+    /** Supplies the local date at each operation so overdue state is never cached across days. */
+    private final Clock clock;
     /** Each addition is a separate loan, even when the item and borrower match an existing entry. */
     private final ArrayList<Loan> loans = new ArrayList<>();
 
@@ -23,12 +27,24 @@ public class LoanManager {
      * @throws NullPointerException If inventory is null.
      */
     public LoanManager(Inventory inventory) {
+        this(inventory, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates an empty loan list with an explicit clock for deterministic date and rollover testing.
+     *
+     * @param inventory Inventory from which new loans deduct stock.
+     * @param clock Clock whose timezone defines the local calendar date.
+     * @throws NullPointerException If inventory or clock is null.
+     */
+    public LoanManager(Inventory inventory, Clock clock) {
         this.inventory = Objects.requireNonNull(inventory, "Loan inventory must not be null");
+        this.clock = Objects.requireNonNull(clock, "Loan clock must not be null");
     }
 
     /**
      * Deducts stock and records a validated loan, then prints one loan confirmation.
-     * Rejected stock requests do not change either inventory or loans.
+     * Warns when the accepted loan is already overdue. Rejected stock requests do not change state.
      *
      * @param loan Validated loan to record.
      * @throws CommandException If the item is missing or its available stock is insufficient.
@@ -36,9 +52,13 @@ public class LoanManager {
      */
     public void addLoan(Loan loan) throws CommandException {
         Objects.requireNonNull(loan, "Loan to add must not be null");
+        LocalDate today = LocalDate.now(clock);
         inventory.lendItem(loan.getName(), loan.getCategory(), loan.getQuantity());
         loans.add(loan);
         System.out.println("Successfully added loan: " + loan);
+        if (loan.isOverdue(today)) {
+            System.out.println("Warning: this loan is already overdue.");
+        }
     }
 
     /**
@@ -91,17 +111,39 @@ public class LoanManager {
     }
 
     /**
-     * Prints active loans with one-based positions, including an explicit empty-list message.
+     * Prints active loans with one-based positions and markers for overdue records.
      */
     public void listLoans() {
+        printLoans(false);
+    }
+
+    /**
+     * Prints only overdue loans, preserving their indices from the full active loan list.
+     */
+    public void listOverdueLoans() {
+        printLoans(true);
+    }
+
+    /**
+     * Displays loans against one current local date without mutating stock or loan records.
+     */
+    private void printLoans(boolean isOverdueOnly) {
+        LocalDate today = LocalDate.now(clock);
         System.out.println(Ui.DIVIDER);
-        System.out.println("Loans");
+        System.out.println(isOverdueOnly ? "Overdue loans" : "Loans");
         System.out.println(Ui.DIVIDER);
-        if (loans.isEmpty()) {
-            System.out.println("No active loans.");
-        }
+        boolean hasDisplayedLoans = false;
         for (int i = 0; i < loans.size(); i++) {
-            System.out.printf("%d. %s%n", i + 1, loans.get(i));
+            Loan loan = loans.get(i);
+            boolean isOverdue = loan.isOverdue(today);
+            if (isOverdueOnly && !isOverdue) {
+                continue;
+            }
+            System.out.printf("%d. %s%s%n", i + 1, loan, isOverdue ? " [OVERDUE]" : "");
+            hasDisplayedLoans = true;
+        }
+        if (!hasDisplayedLoans) {
+            System.out.println(isOverdueOnly ? "No overdue loans." : "No active loans.");
         }
         System.out.println(Ui.DIVIDER);
     }
