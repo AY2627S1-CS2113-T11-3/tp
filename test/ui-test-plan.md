@@ -325,7 +325,7 @@ add-i n/Wire c/Components q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 4
@@ -339,7 +339,7 @@ add-i n/Wire c/Components q/-5
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 5
@@ -553,7 +553,7 @@ delete-i c/Components i/1 q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 5
@@ -623,7 +623,7 @@ delete-i c/Components i/1 q/-5
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 ### UI-DELETE-003: Handle inventory deletion rules
@@ -2009,7 +2009,7 @@ add-p s/1 i/Wire c/Components q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 10
@@ -2139,7 +2139,7 @@ delete-p s/1 i/1 q/-1
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 ### UI-PREP-004: Keep preparation attached to its session
@@ -2430,6 +2430,11 @@ Lab preparation
   add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
   delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
   list-p s/SESSION_INDEX
+Student requests
+  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
+  delete-r INDEX
+  list-r
+  mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -2471,6 +2476,11 @@ Lab preparation
   add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
   delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
   list-p s/SESSION_INDEX
+Student requests
+  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
+  delete-r INDEX
+  list-r
+  mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -4271,7 +4281,7 @@ add-l n/Wire c/Components q/0 b/Alex Tan t/91234567 d/{{TOMORROW}}
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 6
@@ -4285,7 +4295,7 @@ add-l n/Wire c/Components q/-1 b/Alex Tan t/91234567 d/{{TOMORROW}}
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 7

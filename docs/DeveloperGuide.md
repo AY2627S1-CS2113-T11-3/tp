@@ -663,6 +663,48 @@ The section follows the walkthrough and design-alternatives format of the
 See the [SE-EDU PlantUML tutorial](https://se-education.org/guides/tutorials/plantUml.html) for editing and image export.
 Export PNGs into `docs/images/` after changing a source so the guide's images remain in sync.
 
+### Student request tracking
+
+`add-r`, `delete-r`, `list-r`, and `mark-r` follow the same structure as the other features: `Request` validates and
+formats one request, `RequestManager` owns the deadline-sorted list and prints confirmations, and `Parser` dispatches
+the commands. `Request` is the counterpart of `Contact`, while `RequestManager` mirrors `ContactManager` and
+`SessionManager`.
+
+A request records the student's name, item name, quantity, deadline, and status. Unlike a preparation item, a request
+does not name a category. Availability is therefore calculated by
+`Inventory#getTotalAvailableQuantity(String name)`, which adds the stock of that item name across all categories
+without reserving or deducting anything. `RequestManager#listRequests(Inventory)` calls this method whenever the list
+is displayed, so later inventory changes are reflected immediately.
+
+`add-r` builds a `Request`, adds it to the manager, and sorts the list by deadline. `delete-r INDEX` and
+`mark-r INDEX STATUS` use the same one-based positions shown by `list-r`. Because the list is sorted, deleting or
+marking always acts on the row the user sees. `mark-r` accepts `prepared` or `fulfilled` in any capitalization and
+replaces the current status; a new request starts as `pending`.
+
+For example:
+
+```text
+add-r n/Alice i/Wire q/20 d/8 October 2099
+list-r
+mark-r 1 prepared
+```
+
+`add-r` prints a confirmation, `list-r` shows the pending request with current availability, and `mark-r` changes the
+status shown by the next `list-r`. None of these commands changes inventory stock.
+
+| Decision | Rule | Rationale |
+| --- | --- | --- |
+| Deadline format | `d MMMM yyyy`, English month names with an initial capital; today or later | Reuses the session date format and keeps deadlines unambiguous. |
+| Deadline ordering | Earliest deadline first; ties sorted by student name, then item name | Gives a stable list order, so indices do not change between identical listings. |
+| Item category | Not recorded | The requirement lists only student, item, quantity, and deadline. Availability sums stock across categories with the same item name. |
+| Duplicate requests | Allowed | The same student may request the same item again for a different deadline or quantity. |
+| Status changes | `mark-r` sets `prepared` or `fulfilled`; either can replace the other | A simple status field is enough for tracking, and allows corrections without extra commands. |
+| Inventory effect | None; availability is read-only | A request is a tracking record, not a stock reservation. `delete-r` and `mark-r` never change inventory. |
+
+`Request` uses assertions for its validated fields. Invalid statuses raise `InvalidRequestStatusException`, and
+creation, rejection, and status changes emit FINE diagnostics. The user guide documents the command syntax and exact
+output; `help` lists the commands under **Student requests**.
+
 ### Validation and error handling
 
 Validation is performed at the parser and domain boundaries:

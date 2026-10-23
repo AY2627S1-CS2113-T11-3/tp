@@ -184,9 +184,10 @@ class LoanLoggingTest {
     void handleCommand_expectedLoanErrors_retainsParsingCausesInDebugLogs() {
         Parser parser = new Parser();
         parser.handleCommand("add-l n/Wire c/Components q/1 b/" + BORROWER_NAME + " t/" + BORROWER_PHONE
-                + " d/31 February 2099", inventory, new SessionManager(), new ContactManager(), loans);
+                + " d/31 February 2099", inventory, new SessionManager(), new ContactManager(),
+                new RequestManager(), loans);
         parser.handleCommand("return 999999999999999999999", inventory,
-                new SessionManager(), new ContactManager(), loans);
+                new SessionManager(), new ContactManager(), new RequestManager(), loans);
 
         List<LogRecord> records = recordsFrom(Parser.class);
         assertEquals(2, records.size());
@@ -213,7 +214,8 @@ class LoanLoggingTest {
         output.reset();
 
         new Parser().handleCommand("add-l n/Wire c/Components q/1 b/" + BORROWER_NAME + " t/" + BORROWER_PHONE
-                + " d/30 October 2099", failingInventory, new SessionManager(), new ContactManager(), failingLoans);
+                + " d/30 October 2099", failingInventory, new SessionManager(), new ContactManager(),
+                new RequestManager(), failingLoans);
 
         assertEquals(1, handler.records.size());
         assertEquals(Parser.class.getName(), handler.records.get(0).getLoggerName());

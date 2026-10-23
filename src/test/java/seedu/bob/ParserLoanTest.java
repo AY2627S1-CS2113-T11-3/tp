@@ -26,6 +26,7 @@ class ParserLoanTest {
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
+    private final RequestManager requests = new RequestManager();
     private final LoanManager loans = new LoanManager(inventory,
             Clock.fixed(Instant.parse("2026-10-22T04:00:00Z"), ZoneId.of("Asia/Singapore")));
     private final Parser parser = new Parser();
@@ -180,7 +181,7 @@ class ParserLoanTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts, loans);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

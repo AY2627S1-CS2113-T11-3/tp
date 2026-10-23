@@ -14,10 +14,12 @@ import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidLoanIndexException;
 import seedu.bob.exception.InvalidQuantityException;
+import seedu.bob.exception.InvalidRequestIndexException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses help, inventory, scheduling, preparation, contact, and loan commands and dispatches them.
+ * Parses help, inventory, scheduling, preparation, contact, student request, and loan commands
+ * and dispatches them.
  */
 public class Parser {
 
@@ -51,9 +53,17 @@ public class Parser {
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
-    private static final String ADD_CONTACT_USAGE = "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String ADD_REQUEST_USAGE =
+            "Invalid format. Use: add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE";
+    private static final String DELETE_REQUEST_USAGE = "Invalid format. Use: delete-r INDEX";
+    private static final String LIST_REQUEST_USAGE = "Invalid format. Use: list-r";
+    private static final String MARK_REQUEST_USAGE = "Invalid format. Use: mark-r INDEX STATUS";
+
+    private static final String ADD_CONTACT_USAGE =
+            "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
     private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
+
     private static final String ADD_LOAN_USAGE =
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
@@ -78,20 +88,21 @@ public class Parser {
     }
 
     /**
-     * Executes an inventory, scheduling, preparation, contact, or loan command, or prints a message for an
-     * unknown command. Expected user errors are displayed without ending the application. Unexpected
-     * runtime failures are logged and replaced with a safe user-facing message.
+     * Executes an inventory, scheduling, preparation, contact, student request, or loan command,
+     * or prints a message for an unknown command. Expected user errors are displayed without ending
+     * the application. Unexpected runtime failures are logged and replaced with a safe user-facing message.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
      * @param sessionManager SessionManager to schedule or modify lab sessions.
      * @param contactManager ContactManager to add, remove, or display contacts.
+     * @param requestManager RequestManager to add, remove, mark, or display student requests.
      * @param loanManager LoanManager to add, correct, return, or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager, LoanManager loanManager) {
+            ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
         try {
-            handleCommandInternal(input, inventory, sessionManager, contactManager, loanManager);
+            handleCommandInternal(input, inventory, sessionManager, contactManager, requestManager, loanManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
@@ -102,8 +113,8 @@ public class Parser {
      * Parses and dispatches one command after the public failure boundary has been established.
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager, LoanManager loanManager) {
-        String[] parts = input.trim().split("\\s+", 2);
+            ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
+        String[] parts = (input == null ? "" : input).trim().split("\\s+", 2);
         String command = parts[0];
 
         switch (command) {
@@ -191,6 +202,14 @@ public class Parser {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     listContacts(arguments, contactManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "add-r", "delete-r", "list-r", "mark-r" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    handleRequest(command, arguments, requestManager, inventory);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -550,6 +569,90 @@ public class Parser {
     }
 
     /**
+     * Dispatches a student request command.
+     *
+     * @throws CommandException If the command arguments or requested change are invalid.
+     */
+    private void handleRequest(String command, String arguments, RequestManager requestManager,
+            Inventory inventory) throws CommandException {
+        LOGGER.fine(() -> "Handling request command: " + command);
+        switch (command) {
+            case "add-r" -> addRequest(arguments, requestManager);
+            case "delete-r" -> deleteRequest(arguments, requestManager);
+            case "list-r" -> listRequests(arguments, requestManager, inventory);
+            case "mark-r" -> markRequest(arguments, requestManager);
+            default -> throw new CommandFormatException("Invalid request command.");
+        }
+    }
+
+    /**
+     * Parses and executes an add-request command.
+     *
+     * @param arguments Text following the {@code add-r} command word.
+     * @param requestManager Request list to update.
+     * @throws CommandException If the arguments or request values are invalid.
+     */
+    private void addRequest(String arguments, RequestManager requestManager) throws CommandException {
+        List<String> expectedPrefixes = List.of("n", "i", "q", "d");
+        if (!findPrefixes(arguments).equals(expectedPrefixes)) {
+            throw new CommandFormatException(ADD_REQUEST_USAGE);
+        }
+
+        List<String> values = extractValues(arguments, expectedPrefixes, ADD_REQUEST_USAGE);
+        assert values.size() == expectedPrefixes.size() : "Request values must match the prefixes";
+        int quantity = parseQuantity(values.get(2));
+        requestManager.addRequest(new Request(values.get(0), values.get(1), quantity, values.get(3)));
+    }
+
+    /**
+     * Parses and executes a delete-request command.
+     *
+     * @param arguments Text following the {@code delete-r} command word.
+     * @param requestManager Request list to update.
+     * @throws CommandException If the index is malformed or outside the request list.
+     */
+    private void deleteRequest(String arguments, RequestManager requestManager) throws CommandException {
+        String trimmedArguments = arguments.trim();
+        if (trimmedArguments.isEmpty() || trimmedArguments.matches(".*\\s+.*")) {
+            throw new CommandFormatException(DELETE_REQUEST_USAGE);
+        }
+
+        requestManager.deleteRequest(parseRequestIndex(trimmedArguments));
+    }
+
+    /**
+     * Validates and executes a list-requests command.
+     *
+     * @param arguments Text following the {@code list-r} command word.
+     * @param requestManager Request list to display.
+     * @param inventory Inventory used to check stock availability.
+     * @throws CommandFormatException If any arguments are supplied.
+     */
+    private void listRequests(String arguments, RequestManager requestManager, Inventory inventory)
+            throws CommandFormatException {
+        if (!arguments.isBlank()) {
+            throw new CommandFormatException(LIST_REQUEST_USAGE);
+        }
+        requestManager.listRequests(inventory);
+    }
+
+    /**
+     * Parses and executes a mark-request command.
+     *
+     * @param arguments Text following the {@code mark-r} command word.
+     * @param requestManager Request list to update.
+     * @throws CommandException If the index or status is invalid.
+     */
+    private void markRequest(String arguments, RequestManager requestManager) throws CommandException {
+        String[] parts = arguments.trim().split("\\s+");
+        if (parts.length != 2) {
+            throw new CommandFormatException(MARK_REQUEST_USAGE);
+        }
+        assert parts.length == 2 : "Validated mark-r command must have an index and a status";
+        requestManager.markRequest(parseRequestIndex(parts[0]), Request.normalizeStatus(parts[1]));
+    }
+
+    /**
      * Returns all single-letter argument prefixes in their encountered order.
      *
      * @param arguments Command arguments to inspect.
@@ -632,7 +735,7 @@ public class Parser {
         try {
             int quantity = Integer.parseInt(quantityText);
             if (quantity <= 0) {
-                throw new InvalidQuantityException();
+                throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
             }
             return quantity;
         } catch (NumberFormatException e) {
@@ -713,6 +816,25 @@ public class Parser {
             return index;
         } catch (NumberFormatException e) {
             throw new InvalidContactIndexException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based request index.
+     *
+     * @param indexText Index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidRequestIndexException If the index is not a positive integer.
+     */
+    private int parseRequestIndex(String indexText) throws InvalidRequestIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidRequestIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidRequestIndexException();
         }
     }
 }

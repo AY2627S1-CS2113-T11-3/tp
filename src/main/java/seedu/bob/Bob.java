@@ -47,6 +47,7 @@ public class Bob {
         Inventory inventory = new Inventory();
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
+        RequestManager requestManager = new RequestManager();
         LoanManager loanManager = new LoanManager(inventory);
         while (in.hasNextLine()) {
             String line = in.nextLine();
@@ -54,7 +55,7 @@ public class Bob {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager, loanManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager, loanManager);
             System.out.println();
         }
 

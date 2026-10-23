@@ -137,7 +137,7 @@ public class Inventory {
             throw new InvalidItemIndexException(userIndex, storedCategory, itemsInCategory.size());
         }
         if (quantity <= 0) {
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
         int index = userIndex - INDEX_OFFSET;
@@ -200,7 +200,7 @@ public class Inventory {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
@@ -242,7 +242,7 @@ public class Inventory {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected loan stock restoration: quantity must be positive, requested=" + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
@@ -316,6 +316,31 @@ public class Inventory {
             }
         }
         return 0;
+    }
+
+    /**
+     * Returns current stock for an item name across all categories.
+     * Matching is case-insensitive and does not reserve or remove stock.
+     *
+     * @param name Item name to look up.
+     * @return Total available quantity, capped at {@link Integer#MAX_VALUE} if the sum overflows.
+     * @throws NullPointerException If {@code name} is {@code null}.
+     */
+    public int getTotalAvailableQuantity(String name) {
+        Objects.requireNonNull(name, "Item name to look up must not be null");
+        long totalQuantity = 0;
+        // Read-only availability check: requests never reserve or deduct stock.
+        // Requests name an item but not a category, so stock is combined across every category.
+        for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
+            for (InventoryItem item : itemsInCategory) {
+                if (item.getName().equalsIgnoreCase(name)) {
+                    totalQuantity += item.getQuantity();
+                }
+            }
+        }
+        int total = (int) Math.min(totalQuantity, Integer.MAX_VALUE);
+        LOGGER.fine(() -> "Checked total availability for " + name + ": " + total);
+        return total;
     }
 
     /**

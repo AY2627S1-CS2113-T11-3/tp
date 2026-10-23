@@ -50,7 +50,7 @@ public class Loan {
             throw new CommandFormatException("Category cannot be blank.");
         }
         if (quantity <= 0) {
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         Objects.requireNonNull(borrower, "Loan borrower must not be null");
         String capturedName = borrower.getName();
