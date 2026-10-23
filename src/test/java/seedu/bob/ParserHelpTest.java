@@ -16,40 +16,46 @@ import org.junit.jupiter.api.Test;
 class ParserHelpTest {
 
     /** Defines the expected output independently so changes to the application text are detected. */
-    private static final String EXPECTED_HELP =
-            "--------------------------------------------------------------------\n"
-            + "Available commands\n"
-            + "--------------------------------------------------------------------\n"
-            + "Inventory\n"
-            + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
-            + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
-            + "  list-i\n"
-            + "Lab sessions\n"
-            + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
-            + "  delete-s INDEX\n"
-            + "  list-s\n"
-            + "Lab preparation\n"
-            + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
-            + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
-            + "  list-p s/SESSION_INDEX\n"
-            + "Student requests\n"
-            + "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE\n"
-            + "  delete-r INDEX\n"
-            + "  list-r\n"
-            + "  mark-r INDEX STATUS (prepared or fulfilled)\n"
-            + "Contacts\n"
-            + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
-            + "  delete-c INDEX\n"
-            + "  list-c\n"
-            + "Loans\n"
-            + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
-            + "  list-l [overdue]\n"
-            + "  delete-l INDEX\n"
-            + "  return INDEX\n"
-            + "Other\n"
-            + "  help\n"
-            + "  Bye\n"
-            + "--------------------------------------------------------------------\n";
+    private static final String EXPECTED_HELP = """
+            --------------------------------------------------------------------
+            Available commands
+            --------------------------------------------------------------------
+            Inventory
+              add-i n/NAME c/CATEGORY [q/QUANTITY]
+              delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
+              list-i
+            Lab sessions
+              add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+              delete-s INDEX
+              list-s
+            Lab preparation
+              add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+              delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+              list-p s/SESSION_INDEX
+            Student requests
+              add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
+              delete-r INDEX
+              list-r
+              mark-r INDEX STATUS (prepared or fulfilled)
+            Contacts
+              add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+              delete-c INDEX
+              list-c
+            Loans
+              add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+              list-l [overdue]
+              delete-l INDEX
+              return INDEX
+            Broken items
+              add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+              list-b
+              delete-b INDEX
+                Deletion restores all units: use only for full repairs or incorrect reports.
+            Other
+              help
+              Bye
+            --------------------------------------------------------------------
+            """;
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Parser parser = new Parser();
