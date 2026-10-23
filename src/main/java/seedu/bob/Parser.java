@@ -18,7 +18,7 @@ import seedu.bob.exception.InvalidRequestIndexException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses help, inventory, scheduling, preparation, contact, student request, and loan commands
+ * Parses help, inventory, scheduling, preparation, contact, student request, loan, and broken-item commands
  * and dispatches them.
  */
 public class Parser {
@@ -69,6 +69,19 @@ public class Parser {
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
+    private static final String ADD_BROKEN_USAGE =
+            "Invalid format. Use: add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]";
+    private static final String LIST_BROKEN_USAGE = "Invalid format. Use: list-b";
+    private static final String DELETE_BROKEN_USAGE = "Invalid format. Use: delete-b INDEX";
+
+    // Positions corresponding to the add-b prefixes: n, c, q, f, d, and optional m.
+    private static final int BROKEN_NAME_INDEX = 0;
+    private static final int BROKEN_CATEGORY_INDEX = 1;
+    private static final int BROKEN_QUANTITY_INDEX = 2;
+    private static final int BROKEN_FAULT_INDEX = 3;
+    private static final int BROKEN_DATE_INDEX = 4;
+    private static final int BROKEN_CONTACT_INDEX = 5;
+
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Accepted required and optional contact prefixes, in command order. */
@@ -100,9 +113,29 @@ public class Parser {
      * @param loanManager LoanManager to add, correct, return, or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
+                              ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
+        handleCommand(input, inventory, sessionManager, contactManager, requestManager, loanManager, null);
+    }
+
+    /**
+     * Executes commands with one persistent broken-item manager sharing the supplied inventory and contacts.
+     * The six-argument overload remains available to callers of the preexisting features.
+     *
+     * @param input Command text.
+     * @param inventory Shared usable inventory.
+     * @param sessionManager Lab schedule.
+     * @param contactManager Shared maintenance and supplier contacts.
+     * @param requestManager Student requests.
+     * @param loanManager Active loans backed by the shared inventory.
+     * @param brokenItemManager Broken reports backed by the same inventory and contacts;
+     *     null is allowed only for callers that do not execute broken-item commands.
+     */
+    public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
+                              ContactManager contactManager, RequestManager requestManager, LoanManager loanManager,
+                              BrokenItemManager brokenItemManager) {
         try {
-            handleCommandInternal(input, inventory, sessionManager, contactManager, requestManager, loanManager);
+            handleCommandInternal(input, inventory, sessionManager, contactManager, requestManager,
+                    loanManager, brokenItemManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
@@ -113,7 +146,9 @@ public class Parser {
      * Parses and dispatches one command after the public failure boundary has been established.
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
-            ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
+                                       ContactManager contactManager, RequestManager requestManager,
+                                       LoanManager loanManager,
+                                       BrokenItemManager brokenItemManager) {
         String[] parts = (input == null ? "" : input).trim().split("\\s+", 2);
         String command = parts[0];
 
@@ -211,6 +246,15 @@ public class Parser {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     handleRequest(command, arguments, requestManager, inventory);
                 } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            case "add-b", "list-b", "delete-b" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    handleBrokenItem(command, arguments, brokenItemManager, contactManager);
+                } catch (CommandException e) {
+                    LOGGER.log(Level.FINE, "Rejected broken-item command: " + command, e);
                     System.out.println(e.getMessage());
                 }
             }
@@ -428,7 +472,7 @@ public class Parser {
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handlePreparation(String command, String arguments, Inventory inventory,
-            SessionManager sessionManager) throws CommandException {
+                                   SessionManager sessionManager) throws CommandException {
         Session session;
         switch (command) {
             case "add-p" -> session = addPreparation(arguments, sessionManager);
@@ -574,7 +618,7 @@ public class Parser {
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handleRequest(String command, String arguments, RequestManager requestManager,
-            Inventory inventory) throws CommandException {
+                               Inventory inventory) throws CommandException {
         LOGGER.fine(() -> "Handling request command: " + command);
         switch (command) {
             case "add-r" -> addRequest(arguments, requestManager);
@@ -837,4 +881,75 @@ public class Parser {
             throw new InvalidRequestIndexException();
         }
     }
+
+    //@@author gavinlimsh
+    /**
+     * Dispatches broken-item commands after checking that startup supplied a persistent manager.
+     *
+     * @throws CommandException If command arguments or the requested operation are invalid.
+     */
+    private void handleBrokenItem(String command, String arguments, BrokenItemManager brokenItemManager,
+                                  ContactManager contactManager) throws CommandException {
+        if (brokenItemManager == null) {
+            throw new IllegalStateException("Broken-item commands require a configured BrokenItemManager");
+        }
+        switch (command) {
+            case "add-b" -> addBrokenItem(arguments, brokenItemManager, contactManager);
+            case "list-b" -> {
+                if (!arguments.isBlank()) {
+                    throw new CommandFormatException(LIST_BROKEN_USAGE);
+                }
+                Ui.showBrokenItems(brokenItemManager);
+            }
+            case "delete-b" -> {
+                int index = parseBrokenItemIndex(arguments);
+                Ui.showBrokenItemDeleted(brokenItemManager.deleteBrokenItem(index));
+            }
+            default -> throw new CommandFormatException("Invalid broken-item command.");
+        }
+    }
+
+    /**
+     * Resolves the optional contact and validates the entire report before inventory can change.
+     * Prefix order follows the same strict rules as the other features.
+     *
+     * @throws CommandException If a prefix, value, contact index, or stock operation is invalid.
+     */
+    private void addBrokenItem(String arguments, BrokenItemManager brokenItemManager,
+                               ContactManager contactManager) throws CommandException {
+        List<String> prefixes = findPrefixes(arguments);
+        if (!prefixes.equals(List.of("n", "c", "q", "f", "d"))
+                && !prefixes.equals(List.of("n", "c", "q", "f", "d", "m"))) {
+            throw new CommandFormatException(ADD_BROKEN_USAGE);
+        }
+        List<String> values = extractValues(arguments, prefixes, ADD_BROKEN_USAGE);
+        int quantity = parseQuantity(values.get(BROKEN_QUANTITY_INDEX));
+        Contact contact = null;
+        if (values.size() > BROKEN_CONTACT_INDEX) {
+            contact = contactManager.getContact(parseContactIndex(values.get(BROKEN_CONTACT_INDEX)));
+        }
+        BrokenItem item = new BrokenItem(values.get(BROKEN_NAME_INDEX), values.get(BROKEN_CATEGORY_INDEX),
+                quantity, values.get(BROKEN_FAULT_INDEX), values.get(BROKEN_DATE_INDEX), contact);
+        Ui.showBrokenItemAdded(brokenItemManager.addBrokenItem(item));
+    }
+
+    /**
+     * Parses exactly one positive report index, rejecting extra arguments and integer overflow.
+     *
+     * @param arguments Text after delete-b.
+     * @return One-based report index.
+     * @throws CommandFormatException If the input is not one positive integer.
+     */
+    private int parseBrokenItemIndex(String arguments) throws CommandFormatException {
+        try {
+            int index = Integer.parseInt(arguments.trim());
+            if (index <= 0) {
+                throw new CommandFormatException(DELETE_BROKEN_USAGE);
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new CommandFormatException(DELETE_BROKEN_USAGE);
+        }
+    }
+    //@@author gavinlimsh
 }
