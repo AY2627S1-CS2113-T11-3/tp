@@ -28,12 +28,18 @@ public class RequestManager {
     public void addRequest(Request request) {
         Objects.requireNonNull(request, "Request to add must not be null");
         requests.add(request);
-        // Sorting on every addition keeps the displayed indices in deadline order.
-        Collections.sort(requests);
+        sortRequests();
 
         assert hasValidState() : "Request list must remain valid after addition";
         LOGGER.fine(() -> "Added request for " + request.getStudentName());
         System.out.println("Successfully added request: " + request);
+    }
+
+    /**
+     * Keeps the displayed order and the stored order aligned by deadline.
+     */
+    private void sortRequests() {
+        Collections.sort(requests);
     }
 
     /**
