@@ -328,6 +328,7 @@ public class Inventory {
     public int getTotalAvailableQuantity(String name) {
         assert name != null : "Item name to look up must not be null";
         int totalQuantity = 0;
+        // Read-only availability check: requests never reserve or deduct stock.
         // Requests name an item but not a category, so stock is combined across every category.
         for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
             for (InventoryItem item : itemsInCategory) {
