@@ -2444,6 +2444,12 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
+    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.
 Other
   help
   Bye
@@ -2490,6 +2496,12 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
+    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.
 Other
   help
   Bye
