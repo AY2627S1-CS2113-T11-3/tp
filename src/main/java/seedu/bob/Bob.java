@@ -4,16 +4,21 @@ import java.util.Scanner;
 import java.util.logging.Logger;
 
 /**
- * Runs the interactive Bob inventory and scheduling application.
- *
- * @author Lokwx
+ * Runs the interactive Bob lab management application.
  */
 public class Bob {
 
     private static final Logger LOGGER = Logger.getLogger(Bob.class.getName());
 
     /**
-     * Greets the user and processes commands until the user enters Bye.
+     * Creates an application instance; interactive startup is performed by {@link #main(String[])}.
+     */
+    public Bob() {
+    }
+
+    /**
+     * Greets the user and processes commands until the user enters Bye or standard input ends.
+     * Exits without a greeting if input ends before a user name is supplied.
      *
      * @param args Command-line arguments, which are not used.
      */
@@ -43,13 +48,14 @@ public class Bob {
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
         RequestManager requestManager = new RequestManager();
+        LoanManager loanManager = new LoanManager(inventory);
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager, loanManager);
             System.out.println();
         }
 

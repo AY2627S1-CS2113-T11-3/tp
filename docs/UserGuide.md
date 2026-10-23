@@ -1,12 +1,12 @@
 # Bob User Guide
 
-Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, prepare
-materials for each session, track student requests, and keep contacts. Preparation uses the session's headcount to
-calculate required quantities and compare them with the inventory. Requests are sorted by deadline and show whether
-the requested quantity is currently in inventory.
+Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, prepare materials
+for each session, track student requests, keep contacts, and track resources loaned to students. Preparation uses the
+session's headcount to calculate required quantities and compare them with the inventory. Requests are sorted by
+deadline and show whether the requested quantity is currently in inventory.
 
 **Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
-requests, and contacts.
+contacts, requests, and loans.
 
 ## Contents
 
@@ -18,6 +18,7 @@ requests, and contacts.
 - [Lab session preparation](#lab-session-preparation)
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
+- [Loan tracking](#loan-tracking)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -36,17 +37,17 @@ requests, and contacts.
 
    ```bash
    ./gradlew shadowJar
-   java -jar build/libs/duke.jar
+   java -jar build/libs/bob.jar
    ```
 
    **Windows PowerShell**
 
    ```powershell
    .\gradlew.bat shadowJar
-   java -jar build/libs/duke.jar
+   java -jar build/libs/bob.jar
    ```
 
-   The application is named Bob, but the current build produces a file named `duke.jar`.
+   The application is named Bob, and the build produces a file named `bob.jar`.
 
 4. Bob displays a banner and asks `What is your name?`. Enter your name, for example `Alex`, and press Enter.
    Bob responds:
@@ -68,7 +69,7 @@ requests, and contacts.
    The example date is deliberately in the future. Replace it with your session date, which must be today or later.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
-6. Enter `Bye` to exit. To start again, run `java -jar build/libs/duke.jar`. Rebuild with `shadowJar` after changing
+6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
    the source code. Each launch starts with empty lists.
 
 ## Command format
@@ -133,6 +134,11 @@ Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
   list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l [overdue]
+  delete-l INDEX
+  return INDEX
 Other
   help
   Bye
@@ -235,53 +241,92 @@ The stock is now 10 Wire. Run `list-i` to see the updated inventory; `delete-i` 
 
 ## Lab session scheduling
 
+Use these commands to add, view, and delete lab sessions.
+
+After starting Bob and entering your name, type a complete command on one line and press Enter.
+Bob processes the command immediately; it does not prompt separately for the session details or index.
+
+The examples below show command responses, omitting diagnostic log messages.
+
 ### Add a session: `add-s`
 
-Creates a lab session with its date, location, time range, and headcount.
+Creates a lab session with its name, date, location, time range, and headcount.
 
 **Format:** `add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT`
 
-All arguments are required:
+Include every prefix exactly once, in the order shown, with a value after each prefix.
 
 | Argument | Accepted value |
 | --- | --- |
-| `n/NAME` | A nonblank session name, which can contain spaces. |
-| `d/DATE` | A valid date in `d MMMM yyyy` format, such as `8 October 2099`. Use a full English month name with an initial capital: `October`, not `october` or `Oct`. The date must be today or later. |
-| `l/LOCATION` | A nonblank location, which can contain spaces. |
+| `n/NAME` | A nonblank session name. Spaces are allowed. |
+| `d/DATE` | A valid date in `d MMMM yyyy` format, such as `8 October 2099`. Use a full English month name with an initial capital, such as `October`. The date must be today or later. |
+| `l/LOCATION` | A nonblank location. Spaces are allowed. |
 | `s/STARTTIME` | A four-digit, 24-hour time in `HHmm` format, such as `0900`. |
-| `e/ENDTIME` | A four-digit, 24-hour time later than the start time, such as `1200`. |
-| `p/HEADCOUNT` | A positive integer giving the number of attendees. |
+| `e/ENDTIME` | A four-digit, 24-hour time in `HHmm` format, such as `1200`. It must be later than the start time. |
+| `p/HEADCOUNT` | A whole number from `1` to `2147483647`, representing the number of attendees. |
 
-Times must fall between `0000` and `2359`. A session cannot end at or before its start time or span midnight.
-Two sessions cannot overlap on the same date at the same location. A session may start exactly when another ends.
-Overlapping times at different locations are allowed. Session names do not have to be unique.
+The following scheduling rules apply:
 
-Example in an empty schedule:
+- Times must be between `0000` and `2359`. Sessions cannot span midnight.
+- Sessions cannot overlap on the same date at the same location. Location comparisons ignore
+  capitalization, so `Room-A` and `room-a` are treated as the same location.
+- A session may start exactly when another session ends.
+- Overlapping sessions at different locations are allowed.
+- Session names do not have to be unique.
+
+For a session dated today, Bob does not check whether its start time has already passed.
+
+**Example:** Starting with an empty schedule, enter:
 
 ```text
 add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
 ```
 
-Expected output:
+Expected response:
 
 ```text
 Successfully added: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
 ```
 
+The new session is placed in chronological order. Adding a session can change the indices of
+existing sessions. Use `list-s` to check the current indices before using a command that requires one.
+
+**Example of a conflict:** With Practice Lab still scheduled, enter:
+
+```text
+add-s n/Circuit Lab d/8 October 2099 l/Room-A s/0930 e/1030 p/15
+```
+
+Expected response:
+
+```text
+Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.
+```
+
+Circuit Lab is not added. Change its date, location, or time range to avoid the conflict, then
+submit the complete command again.
+
 ### List sessions: `list-s`
 
 Displays all scheduled sessions with their indices, names, dates, locations, time ranges, and headcounts.
-Sessions are shown in insertion order, not sorted by date. No arguments are accepted.
+Sessions are sorted by date, then start time, then name alphabetically (ignoring case). No arguments are accepted.
+Adding an earlier session can change existing indices; use `list-s` before selecting a session.
 
 **Format:** `list-s`
 
-With only the session above:
+This command takes no arguments.
+
+Sessions are sorted by date, with earlier dates first. Sessions on the same date are sorted
+by start time. If both the date and start time match, they are sorted alphabetically by name,
+ignoring capitalization.
+
+**Example:** With only Practice Lab scheduled, enter:
 
 ```text
 list-s
 ```
 
-Expected output:
+Expected response:
 
 ```text
 --------------------------------------------------------------------
@@ -291,28 +336,59 @@ Sessions
 --------------------------------------------------------------------
 ```
 
-An empty schedule displays `No sessions scheduled.` between the sessions heading and the closing divider.
+If there are no scheduled sessions, the response is:
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+No sessions scheduled.
+--------------------------------------------------------------------
+```
+
+Indices begin at `1` and represent positions in the current list. They are not permanent
+session identifiers and may change after a session is added or deleted.
 
 ### Delete a session: `delete-s`
 
-Deletes a session and its preparation list. Inventory is unaffected.
+Deletes the selected session and its preparation list. Inventory quantities are unaffected.
 
 **Format:** `delete-s INDEX`
 
-Use the index from `list-s`. Unlike preparation commands, this command takes a plain number, without `s/`.
+Replace `INDEX` with the session's current index from `list-s`. Enter the index as a plain
+positive whole number, without the `s/` prefix.
+
+Deletion happens immediately, without a confirmation prompt. Check the current list before
+submitting the command.
+
+**Example:** With Practice Lab at index `1`, enter:
 
 ```text
 delete-s 1
 ```
 
-For the session above, the expected output is:
+Expected response:
 
 ```text
 Successfully removed session: Practice Lab
 ```
 
-Remaining sessions are renumbered. Their preparation lists stay attached to the correct sessions. Run `list-s`
-to check the updated indices before the next command.
+Remaining sessions are renumbered. Their preparation lists stay attached to the correct sessions.
+Run `list-s` again before using another command that requires a session index.
+
+**Example of an invalid index:** If only one session is scheduled, entering `delete-s 2` produces:
+
+```text
+Session index 2 is invalid. There are 1 scheduled session(s).
+```
+
+No session is deleted. Use `list-s` to find a valid index.
+
+Entering `delete-s` without an index produces:
+
+```text
+Invalid format. Use: delete-s INDEX
+```
 
 ## Lab session preparation
 
@@ -632,6 +708,165 @@ Successfully removed contact: NUS Infrastructure
 
 Remaining contacts are renumbered. Run `list-c` to check the updated indices before the next command.
 
+## Loan tracking
+
+Record student loans separately from supplier and technician contacts. Each loan contains one inventory
+item, its quantity, borrower name and phone number, and explicit due date. Borrowers are entered directly;
+adding or deleting a supplier contact does not change a loan's borrower details.
+
+### Add a loan: `add-l`
+
+**Format:** `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE`
+
+- All six arguments are required, in the displayed order. Quantity is the total number of units lent.
+- Item name and category must already exist in inventory. Matching ignores capitalization, while the loan
+  retains the spelling entered in the command.
+- Quantity must be a positive integer and cannot exceed available inventory. Successful additions deduct
+  stock immediately; preparation availability and shortage checks reflect that deduction.
+- Lending all available units removes the depleted inventory entry and its category if empty. The loan
+  retains its item details and quantity independently.
+- Borrower name cannot be blank. Phone numbers use the existing contact rule: digits only, with leading
+  zeros preserved. No entry is added to `list-c`.
+- Due dates use a full, capitalized English month in `d MMMM yyyy` format, for example `30 October 2099`.
+  Today and past dates are accepted so existing loans can be entered as a backlog. A past due date
+  produces an immediate warning after the success confirmation; it does not reject the loan.
+- Every successful command creates a separate record, including repeated loans to the same borrower.
+- Rejected commands leave inventory, loans, and supplier contacts unchanged.
+
+In a fresh application, enter:
+
+```text
+add-i n/Multimeter c/Equipment q/5
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+The loan command prints:
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+```
+
+There are now 3 Multimeters available in inventory.
+
+### List active loans: `list-l`
+
+**Format:** `list-l`
+
+Displays loans in insertion order with one-based indices. Overdue loans have an `[OVERDUE]` marker.
+Listing loans does not change inventory. A loan due today is not overdue.
+After the example above:
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+An empty list displays `No active loans.` between the heading and closing divider.
+
+### Delete an incorrect loan: `delete-l`
+
+**Format:** `delete-l INDEX`
+
+Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
+from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
+This command corrects an entry. Use `return` when the borrower has actually returned the items.
+Partial deletion is not supported.
+
+Continuing the Multimeter example, enter:
+
+```text
+delete-l 1
+```
+
+Expected output:
+
+```text
+Successfully deleted incorrect loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+Inventory is back to 5 Multimeters. Restoration matches item/category without regard to capitalization,
+increases existing stock, or recreates a missing item/category. Existing spelling is preserved; a recreated
+entry uses the loan's spelling and is appended to its category or the inventory category list.
+Preparation availability reflects the restored stock when next displayed. Supplier contacts and other
+loans are unaffected. An invalid index leaves everything unchanged.
+
+If re-added stock makes restoration exceed 2,147,483,647 units, Bob rejects the deletion and retains both
+the loan and stock unchanged. Check the inventory quantities before retrying the correction.
+
+### Record a full return: `return`
+
+**Format:** `return INDEX`
+
+Records the return of every item in one loan, restores its full quantity to inventory, and removes it
+from the active loan list. Use the index from the latest `list-l`. Remaining loans are renumbered, so
+list again before choosing another loan. The confirmation identifies a return rather than a correction.
+
+With the Multimeter loan from the add example still active, enter:
+
+```text
+return 1
+```
+
+Expected output:
+
+```text
+Successfully returned loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+Inventory is back to 5 Multimeters, and `list-l` shows no active loans if this was the only loan.
+Preparation availability reflects the restored stock when next displayed. Returning the loan does not
+change supplier contacts, sessions, or other loans.
+
+- Returns must cover the whole loan. Do not supply a quantity or additional loan index.
+- Restoration merges matching stock without regard to capitalization, or recreates missing items/categories,
+  following the same inventory rules as correcting a loan.
+- Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
+- A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
+  always check `list-l` before the next operation.
+- Returned records are removed immediately; return history is not retained in this version.
+
+### Track overdue loans: `list-l overdue`
+
+**Format:** `list-l overdue`
+
+Shows only active loans whose due date is before today's date on the computer running Bob. A loan becomes
+overdue on the day after its due date. Status is checked again each time you list loans, so a running
+application reflects the new date after midnight without restarting. `list-l` also marks overdue rows.
+
+The overdue-only list keeps each loan's index from the full active list. For example, if only loan 2 is
+overdue, it is still displayed as `2.`. Use that index for `return` or `delete-l`. After removal, indices
+shift in both lists; list again before the next operation.
+
+With an overdue Multimeter loan at position 2 and other current loans, the output looks like:
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 2x Multimeter [Equipment] to Alex Tan (91234567), due 1 January 2000 [OVERDUE]
+--------------------------------------------------------------------
+```
+
+When no loans are overdue, Bob displays `No overdue loans.`. The filter is case-sensitive: enter
+`overdue` in lowercase. Extra or unsupported arguments are rejected. Filtering never changes stock,
+loan order, borrower details, or preparation requirements.
+
+Adding an existing loan with a past due date succeeds and prints this additional line:
+
+```text
+Warning: this loan is already overdue.
+```
+
+Loans due today or in the future do not produce this warning. Invalid or insufficient-stock additions
+are rejected without adding a loan or printing an overdue warning. Returned and corrected records
+are removed from both active and overdue lists.
+
+All loans disappear when Bob exits; persistence is planned for V2.0b. Return history and partial returns
+remain unsupported.
+
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
@@ -640,7 +875,7 @@ Bob exits without a farewell message or a save prompt. All data entered during t
 ## Errors and troubleshooting
 
 Bob displays an error and continues accepting commands when input is invalid. A rejected command does not change
-inventory, sessions, preparation, or requests. Format errors show the required command syntax.
+inventory, sessions, preparation, contacts, requests, or loans. Format errors show the required command syntax.
 
 These are examples of the current messages:
 
@@ -652,13 +887,15 @@ These are examples of the current messages:
 | Blank item name or category | `Item name cannot be blank.` or `Category cannot be blank.` | Enter a nonblank value after the prefix. |
 | Zero, negative, non-integer, or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
 | Invalid headcount | `Headcount must be a positive integer.` | Enter a positive whole number after `p/`. |
-| Invalid date or lowercase month | `Date must be a valid date in d MMMM yyyy format.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
+| Invalid date or lowercase month | `Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
 | Past session date | `Session date cannot be before today.` | Use today's date or a future date. |
-| Invalid start or end time | `Start time must be a valid time in HHmm format.` or `End time must be a valid time in HHmm format.` | Use four digits, such as `0900`, with no colon. |
+| Invalid start or end time | `Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).` or `End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).` | Use four digits, such as `0900`, with no colon. |
 | End time at or before start time | `Start time must be earlier than end time.` | Choose a later end time on the same day. |
 | Overlapping session at the same location | `Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.` | Change the date, location, or time range. |
 | Missing contact name or phone | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` | Supply at least the name and phone number, in that order. |
 | Invalid phone or email | `Phone must contain digits only.` or `Email must be a valid address, e.g. name@example.com.` | Correct the value after the prefix. |
+| Unknown loan index | `Loan index 3 is invalid. There are 2 active loan(s).` | Use the latest `list-l` to check the index. |
+| Stock restoration exceeds the limit | `Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.` | Check re-added stock before retrying; the loan remains active. |
 | Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
@@ -674,7 +911,7 @@ These are examples of the current messages:
 | Invalid request status | `Status must be "prepared" or "fulfilled".` | Use `prepared` or `fulfilled` after the index. |
 
 If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
-`build/libs/duke.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
+`build/libs/bob.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
 
 ## Current limitations
 
@@ -749,4 +986,9 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
 | Delete a contact | `delete-c INDEX` |
 | List contacts | `list-c` |
+| Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
+| List active loans with overdue markers | `list-l` |
+| List overdue loans only | `list-l overdue` |
+| Delete an incorrect loan and restore stock | `delete-l INDEX` |
+| Record a full return and restore stock | `return INDEX` |
 | Exit and discard data | `Bye` |

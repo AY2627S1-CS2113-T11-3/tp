@@ -2,8 +2,6 @@ package seedu.bob.exception;
 
 /**
  * Indicates that a student request status is not prepared or fulfilled.
- *
- * @author Lokwx
  */
 public class InvalidRequestStatusException extends CommandFormatException {
 

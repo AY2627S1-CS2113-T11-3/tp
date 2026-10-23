@@ -1,0 +1,46 @@
+@startuml
+!include loan-style.puml
+hide circle
+hide empty members
+top to bottom direction
+skinparam nodesep 45
+skinparam ranksep 55
+
+class LoanManager {
+    +addLoan(loan: Loan): LoanAdditionResult
+    +returnLoan(userIndex: int): Loan
+    +deleteLoan(userIndex: int): Loan
+    +getLoanEntries(): List<LoanListEntry>
+    +getOverdueLoanEntries(): List<LoanListEntry>
+}
+
+class Inventory
+abstract class Clock <<Java API>>
+
+class Loan {
+    -borrowerName: String
+    -borrowerPhone: String
+    -dueDate: LocalDate
+    +isOverdue(today: LocalDate): boolean
+}
+
+class InventoryItem {
+    -name: String
+    -category: String
+    -quantity: int
+}
+
+class Contact
+
+LoanManager -left-> "1" Inventory : -inventory
+LoanManager -right-> "1" Clock : -clock
+LoanManager -down-> "0..*" Loan : -loans\n{ordered}
+Loan *-left-> "1" InventoryItem : -item\n{private snapshot}
+Inventory -down-> "0..*" InventoryItem : available stock\n(grouped by category)
+Loan .right.> Contact : <<use>>\nvalidate copied values
+
+note bottom of InventoryItem
+  Loan snapshots and live stock
+  are separate objects of this class.
+end note
+@enduml

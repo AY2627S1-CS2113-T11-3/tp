@@ -24,8 +24,6 @@ import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Verifies FINE-level diagnostics for request creation, validation, and status changes.
- *
- * @author Lokwx
  */
 class RequestLoggingTest {
 

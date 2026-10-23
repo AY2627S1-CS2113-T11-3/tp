@@ -51,18 +51,38 @@ public class Contact {
         this.role = role;
     }
 
+    /**
+     * Returns the contact's display name.
+     *
+     * @return Contact name.
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the digits-only phone number, preserving leading zeros.
+     *
+     * @return Phone number as entered.
+     */
     public String getPhone() {
         return phone;
     }
 
+    /**
+     * Returns the email address, or {@code null} if none was supplied.
+     *
+     * @return Optional email address.
+     */
     public String getEmail() {
         return email;
     }
 
+    /**
+     * Returns the contact's role, or {@code null} if none was supplied.
+     *
+     * @return Optional contact role.
+     */
     public String getRole() {
         return role;
     }

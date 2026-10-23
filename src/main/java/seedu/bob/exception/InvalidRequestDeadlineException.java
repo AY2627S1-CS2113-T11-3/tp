@@ -2,8 +2,6 @@ package seedu.bob.exception;
 
 /**
  * Indicates that a student request deadline is malformed or in the past.
- *
- * @author Lokwx
  */
 public class InvalidRequestDeadlineException extends CommandException {
 

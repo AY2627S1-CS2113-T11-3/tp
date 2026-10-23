@@ -13,4 +13,14 @@ public abstract class CommandException extends Exception {
     protected CommandException(String message) {
         super(message);
     }
+
+    /**
+     * Creates a command exception while retaining the underlying diagnostic cause.
+     *
+     * @param message Explanation shown to the user.
+     * @param cause Original failure, retained for debugging.
+     */
+    protected CommandException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

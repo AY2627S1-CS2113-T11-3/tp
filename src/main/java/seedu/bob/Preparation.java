@@ -18,6 +18,12 @@ public class Preparation {
     private final ArrayList<PreparationItem> items = new ArrayList<>();
 
     /**
+     * Creates an empty preparation list for a session without reserving inventory.
+     */
+    public Preparation() {
+    }
+
+    /**
      * Adds a per-attendee requirement, accumulating repeated name/category pairs without regard to case.
      *
      * @param name Item name, which may be absent from inventory.
@@ -63,6 +69,10 @@ public class Preparation {
 
     /**
      * Finds an existing name/category pair, or returns -1 when the requirement is new.
+     *
+     * @param name Item name to match without regard to case.
+     * @param category Category to match without regard to case.
+     * @return Zero-based position of the matching requirement, or -1 if none exists.
      */
     private int findItemIndex(String name, String category) {
         for (int i = 0; i < items.size(); i++) {

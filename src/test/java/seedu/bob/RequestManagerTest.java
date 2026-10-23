@@ -21,8 +21,6 @@ import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Verifies deadline ordering, status changes, and availability display in {@link RequestManager}.
- *
- * @author Lokwx
  */
 class RequestManagerTest {
 
