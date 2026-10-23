@@ -205,7 +205,8 @@ class ParserRequestTest {
         assertEquals("Request index must be a positive integer.\n", execute("delete-r 0"));
         assertEquals("Request index must be a positive integer.\n", execute("delete-r -1"));
         assertEquals("Request index must be a positive integer.\n", execute("delete-r 2147483648"));
-        assertEquals("Request index 2 is invalid. There are 1 request(s).\n", execute("delete-r 2"));
+        assertEquals("Request index 2 is invalid. There are 1 recorded request(s).\n",
+                execute("delete-r 2"));
         assertTrue(execute("list-r").contains("Alice"));
     }
 
@@ -252,7 +253,7 @@ class ParserRequestTest {
         assertEquals(MARK_USAGE, execute("mark-r 1 prepared extra"));
         assertEquals("Request index must be a positive integer.\n", execute("mark-r abc prepared"));
         assertEquals("Request index must be a positive integer.\n", execute("mark-r 0 prepared"));
-        assertEquals("Request index 2 is invalid. There are 1 request(s).\n",
+        assertEquals("Request index 2 is invalid. There are 1 recorded request(s).\n",
                 execute("mark-r 2 prepared"));
         assertEquals("Status must be \"prepared\" or \"fulfilled\".\n",
                 execute("mark-r 1 pending"));

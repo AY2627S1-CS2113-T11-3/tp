@@ -907,7 +907,7 @@ These are examples of the current messages:
 | Missing `add-r` arguments | `Invalid format. Use: add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE` | Supply the student, item, quantity, and deadline in that order. |
 | Blank student name or request item | `Student name cannot be blank.` or `Item name cannot be blank.` | Enter a nonblank value after the prefix. |
 | Invalid or past request deadline | `Deadline must be a valid date in d MMMM yyyy format.` or `Request deadline cannot be before today.` | Use a real date such as `8 October 2099`, with a capitalized full month name, and do not use a date before today. |
-| Unknown request index | `Request index 3 is invalid. There are 2 request(s).` | Use `list-r` to check the index. |
+| Unknown request index | `Request index 3 is invalid. There are 2 recorded request(s).` | Use `list-r` to check the index. |
 | Invalid request status | `Status must be "prepared" or "fulfilled".` | Use `prepared` or `fulfilled` after the index. |
 
 If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
