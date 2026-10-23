@@ -29,6 +29,9 @@ public class Request implements Comparable<Request> {
             .ofPattern("d MMMM uuuu", Locale.ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
 
+    private static final String INVALID_DEADLINE_MESSAGE =
+            "Deadline must be a valid date in d MMMM yyyy format.";
+
     /** Records request diagnostics at FINE level so normal console output stays unchanged. */
     private static final Logger LOGGER = Logger.getLogger(Request.class.getName());
 
@@ -63,12 +66,15 @@ public class Request implements Comparable<Request> {
         }
 
         LocalDate parsedDeadline;
+        if (deadlineText == null) {
+            LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
+            throw new InvalidRequestDeadlineException(INVALID_DEADLINE_MESSAGE);
+        }
         try {
             parsedDeadline = LocalDate.parse(deadlineText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
-            throw new InvalidRequestDeadlineException(
-                    "Deadline must be a valid date in d MMMM yyyy format.");
+            throw new InvalidRequestDeadlineException(INVALID_DEADLINE_MESSAGE);
         }
         // A deadline is a calendar date, so requests due today are still accepted.
         if (parsedDeadline.isBefore(LocalDate.now())) {

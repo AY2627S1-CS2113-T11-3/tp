@@ -82,6 +82,15 @@ class RequestTest {
     }
 
     @Test
+    void constructor_nullDeadline_throwsInvalidRequestDeadlineException() {
+        InvalidRequestDeadlineException exception = assertThrows(
+                InvalidRequestDeadlineException.class,
+                () -> new Request("Alice", "Wire", 1, null));
+
+        assertEquals("Deadline must be a valid date in d MMMM yyyy format.", exception.getMessage());
+    }
+
+    @Test
     void constructor_pastDeadline_throwsInvalidRequestDeadlineException() {
         InvalidRequestDeadlineException exception = assertThrows(
                 InvalidRequestDeadlineException.class,
