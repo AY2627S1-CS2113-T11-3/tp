@@ -134,19 +134,30 @@ public class Request implements Comparable<Request> {
     }
 
     /**
-     * Marks this request as prepared or fulfilled.
+     * Normalizes and validates a status entered by the user.
      *
-     * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
-     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     * @param newStatus Status text, ignoring case.
+     * @return Lowercase status.
+     * @throws InvalidRequestStatusException If the status is not prepared or fulfilled.
      */
-    public void markAs(String newStatus) throws InvalidRequestStatusException {
+    public static String normalizeStatus(String newStatus) throws InvalidRequestStatusException {
         // Normalize once so callers may type prepared, Prepared, or PREPARED.
         String normalizedStatus = newStatus == null ? "" : newStatus.trim().toLowerCase(Locale.ENGLISH);
         if (!STATUS_PREPARED.equals(normalizedStatus) && !STATUS_FULFILLED.equals(normalizedStatus)) {
             LOGGER.fine(() -> "Rejected request status: " + newStatus);
             throw new InvalidRequestStatusException();
         }
-        this.status = normalizedStatus;
+        return normalizedStatus;
+    }
+
+    /**
+     * Marks this request as prepared or fulfilled.
+     *
+     * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
+     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     */
+    public void markAs(String newStatus) throws InvalidRequestStatusException {
+        this.status = normalizeStatus(newStatus);
 
         assert STATUS_PREPARED.equals(status) || STATUS_FULFILLED.equals(status)
                 : "Validated request status must be prepared or fulfilled";

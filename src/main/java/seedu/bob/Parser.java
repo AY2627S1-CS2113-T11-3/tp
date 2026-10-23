@@ -649,7 +649,7 @@ public class Parser {
             throw new CommandFormatException(MARK_REQUEST_USAGE);
         }
         assert parts.length == 2 : "Validated mark-r command must have an index and a status";
-        requestManager.markRequest(parseRequestIndex(parts[0]), parts[1]);
+        requestManager.markRequest(parseRequestIndex(parts[0]), Request.normalizeStatus(parts[1]));
     }
 
     /**
