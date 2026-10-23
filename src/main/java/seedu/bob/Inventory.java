@@ -323,11 +323,12 @@ public class Inventory {
      * Matching is case-insensitive and does not reserve or remove stock.
      *
      * @param name Item name to look up.
-     * @return Total available quantity, or zero if the item is absent from inventory.
+     * @return Total available quantity, capped at {@link Integer#MAX_VALUE} if the sum overflows.
+     * @throws NullPointerException If {@code name} is {@code null}.
      */
     public int getTotalAvailableQuantity(String name) {
-        assert name != null : "Item name to look up must not be null";
-        int totalQuantity = 0;
+        Objects.requireNonNull(name, "Item name to look up must not be null");
+        long totalQuantity = 0;
         // Read-only availability check: requests never reserve or deduct stock.
         // Requests name an item but not a category, so stock is combined across every category.
         for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
@@ -337,7 +338,7 @@ public class Inventory {
                 }
             }
         }
-        final int total = totalQuantity;
+        int total = (int) Math.min(totalQuantity, Integer.MAX_VALUE);
         LOGGER.fine(() -> "Checked total availability for " + name + ": " + total);
         return total;
     }

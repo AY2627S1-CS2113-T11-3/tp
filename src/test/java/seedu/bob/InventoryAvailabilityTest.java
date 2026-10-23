@@ -1,13 +1,14 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CommandException;
 
 /**
- * Verifies that preparation stock checks select the correct category and reflect inventory changes.
+ * Verifies preparation stock checks, total request availability, and inventory boundary cases.
  */
 class InventoryAvailabilityTest {
 
@@ -54,5 +55,24 @@ class InventoryAvailabilityTest {
         inventory.removeItem("Spares", 1, 40);
 
         assertEquals(80, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void getTotalAvailableQuantity_nullName_throwsNullPointerException() {
+        Inventory inventory = new Inventory();
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> inventory.getTotalAvailableQuantity(null));
+
+        assertEquals("Item name to look up must not be null", exception.getMessage());
+    }
+
+    @Test
+    void getTotalAvailableQuantity_sumOverflows_saturatesAtMax() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", Integer.MAX_VALUE));
+        inventory.addItem(new InventoryItem("Wire", "Spares", Integer.MAX_VALUE));
+
+        assertEquals(Integer.MAX_VALUE, inventory.getTotalAvailableQuantity("Wire"));
     }
 }

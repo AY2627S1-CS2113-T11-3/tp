@@ -45,10 +45,10 @@ public class Request implements Comparable<Request> {
     /**
      * Creates a validated student request.
      *
-     * @param studentName Name of the student making the request.
-     * @param itemName Name of the requested item.
+     * @param studentName Name of the student making the request; surrounding whitespace is ignored.
+     * @param itemName Name of the requested item; surrounding whitespace is ignored.
      * @param quantity Number of units requested.
-     * @param deadlineText Deadline in {@code d MMMM uuuu} format, which must not be before today.
+     * @param deadlineText Deadline in {@code d MMMM uuuu} format; surrounding whitespace is ignored.
      * @throws CommandException If a value is blank, the quantity is not positive, or the deadline is invalid.
      */
     public Request(String studentName, String itemName, int quantity, String deadlineText)
@@ -59,20 +59,22 @@ public class Request implements Comparable<Request> {
     /**
      * Creates a validated student request using the supplied clock for the today check.
      *
-     * @param studentName Name of the student making the request.
-     * @param itemName Name of the requested item.
+     * @param studentName Name of the student making the request; surrounding whitespace is ignored.
+     * @param itemName Name of the requested item; surrounding whitespace is ignored.
      * @param quantity Number of units requested.
-     * @param deadlineText Deadline in {@code d MMMM uuuu} format, which must not be before today.
+     * @param deadlineText Deadline in {@code d MMMM uuuu} format; surrounding whitespace is ignored.
      * @param clock Clock used to determine today's date.
      * @throws CommandException If a value is blank, the quantity is not positive, or the deadline is invalid.
      */
     Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock)
             throws CommandException {
         Objects.requireNonNull(clock, "Clock must not be null");
-        if (studentName == null || studentName.isBlank()) {
+        String trimmedStudentName = studentName == null ? "" : studentName.trim();
+        String trimmedItemName = itemName == null ? "" : itemName.trim();
+        if (trimmedStudentName.isEmpty()) {
             throw new CommandFormatException("Student name cannot be blank.");
         }
-        if (itemName == null || itemName.isBlank()) {
+        if (trimmedItemName.isEmpty()) {
             throw new CommandFormatException("Item name cannot be blank.");
         }
         if (quantity <= 0) {
@@ -80,14 +82,15 @@ public class Request implements Comparable<Request> {
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
-        LocalDate parsedDeadline;
-        if (deadlineText == null) {
+        String trimmedDeadlineText = deadlineText == null ? "" : deadlineText.trim();
+        if (trimmedDeadlineText.isEmpty()) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
                     InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
         }
+        LocalDate parsedDeadline;
         try {
-            parsedDeadline = LocalDate.parse(deadlineText, DATE_FORMATTER);
+            parsedDeadline = LocalDate.parse(trimmedDeadlineText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
@@ -100,17 +103,16 @@ public class Request implements Comparable<Request> {
                     InvalidRequestDeadlineException.PAST_DATE_MESSAGE);
         }
 
-        this.studentName = studentName;
-        this.itemName = itemName;
+        this.studentName = trimmedStudentName;
+        this.itemName = trimmedItemName;
         this.quantity = quantity;
         this.deadline = parsedDeadline;
 
-        assert studentName != null && !studentName.isBlank()
-                : "Validated student name must not be blank";
-        assert itemName != null && !itemName.isBlank() : "Validated item name must not be blank";
+        assert !this.studentName.isEmpty() : "Validated student name must not be blank";
+        assert !this.itemName.isEmpty() : "Validated item name must not be blank";
         assert quantity > 0 : "Validated quantity must be positive";
         assert deadline != null : "Validated deadline must not be null";
-        LOGGER.fine(() -> "Created request for " + studentName + " for " + itemName);
+        LOGGER.fine(() -> "Created request for " + this.studentName + " for " + this.itemName);
     }
 
     public String getStudentName() {

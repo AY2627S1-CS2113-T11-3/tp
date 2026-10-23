@@ -1,8 +1,10 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -191,6 +193,8 @@ class RequestManagerTest {
         manager.addRequest(request);
 
         assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "pending"));
+        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, null));
+        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "   "));
         assertEquals("pending", request.getStatus());
     }
 
@@ -233,6 +237,22 @@ class RequestManagerTest {
                 + "2. [Pending] Bob - 5x Battery by " + laterDeadline
                 + " (Available: 1) !! Insufficient stock (Shortfall: 4)\n"
                 + Ui.DIVIDER + "\n", printed());
+    }
+
+    @Test
+    void listRequests_saturatedAvailability_noShortfall() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
+        String deadline = date(2);
+        inventory.addItem(new InventoryItem("Wire", "Components", Integer.MAX_VALUE));
+        inventory.addItem(new InventoryItem("Wire", "Spares", Integer.MAX_VALUE));
+        manager.addRequest(new Request("Alice", "Wire", Integer.MAX_VALUE, deadline));
+        output.reset();
+
+        manager.listRequests(inventory);
+
+        assertTrue(printed().contains("(Available: 2147483647)"));
+        assertFalse(printed().contains("Insufficient"));
     }
 
     @Test

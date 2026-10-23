@@ -114,7 +114,7 @@ public class Parser {
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
             ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
-        String[] parts = input.trim().split("\\s+", 2);
+        String[] parts = (input == null ? "" : input).trim().split("\\s+", 2);
         String command = parts[0];
 
         switch (command) {

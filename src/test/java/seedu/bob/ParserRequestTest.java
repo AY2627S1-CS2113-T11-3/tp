@@ -75,13 +75,25 @@ class ParserRequestTest {
     }
 
     @Test
+    void addRequest_surroundingWhitespace_accepted() {
+        String deadline = date(2);
+
+        assertEquals("Successfully added request: Alice - 2x Wire by " + deadline + "\n"
+                + LIST_UPDATED, execute("add-r   n/Alice   i/Wire   q/2   d/" + deadline));
+    }
+
+    @Test
     void addRequest_malformedArguments_usageShown() {
         String deadline = date(2);
         String[] commands = {
             "add-r",
             "add-r n/Alice i/Wire q/2",
+            "add-r n/Alice i/Wire d/" + deadline,
+            "add-r n/Alice q/2 d/" + deadline,
+            "add-r i/Wire q/2 d/" + deadline,
             "add-r i/Wire n/Alice q/2 d/" + deadline,
             "add-r n/Alice i/Wire q/2 d/" + deadline + " x/extra",
+            "add-r n/Alice i/Wire q/2 d/" + deadline + " d/" + deadline,
             "add-r n/Alice n/Bob i/Wire q/2 d/" + deadline,
             "add-r extra n/Alice i/Wire q/2 d/" + deadline
         };
@@ -100,6 +112,10 @@ class ParserRequestTest {
                 execute("add-r n/Alice i/ q/2 d/" + deadline));
         assertEquals("Quantity must be greater than zero.\n",
                 execute("add-r n/Alice i/Wire q/0 d/" + deadline));
+        assertEquals("Quantity must be greater than zero.\n",
+                execute("add-r n/Alice i/Wire q/-5 d/" + deadline));
+        assertEquals("Quantity must be a positive integer.\n",
+                execute("add-r n/Alice i/Wire q/ d/" + deadline));
         assertEquals("Quantity must be a positive integer.\n",
                 execute("add-r n/Alice i/Wire q/abc d/" + deadline));
         assertEquals("Quantity must be a positive integer.\n",
@@ -237,6 +253,15 @@ class ParserRequestTest {
     }
 
     @Test
+    void markRequest_statusSurroundingWhitespace_accepted() {
+        String deadline = date(2);
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+
+        assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by " + deadline + "\n",
+                execute("mark-r   1   prepared   "));
+    }
+
+    @Test
     void markRequest_pendingDirectlyToFulfilled_allowed() {
         String deadline = date(2);
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
@@ -252,6 +277,7 @@ class ParserRequestTest {
 
         assertEquals(MARK_USAGE, execute("mark-r"));
         assertEquals(MARK_USAGE, execute("mark-r 1"));
+        assertEquals(MARK_USAGE, execute("mark-r 1   "));
         assertEquals(MARK_USAGE, execute("mark-r 1 prepared extra"));
         assertEquals("Request index must be a positive integer.\n", execute("mark-r abc prepared"));
         assertEquals("Request index must be a positive integer.\n", execute("mark-r 0 prepared"));
@@ -262,6 +288,12 @@ class ParserRequestTest {
         assertEquals("Status must be \"prepared\" or \"fulfilled\".\n",
                 execute("mark-r 1 done"));
         assertTrue(execute("list-r").contains("1. [Pending] Alice"));
+    }
+
+    @Test
+    void requestCommands_nullOrBlankInput_invalidCommand() {
+        assertEquals("Invalid command\n", execute(null));
+        assertEquals("Invalid command\n", execute("   "));
     }
 
     @Test

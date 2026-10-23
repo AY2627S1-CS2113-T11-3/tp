@@ -74,7 +74,7 @@ class RequestTest {
 
     @Test
     void constructor_invalidDeadlineFormat_throwsInvalidRequestDeadlineException() {
-        String[] invalidDeadlines = {"31 February 2099", "2 october 2050", "2099-10-02", ""};
+        String[] invalidDeadlines = {"31 February 2099", "2 october 2050", "2099-10-02", "", "   "};
         for (String deadline : invalidDeadlines) {
             InvalidRequestDeadlineException exception = assertThrows(
                     InvalidRequestDeadlineException.class,
@@ -114,6 +114,25 @@ class RequestTest {
     }
 
     @Test
+    void constructor_surroundingWhitespace_trimsStoredValues() throws CommandException {
+        Clock fixedClock = Clock.fixed(Instant.parse("2026-10-22T00:00:00Z"), ZoneOffset.UTC);
+
+        Request request = new Request("  Alice Tan  ", "  Wire  ", 2, "  22 October 2026  ", fixedClock);
+
+        assertEquals("Alice Tan", request.getStudentName());
+        assertEquals("Wire", request.getItemName());
+        assertEquals(LocalDate.of(2026, 10, 22), request.getDeadline());
+    }
+
+    @Test
+    void constructor_nullClock_throwsNullPointerException() {
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> new Request("Alice", "Wire", 1, date(2), null));
+
+        assertEquals("Clock must not be null", exception.getMessage());
+    }
+
+    @Test
     void markAs_preparedAndFulfilled_ignoresCase() throws CommandException {
         Request request = new Request("Alice", "Wire", 1, date(2));
 
@@ -131,6 +150,10 @@ class RequestTest {
         InvalidRequestStatusException exception = assertThrows(InvalidRequestStatusException.class,
                 () -> request.markAs("pending"));
         assertEquals("Status must be \"prepared\" or \"fulfilled\".", exception.getMessage());
+        assertEquals("pending", request.getStatus());
+
+        assertThrows(InvalidRequestStatusException.class, () -> request.markAs(null));
+        assertThrows(InvalidRequestStatusException.class, () -> request.markAs("   "));
         assertEquals("pending", request.getStatus());
 
         request.markAs("prepared");
