@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -97,6 +100,17 @@ class RequestTest {
                 () -> new Request("Alice", "Wire", 1, "1 January 2000"));
 
         assertEquals("Request deadline cannot be before today.", exception.getMessage());
+    }
+
+    @Test
+    void constructor_fixedClock_usesInjectedTodayForPastDeadlineCheck() throws CommandException {
+        Clock fixedClock = Clock.fixed(Instant.parse("2026-10-22T00:00:00Z"), ZoneOffset.UTC);
+
+        Request request = new Request("Alice", "Wire", 1, "22 October 2026", fixedClock);
+
+        assertEquals(LocalDate.of(2026, 10, 22), request.getDeadline());
+        assertThrows(InvalidRequestDeadlineException.class,
+                () -> new Request("Alice", "Wire", 1, "21 October 2026", fixedClock));
     }
 
     @Test

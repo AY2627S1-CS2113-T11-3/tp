@@ -1,10 +1,12 @@
 package seedu.bob;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
@@ -51,6 +53,22 @@ public class Request implements Comparable<Request> {
      */
     public Request(String studentName, String itemName, int quantity, String deadlineText)
             throws CommandException {
+        this(studentName, itemName, quantity, deadlineText, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates a validated student request using the supplied clock for the today check.
+     *
+     * @param studentName Name of the student making the request.
+     * @param itemName Name of the requested item.
+     * @param quantity Number of units requested.
+     * @param deadlineText Deadline in {@code d MMMM uuuu} format, which must not be before today.
+     * @param clock Clock used to determine today's date.
+     * @throws CommandException If a value is blank, the quantity is not positive, or the deadline is invalid.
+     */
+    Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock)
+            throws CommandException {
+        Objects.requireNonNull(clock, "Clock must not be null");
         if (studentName == null || studentName.isBlank()) {
             throw new CommandFormatException("Student name cannot be blank.");
         }
@@ -76,7 +94,7 @@ public class Request implements Comparable<Request> {
                     InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
         }
         // A deadline is a calendar date, so requests due today are still accepted.
-        if (parsedDeadline.isBefore(LocalDate.now())) {
+        if (parsedDeadline.isBefore(LocalDate.now(clock))) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
                     InvalidRequestDeadlineException.PAST_DATE_MESSAGE);
