@@ -24,6 +24,8 @@ class ParserRequestTest {
     private static final String DELETE_USAGE = "Invalid format. Use: delete-r INDEX\n";
     private static final String LIST_USAGE = "Invalid format. Use: list-r\n";
     private static final String MARK_USAGE = "Invalid format. Use: mark-r INDEX STATUS\n";
+    private static final String LIST_UPDATED =
+            "Request list updated. Run list-r to see the latest order.\n";
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Parser parser = new Parser();
@@ -52,24 +54,24 @@ class ParserRequestTest {
     void addRequest_validRequest_confirmationShown() {
         String deadline = date(2);
 
-        assertEquals("Successfully added request: Alice - 20x Wire by " + deadline + "\n",
-                execute("add-r n/Alice i/Wire q/20 d/" + deadline));
+        assertEquals("Successfully added request: Alice - 20x Wire by " + deadline + "\n"
+                + LIST_UPDATED, execute("add-r n/Alice i/Wire q/20 d/" + deadline));
     }
 
     @Test
     void addRequest_todayDeadline_accepted() {
         String deadline = date(0);
 
-        assertEquals("Successfully added request: Alice - 1x Wire by " + deadline + "\n",
-                execute("add-r n/Alice i/Wire q/1 d/" + deadline));
+        assertEquals("Successfully added request: Alice - 1x Wire by " + deadline + "\n"
+                + LIST_UPDATED, execute("add-r n/Alice i/Wire q/1 d/" + deadline));
     }
 
     @Test
     void addRequest_multiWordValues_accepted() {
         String deadline = date(2);
 
-        assertEquals("Successfully added request: Alice Tan - 10x Red LED by " + deadline + "\n",
-                execute("add-r n/Alice Tan i/Red LED q/10 d/" + deadline));
+        assertEquals("Successfully added request: Alice Tan - 10x Red LED by " + deadline + "\n"
+                + LIST_UPDATED, execute("add-r n/Alice Tan i/Red LED q/10 d/" + deadline));
     }
 
     @Test
@@ -188,8 +190,8 @@ class ParserRequestTest {
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
         execute("add-r n/Bob i/Battery q/2 d/" + laterDeadline);
 
-        assertEquals("Successfully removed request: Alice - 5x Wire by " + deadline + "\n",
-                execute("delete-r 1"));
+        assertEquals("Successfully removed request: Alice - 5x Wire by " + deadline + "\n"
+                + LIST_UPDATED, execute("delete-r 1"));
         assertEquals(requestList("1. [Pending] Bob - 2x Battery by " + laterDeadline
                 + " (Available: 0) !! Insufficient stock (Shortfall: 2)\n"),
                 execute("list-r"));

@@ -15,6 +15,8 @@ public class RequestManager {
 
     private static final Logger LOGGER = Logger.getLogger(RequestManager.class.getName());
     private static final int INDEX_OFFSET = 1;
+    private static final String LIST_UPDATED_MESSAGE =
+            "Request list updated. Run list-r to see the latest order.";
 
     /** Kept sorted by deadline so displayed positions can be used by {@code delete-r} and {@code mark-r}. */
     private final ArrayList<Request> requests = new ArrayList<>();
@@ -33,6 +35,7 @@ public class RequestManager {
         assert hasValidState() : "Request list must remain valid after addition";
         LOGGER.fine(() -> "Added request for " + request.getStudentName());
         System.out.println("Successfully added request: " + request);
+        System.out.println(LIST_UPDATED_MESSAGE);
     }
 
     /**
@@ -55,6 +58,7 @@ public class RequestManager {
         assert hasValidState() : "Request list must remain valid after deletion";
         LOGGER.fine(() -> "Removed request for " + removedRequest.getStudentName());
         System.out.println("Successfully removed request: " + removedRequest);
+        System.out.println(LIST_UPDATED_MESSAGE);
     }
 
     /**

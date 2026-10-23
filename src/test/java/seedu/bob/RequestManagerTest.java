@@ -24,6 +24,9 @@ import seedu.bob.exception.InvalidRequestStatusException;
  */
 class RequestManagerTest {
 
+    private static final String LIST_UPDATED =
+            "Request list updated. Run list-r to see the latest order.\n";
+
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
@@ -62,7 +65,9 @@ class RequestManagerTest {
         assertSame(earlier, manager.getRequest(1));
         assertSame(later, manager.getRequest(2));
         assertEquals("Successfully added request: Bob - 2x Battery by " + laterDeadline + "\n"
-                + "Successfully added request: Alice - 5x Wire by " + earlierDeadline + "\n", printed());
+                + LIST_UPDATED
+                + "Successfully added request: Alice - 5x Wire by " + earlierDeadline + "\n"
+                + LIST_UPDATED, printed());
     }
 
     @Test
@@ -118,7 +123,8 @@ class RequestManagerTest {
 
         manager.deleteRequest(1);
 
-        assertEquals("Successfully removed request: Alice - 5x Wire by " + firstDeadline + "\n", printed());
+        assertEquals("Successfully removed request: Alice - 5x Wire by " + firstDeadline + "\n"
+                + LIST_UPDATED, printed());
         assertSame(second, manager.getRequest(1));
         assertThrows(InvalidRequestIndexException.class, () -> manager.getRequest(2));
     }

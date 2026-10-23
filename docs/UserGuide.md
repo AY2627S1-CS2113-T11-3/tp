@@ -522,6 +522,7 @@ Expected output:
 
 ```text
 Successfully added request: Alice - 20x Wire by 8 October 2099
+Request list updated. Run list-r to see the latest order.
 ```
 
 The request is stored in deadline order, so the list may show it before or after requests added earlier.
@@ -571,6 +572,7 @@ Expected output:
 
 ```text
 Successfully removed request: Alice - 20x Wire by 8 October 2099
+Request list updated. Run list-r to see the latest order.
 ```
 
 Remaining requests are renumbered in deadline order. Run `list-r` to check the updated indices before the next
