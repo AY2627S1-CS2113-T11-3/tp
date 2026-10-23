@@ -126,15 +126,22 @@ public class RequestManager {
                 Request request = requests.get(i);
                 // Availability is recalculated on every listing because stock may have changed.
                 int available = inventory.getTotalAvailableQuantity(request.getItemName());
-                boolean isInsufficient = available < request.getQuantity();
-                String shortage = isInsufficient
-                        ? " !! Insufficient stock (Shortfall: " + (request.getQuantity() - available) + ")"
-                        : "";
+                String shortage = formatShortage(available, request.getQuantity());
                 System.out.printf("%d. [%s] %s (Available: %d)%s%n",
                         i + INDEX_OFFSET, displayStatus(request.getStatus()), request, available, shortage);
             }
         }
         System.out.println(Ui.DIVIDER);
+    }
+
+    /**
+     * Returns the shortage warning for a request, or an empty string when stock is sufficient.
+     */
+    private static String formatShortage(int available, int required) {
+        if (available >= required) {
+            return "";
+        }
+        return " !! Insufficient stock (Shortfall: " + (required - available) + ")";
     }
 
     /**
