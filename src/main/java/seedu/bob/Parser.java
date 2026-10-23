@@ -12,16 +12,26 @@ import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidContactIndexException;
 import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidItemIndexException;
+import seedu.bob.exception.InvalidLoanIndexException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidSessionIndexException;
 
 /**
- * Parses and dispatches help, inventory, scheduling, preparation, and contact commands.
+ * Parses help, inventory, scheduling, preparation, contact, and loan commands and dispatches them.
  */
 public class Parser {
 
     private static final Logger LOGGER = Logger.getLogger(Parser.class.getName());
     private static final int DEFAULT_ITEM_QUANTITY = 1;
+
+    // Positions corresponding to the add-l prefixes: n, c, q, b, t, d.
+    private static final int LOAN_ITEM_NAME_INDEX = 0;
+    private static final int LOAN_CATEGORY_INDEX = 1;
+    private static final int LOAN_QUANTITY_INDEX = 2;
+    private static final int LOAN_BORROWER_NAME_INDEX = 3;
+    private static final int LOAN_BORROWER_PHONE_INDEX = 4;
+    private static final int LOAN_DUE_DATE_INDEX = 5;
+
     private static final String UNEXPECTED_ERROR_MESSAGE =
             "An unexpected error occurred while processing the command. Please try again.";
 
@@ -41,14 +51,17 @@ public class Parser {
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
-
-    private static final String ADD_CONTACT_USAGE =
-            "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
+    private static final String ADD_CONTACT_USAGE = "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
     private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
+    private static final String ADD_LOAN_USAGE =
+            "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
+    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
+    private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
+    private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
-    /** Accepted prefix sequences for {@code add-c}; name and phone are required, the rest optional. */
+    /** Accepted required and optional contact prefixes, in command order. */
     private static final List<List<String>> ADD_CONTACT_PREFIXES = List.of(
             List.of("n", "t"),
             List.of("n", "t", "e"),
@@ -59,19 +72,26 @@ public class Parser {
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
 
     /**
-     * Executes a supported command or prints a message for an unknown command.
-     * Expected user errors are displayed without ending the application. Unexpected
+     * Creates a parser that dispatches commands to the managers supplied for each invocation.
+     */
+    public Parser() {
+    }
+
+    /**
+     * Executes an inventory, scheduling, preparation, contact, or loan command, or prints a message for an
+     * unknown command. Expected user errors are displayed without ending the application. Unexpected
      * runtime failures are logged and replaced with a safe user-facing message.
      *
      * @param input Command text containing the required arguments.
      * @param inventory Inventory to query or update.
-     * @param sessionManager Session manager to schedule or modify lab sessions.
-     * @param contactManager Contact manager to add, remove, or display contacts.
+     * @param sessionManager SessionManager to schedule or modify lab sessions.
+     * @param contactManager ContactManager to add, remove, or display contacts.
+     * @param loanManager LoanManager to add, correct, return, or display loans.
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
-                              ContactManager contactManager) {
+            ContactManager contactManager, LoanManager loanManager) {
         try {
-            handleCommandInternal(input, inventory, sessionManager, contactManager);
+            handleCommandInternal(input, inventory, sessionManager, contactManager, loanManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
@@ -82,7 +102,7 @@ public class Parser {
      * Parses and dispatches one command after the public failure boundary has been established.
      */
     private void handleCommandInternal(String input, Inventory inventory, SessionManager sessionManager,
-                                       ContactManager contactManager) {
+            ContactManager contactManager, LoanManager loanManager) {
         String[] parts = input.trim().split("\\s+", 2);
         String command = parts[0];
 
@@ -175,6 +195,15 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            case "add-l", "list-l", "delete-l", "return" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    handleLoan(command, arguments, loanManager);
+                } catch (CommandException e) {
+                    LOGGER.log(Level.FINE, "Rejected loan command: " + command, e);
+                    System.out.println(e.getMessage());
+                }
+            }
             default -> {
                 System.out.println("Invalid command");
             }
@@ -192,6 +221,54 @@ public class Parser {
             throw new CommandFormatException(HELP_USAGE);
         }
         System.out.println(Ui.HELP_MESSAGE);
+    }
+
+    /**
+     * Parses loan commands, validating input before the manager changes loans or stock.
+     *
+     * @param command Supported loan command word.
+     * @param arguments Text following the command word.
+     * @param loanManager Active loans and their shared inventory.
+     * @throws CommandException If syntax, borrower details, date, stock, or a loan index is invalid.
+     */
+    private void handleLoan(String command, String arguments, LoanManager loanManager) throws CommandException {
+        if (command.equals("delete-l") || command.equals("return")) {
+            String indexText = arguments.trim();
+            if (indexText.isEmpty() || indexText.matches(".*\\s+.*")) {
+                String usage = command.equals("return") ? RETURN_LOAN_USAGE : DELETE_LOAN_USAGE;
+                throw new CommandFormatException(usage);
+            }
+            int index = parseLoanIndex(indexText);
+            if (command.equals("return")) {
+                Ui.showLoanReturned(loanManager.returnLoan(index));
+            } else {
+                Ui.showLoanDeleted(loanManager.deleteLoan(index));
+            }
+            return;
+        }
+        if (command.equals("list-l")) {
+            if (arguments.isBlank()) {
+                Ui.showLoans(loanManager.getLoanEntries(), false);
+            } else if (arguments.trim().equals("overdue")) {
+                Ui.showLoans(loanManager.getOverdueLoanEntries(), true);
+            } else {
+                throw new CommandFormatException(LIST_LOAN_USAGE);
+            }
+            return;
+        }
+        List<String> values = extractValues(arguments, List.of("n", "c", "q", "b", "t", "d"), ADD_LOAN_USAGE);
+        int quantity = parseQuantity(values.get(LOAN_QUANTITY_INDEX));
+        Contact borrower = new Contact(
+                values.get(LOAN_BORROWER_NAME_INDEX),
+                values.get(LOAN_BORROWER_PHONE_INDEX),
+                null, null);
+        Loan loan = new Loan(
+                values.get(LOAN_ITEM_NAME_INDEX),
+                values.get(LOAN_CATEGORY_INDEX),
+                quantity,
+                borrower,
+                values.get(LOAN_DUE_DATE_INDEX));
+        Ui.showLoanAdded(loanManager.addLoan(loan));
     }
 
     /**
@@ -325,10 +402,14 @@ public class Parser {
     /**
      * Dispatches a preparation command and displays the resulting requirements against current stock.
      *
+     * @param command Supported preparation command word.
+     * @param arguments Text following the command word.
+     * @param inventory Available stock used to calculate shortages.
+     * @param sessionManager Schedule containing the selected session and its preparation.
      * @throws CommandException If the command arguments or requested change are invalid.
      */
     private void handlePreparation(String command, String arguments, Inventory inventory,
-                                   SessionManager sessionManager) throws CommandException {
+            SessionManager sessionManager) throws CommandException {
         Session session;
         switch (command) {
             case "add-p" -> session = addPreparation(arguments, sessionManager);
@@ -345,6 +426,8 @@ public class Parser {
     /**
      * Adds an item's per-person quantity to the selected session's preparation.
      *
+     * @param arguments Prefixed session, item, category, and optional per-attendee quantity.
+     * @param sessionManager Schedule containing the selected session.
      * @return Updated session.
      * @throws CommandException If arguments or the calculated requirement are invalid.
      */
@@ -365,6 +448,8 @@ public class Parser {
     /**
      * Removes a total quantity from an item in the selected session's preparation.
      *
+     * @param arguments Prefixed session index, preparation item index, and total quantity to remove.
+     * @param sessionManager Schedule containing the selected session.
      * @return Updated session.
      * @throws CommandException If the arguments or removal are invalid.
      */
@@ -380,6 +465,9 @@ public class Parser {
 
     /**
      * Displays required totals and current availability, including a shortfall for insufficient items.
+     *
+     * @param session Session whose preparation requirements are displayed.
+     * @param inventory Live inventory used to calculate availability and shortages.
      */
     private void listPreparation(Session session, Inventory inventory) {
         System.out.println(Ui.DIVIDER);
@@ -587,6 +675,25 @@ public class Parser {
             return index;
         } catch (NumberFormatException e) {
             throw new InvalidSessionIndexException();
+        }
+    }
+
+    /**
+     * Parses a positive one-based active loan index.
+     *
+     * @param indexText Loan index text supplied by the user.
+     * @return Parsed positive index.
+     * @throws InvalidLoanIndexException If the text does not represent a positive integer.
+     */
+    private int parseLoanIndex(String indexText) throws InvalidLoanIndexException {
+        try {
+            int index = Integer.parseInt(indexText);
+            if (index <= 0) {
+                throw new InvalidLoanIndexException();
+            }
+            return index;
+        } catch (NumberFormatException e) {
+            throw new InvalidLoanIndexException(e);
         }
     }
 

@@ -48,7 +48,7 @@ public class Session implements Comparable<Session> {
      * @throws CommandException If any session value is invalid.
      */
     public Session(String name, String dateText, String location,
-                   String startTimeText, String endTimeText, int headcount) throws CommandException {
+            String startTimeText, String endTimeText, int headcount) throws CommandException {
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -164,9 +164,9 @@ public class Session implements Comparable<Session> {
     public boolean conflictsWith(Session other) {
         boolean hasSameDate = date.equals(other.date);
         boolean hasSameLocation = location.equalsIgnoreCase(other.location);
-        boolean timesOverlap = startTime.isBefore(other.endTime)
+        boolean hasTimeOverlap = startTime.isBefore(other.endTime)
                 && other.startTime.isBefore(endTime);
-        return hasSameDate && hasSameLocation && timesOverlap;
+        return hasSameDate && hasSameLocation && hasTimeOverlap;
     }
 
     /**

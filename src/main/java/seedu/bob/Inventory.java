@@ -6,10 +6,13 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CategoryNotFoundException;
+import seedu.bob.exception.CommandException;
+import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.DuplicateItemException;
 import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
+import seedu.bob.exception.LoanException;
 
 /**
  * Stores inventory items grouped by category and displays inventory changes.
@@ -23,7 +26,14 @@ public class Inventory {
      */
     private static final Logger LOGGER = Logger.getLogger(Inventory.class.getName());
 
+    /** Preserves category and item insertion order for display and category-specific deletion indices. */
     private final LinkedHashMap<String, ArrayList<InventoryItem>> items = new LinkedHashMap<>();
+
+    /**
+     * Creates an empty inventory with categories and items kept in insertion order.
+     */
+    public Inventory() {
+    }
 
     /**
      * Adds an item to its category and prints a confirmation.
@@ -139,6 +149,31 @@ public class Inventory {
         }
 
         int remainingQuantity = item.getQuantity() - quantity;
+        deductQuantity(storedCategory, index, quantity);
+
+        assert hasValidState() : "Inventory state must remain valid after removal";
+        LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
+                + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
+        System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
+    }
+
+    /**
+     * Deducts a validated quantity without displaying an inventory-deletion confirmation.
+     * Both manual deletion and lending use this path to remove depleted items and categories consistently.
+     *
+     * @param storedCategory Existing category's stored display name.
+     * @param index Zero-based position within the category.
+     * @param quantity Positive units to deduct, not exceeding the item's available stock.
+     */
+    private void deductQuantity(String storedCategory, int index, int quantity) {
+        assert hasValidState() : "Stock deduction requires valid inventory";
+        ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        assert itemsInCategory != null && index >= 0 && index < itemsInCategory.size()
+                : "Stock deduction requires an existing category and valid item position";
+        InventoryItem item = itemsInCategory.get(index);
+        assert quantity > 0 && quantity <= item.getQuantity()
+                : "Stock deduction requires a validated positive quantity within available stock";
+        int remainingQuantity = item.getQuantity() - quantity;
         assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {
             itemsInCategory.remove(index);
@@ -149,14 +184,120 @@ public class Inventory {
             item.removeQuantity(quantity);
         }
 
-        assert hasValidState() : "Inventory state must remain valid after removal";
-        LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
-                + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
-        System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
+        assert hasValidState() : "Inventory state must remain valid after deduction";
     }
 
     /**
-     * Returns current stock matching a preparation item's name and category.
+     * Deducts loaned units by case-insensitive item name and category without printing a confirmation.
+     * All validation completes before stock changes. Missing items cannot be loaned.
+     *
+     * @param name Item name to locate.
+     * @param category Category containing the item.
+     * @param quantity Positive total units to lend.
+     * @throws CommandException If the quantity is invalid, the item is absent, or stock is insufficient.
+     */
+    void lendItem(String name, String category, int quantity) throws CommandException {
+        validateLoanItemDetails(name, category);
+        if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
+            throw new InvalidQuantityException();
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            LOGGER.fine(() -> "Rejected lending: missing category=" + category + ", item=" + name);
+            throw new CategoryNotFoundException(category);
+        }
+        ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        for (int i = 0; i < itemsInCategory.size(); i++) {
+            InventoryItem item = itemsInCategory.get(i);
+            if (!item.getName().equalsIgnoreCase(name)) {
+                continue;
+            }
+            if (quantity > item.getQuantity()) {
+                LOGGER.fine(() -> "Rejected lending: " + item.getName() + " in category " + storedCategory
+                        + ", requested=" + quantity + ", available=" + item.getQuantity());
+                throw new LoanException(String.format("Cannot loan %d %s. Only %d are available.",
+                        quantity, item.getName(), item.getQuantity()));
+            }
+            int remainingQuantity = item.getQuantity() - quantity;
+            deductQuantity(storedCategory, i, quantity);
+            LOGGER.fine(() -> "Lent inventory stock: " + item.getName() + " in category " + storedCategory
+                    + ", quantity=" + quantity + ", remaining=" + remainingQuantity);
+            return;
+        }
+        LOGGER.fine(() -> "Rejected lending: missing item=" + name + " in category " + storedCategory);
+        throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
+    }
+
+    /**
+     * Restores a loan's stock without printing an inventory-addition confirmation.
+     * Matches existing names and categories ignoring case, or appends missing entries.
+     *
+     * @param name Item name from the loan.
+     * @param category Category from the loan.
+     * @param quantity Positive number of units to restore.
+     * @throws CommandException If the quantity is invalid or restoration would overflow existing stock.
+     */
+    void restoreStock(String name, String category, int quantity) throws CommandException {
+        validateLoanItemDetails(name, category);
+        if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected loan stock restoration: quantity must be positive, requested=" + quantity);
+            throw new InvalidQuantityException();
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            InventoryItem restoredItem = new InventoryItem(name, category, quantity);
+            ArrayList<InventoryItem> restoredItems = new ArrayList<>();
+            restoredItems.add(restoredItem);
+            items.put(category, restoredItems);
+        } else {
+            ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+            for (InventoryItem item : itemsInCategory) {
+                if (!item.getName().equalsIgnoreCase(name)) {
+                    continue;
+                }
+                if (quantity > Integer.MAX_VALUE - item.getQuantity()) {
+                    LOGGER.fine(() -> "Rejected loan stock restoration: " + item.getName()
+                            + " in category " + storedCategory + ", requested=" + quantity
+                            + ", available=" + item.getQuantity() + ", maximum=" + Integer.MAX_VALUE);
+                    throw new LoanException(String.format(
+                            "Cannot restore %d %s. Inventory quantity must not exceed %d.",
+                            quantity, item.getName(), Integer.MAX_VALUE));
+                }
+                item.addQuantity(quantity);
+                assert hasValidState() : "Inventory state must remain valid after restoration";
+                LOGGER.fine(() -> "Restored loan stock: " + item.getName() + " in category " + storedCategory
+                        + ", quantity=" + quantity + ", available=" + item.getQuantity());
+                return;
+            }
+            itemsInCategory.add(new InventoryItem(name, storedCategory, quantity));
+        }
+        assert hasValidState() : "Inventory state must remain valid after restoration";
+        LOGGER.fine(() -> "Recreated loan stock: " + name + " in category " + category
+                + ", quantity=" + quantity);
+    }
+
+    /**
+     * Validates loan item identifiers before either stock path can modify inventory.
+     * Direct domain calls receive the same checked errors as loan construction.
+     *
+     * @param name Loan item name.
+     * @param category Loan item category.
+     * @throws CommandFormatException If the name or category is null or blank.
+     */
+    private void validateLoanItemDetails(String name, String category) throws CommandFormatException {
+        if (name == null || name.isBlank()) {
+            LOGGER.fine("Rejected loan stock operation: item name is blank");
+            throw new CommandFormatException("Item name cannot be blank.");
+        }
+        if (category == null || category.isBlank()) {
+            LOGGER.fine("Rejected loan stock operation: category is blank");
+            throw new CommandFormatException("Category cannot be blank.");
+        }
+    }
+
+    /**
+     * Returns current stock matching a preparation or loan item's name and category.
      * Matching is case-insensitive and does not reserve or remove stock.
      *
      * @param name Item name to look up.

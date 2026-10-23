@@ -1,0 +1,54 @@
+@startuml
+!include loan-style.puml
+hide footbox
+skinparam maxMessageSize 240
+
+participant ":Parser" as Parser
+participant ":LoanManager" as Manager
+participant "loans:ArrayList<Loan>" as Loans
+participant ":Inventory" as Inventory
+participant "Ui" as Ui
+
+[-> Parser : handleCommand("return 1", ...)
+activate Parser
+Parser -> Manager : returnLoan(1)
+activate Manager
+Manager -> Manager : removeLoanAndRestoreStock(1)
+activate Manager
+note over Manager
+    Validate the full-list index.
+    Convert to zero-based position.
+end note
+Manager -> Loans : get(0)
+activate Loans
+Loans --> Manager : loan
+deactivate Loans
+Manager -> Inventory : restoreStock(name, category, quantity)
+activate Inventory
+note right of Inventory
+    Merge matching stock or
+    recreate missing entries.
+    Check overflow before mutation.
+end note
+Inventory --> Manager : completed
+deactivate Inventory
+note over Manager, Loans
+    If overflow rejects restoration,
+    removal is skipped; the active loan
+    and stock remain unchanged.
+end note
+Manager -> Loans : remove(0)
+activate Loans
+Loans --> Manager : loan
+deactivate Loans
+Manager --> Manager : loan
+deactivate Manager
+Manager --> Parser : loan
+deactivate Manager
+Parser -> Ui : showLoanReturned(loan)
+activate Ui
+Ui --> Parser : completed
+deactivate Ui
+[<-- Parser
+deactivate Parser
+@enduml

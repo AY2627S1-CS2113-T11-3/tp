@@ -18,34 +18,40 @@ class ParserHelpTest {
     /** Defines the expected output independently so changes to the application text are detected. */
     private static final String EXPECTED_HELP =
             "--------------------------------------------------------------------\n"
-                    + "Available commands\n"
-                    + "--------------------------------------------------------------------\n"
-                    + "Inventory\n"
-                    + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
-                    + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
-                    + "  list-i\n"
-                    + "Lab sessions\n"
-                    + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
-                    + "  delete-s INDEX\n"
-                    + "  list-s\n"
-                    + "Lab preparation\n"
-                    + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
-                    + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
-                    + "  list-p s/SESSION_INDEX\n"
-                    + "Contacts\n"
-                    + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
-                    + "  delete-c INDEX\n"
-                    + "  list-c\n"
-                    + "Other\n"
-                    + "  help\n"
-                    + "  Bye\n"
-                    + "--------------------------------------------------------------------\n";
+            + "Available commands\n"
+            + "--------------------------------------------------------------------\n"
+            + "Inventory\n"
+            + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
+            + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
+            + "  list-i\n"
+            + "Lab sessions\n"
+            + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
+            + "  delete-s INDEX\n"
+            + "  list-s\n"
+            + "Lab preparation\n"
+            + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
+            + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
+            + "  list-p s/SESSION_INDEX\n"
+            + "Contacts\n"
+            + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
+            + "  delete-c INDEX\n"
+            + "  list-c\n"
+            + "Loans\n"
+            + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
+            + "  list-l [overdue]\n"
+            + "  delete-l INDEX\n"
+            + "  return INDEX\n"
+            + "Other\n"
+            + "  help\n"
+            + "  Bye\n"
+            + "--------------------------------------------------------------------\n";
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Parser parser = new Parser();
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -112,7 +118,7 @@ class ParserHelpTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts);
+        parser.handleCommand(command, inventory, sessions, contacts, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }
