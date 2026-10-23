@@ -132,9 +132,14 @@ public class RequestManager {
     }
 
     /**
-     * Capitalizes a stored lowercase status for display.
+     * Capitalizes a stored lowercase status for display, falling back to {@code Unknown}
+     * when a malformed value reaches this rendering layer.
      */
     private static String displayStatus(String status) {
+        if (status == null || status.isBlank()) {
+            LOGGER.warning(() -> "Request has an invalid stored status: " + status);
+            return "Unknown";
+        }
         return Character.toUpperCase(status.charAt(0)) + status.substring(1);
     }
 }

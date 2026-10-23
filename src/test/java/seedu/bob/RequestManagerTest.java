@@ -229,6 +229,35 @@ class RequestManagerTest {
                 + Ui.DIVIDER + "\n", printed());
     }
 
+    @Test
+    void listRequests_invalidStoredStatus_printsUnknownInsteadOfThrowing() throws CommandException {
+        RequestManager manager = new RequestManager();
+        String earlierDeadline = date(2);
+        String laterDeadline = date(3);
+        manager.addRequest(new Request("Alice", "Wire", 1, earlierDeadline) {
+            @Override
+            public String getStatus() {
+                return "";
+            }
+        });
+        manager.addRequest(new Request("Bob", "Battery", 1, laterDeadline) {
+            @Override
+            public String getStatus() {
+                return null;
+            }
+        });
+        output.reset();
+
+        manager.listRequests(new Inventory());
+
+        assertEquals(Ui.DIVIDER + "\nStudent requests\n" + Ui.DIVIDER + "\n"
+                + "1. [Unknown] Alice - 1x Wire by " + earlierDeadline
+                + " (Available: 0) !! Insufficient stock (Shortfall: 1)\n"
+                + "2. [Unknown] Bob - 1x Battery by " + laterDeadline
+                + " (Available: 0) !! Insufficient stock (Shortfall: 1)\n"
+                + Ui.DIVIDER + "\n", printed());
+    }
+
     /**
      * Returns a date the given number of days from today in the documented format.
      */
