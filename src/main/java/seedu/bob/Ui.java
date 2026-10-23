@@ -47,7 +47,6 @@ public class Ui {
             "  list-b",
             "  delete-b INDEX",
             "    Deletion restores all units: use only for full repairs or incorrect reports.",
-            "    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.",
             "Other",
             "  help",
             "  Bye",

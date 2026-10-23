@@ -91,7 +91,7 @@ Clock-controlled unit tests cover midnight rollover, calendar boundaries, and ti
 
 ## Defensive programming: phase 1 exception contract
 
-Loan command syntax and stdout remain unchanged. Invalid dates and non-integer loan indices retain
+Loan command syntax and stdout remain unchanged. Invalid dates and loan indices that are not integers retain
 their parsing causes in checked exceptions without exposing stack traces to the user. Loan inventory
 helpers reject invalid names, categories, and quantities before mutation, including direct domain calls.
 UI-LOAN-DEFENSIVE-001 records recovery after rejected commands; the existing overflow, date, index,
@@ -104,7 +104,7 @@ Expected outputs are recorded before implementation and before running the affec
 Assertions check loan invariants and exact stock/list-size changes during additions, corrections, and
 returns. Private deduction helpers assert their already-validated preconditions. Expected user errors
 still use checked exceptions with assertions disabled. Duplicate loans and past due dates remain valid.
-After this phase, run the full plan normally and again with `java -ea -jar build/libs/duke.jar`.
+After this phase, run the full plan normally and again with `java -ea -jar build/libs/bob.jar`.
 Both runs must produce the same expected stdout. Unit tests use faulty
 inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
 The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/bob.jar`.
@@ -2449,7 +2449,6 @@ Broken items
   list-b
   delete-b INDEX
     Deletion restores all units: use only for full repairs or incorrect reports.
-    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.
 Other
   help
   Bye
@@ -2501,7 +2500,6 @@ Broken items
   list-b
   delete-b INDEX
     Deletion restores all units: use only for full repairs or incorrect reports.
-    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.
 Other
   help
   Bye
@@ -2607,7 +2605,7 @@ Bye
 **Input**
 
 ```text
-add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+add-c n/NUS Infrastructure t/65161234 r/Air conditioning and lighting repairs
 ```
 
 **Expected output**
@@ -2686,7 +2684,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -2722,7 +2720,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -3644,7 +3642,7 @@ Lab preparation: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10
 --------------------------------------------------------------------
 ```
 
-### UI-SESSION-LIST-003: Sort sessions by date then time then name
+### UI-SESSION-LIST-003: Sort sessions by date, time, and name
 
 **Aim:** Verify the chronological ordering contract, including alphabetical ties, using out-of-order additions.
 

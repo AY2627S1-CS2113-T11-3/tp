@@ -147,7 +147,6 @@ Broken items
   list-b
   delete-b INDEX
     Deletion restores all units: use only for full repairs or incorrect reports.
-    Date reported: d MMMM yyyy, today or earlier. Optional m/ selects a contact from list-c.
 Other
   help
   Bye
@@ -1049,7 +1048,9 @@ These are examples of the current messages:
 | Invalid reported date | `Date reported must be a valid date in d MMMM yyyy format (e.g., 23 October 2026).` | Use a real date and a capitalized full English month name. |
 | Future reported date | `Date reported cannot be in the future.` | Enter the actual reported date, today or earlier. |
 | Broken quantity exceeds available stock | `Cannot report 11 Meter as broken. Only 10 are available.` | Check `list-i`; do not include units still on loan or already reported as broken. |
-| Unknown broken-item index | `Invalid broken-item index: 2. There are 1 broken-item reports. Use list-b to check positions.` | Run `list-b` and use its current index. |
+| Invalid broken-item index value | `Broken-item index must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
+| Unknown broken-item index | `Broken-item index 2 is invalid. There are 1 broken-item report(s).` | Run `list-b` and use its current index. |
+| Missing index or extra deletion arguments | `Invalid format. Use: delete-b INDEX` | Supply exactly one index, for example `delete-b 1`. |
 
 If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
 `build/libs/bob.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.

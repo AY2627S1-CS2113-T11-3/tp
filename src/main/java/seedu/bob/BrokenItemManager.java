@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import seedu.bob.exception.BrokenItemException;
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.InvalidBrokenItemIndexException;
 
 /**
  * Tracks broken-item reports in insertion order using the application's shared inventory and contacts.
@@ -82,9 +83,7 @@ public class BrokenItemManager {
         if (userIndex <= 0 || userIndex > brokenItems.size()) {
             LOGGER.fine(() -> "Rejected broken-item deletion: index=" + userIndex
                     + ", active=" + brokenItems.size());
-            throw new BrokenItemException(String.format(
-                    "Invalid broken-item index: %d. There are %d broken-item reports. Use list-b to check positions.",
-                    userIndex, brokenItems.size()));
+            throw new InvalidBrokenItemIndexException(userIndex, brokenItems.size());
         }
 
         int index = userIndex - INDEX_OFFSET;

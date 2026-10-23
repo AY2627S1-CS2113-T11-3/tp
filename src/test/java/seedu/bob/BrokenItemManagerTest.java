@@ -17,7 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.BrokenItemException;
+import seedu.bob.exception.CategoryNotFoundException;
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.InvalidBrokenItemIndexException;
 
 /**
  * Tests stock conservation, failed operations, report indexing, and live contact membership.
@@ -45,9 +47,9 @@ class BrokenItemManagerTest {
     }
 
     @Test
-    void addBrokenItem_missingOrInsufficientStock_preservesState() throws CommandException {
+    void addBrokenItem_missingOrInsufficientStock_preservesState() {
         assertThrows(BrokenItemException.class, () -> manager.addBrokenItem(report(11, null)));
-        assertThrows(CommandException.class, () -> manager.addBrokenItem(
+        assertThrows(CategoryNotFoundException.class, () -> manager.addBrokenItem(
                 new BrokenItem("Meter", "Absent", 1, "Fault", "23 October 2026", null, CLOCK)));
         assertThrows(BrokenItemException.class, () -> manager.addBrokenItem(
                 new BrokenItem("Absent", "Equipment", 1, "Fault", "23 October 2026", null, CLOCK)));
@@ -59,10 +61,22 @@ class BrokenItemManagerTest {
     void deleteBrokenItem_invalidIndex_preservesState() throws CommandException {
         BrokenItem item = manager.addBrokenItem(report(2, null));
         for (int index : new int[]{Integer.MIN_VALUE, -1, 0, 2, Integer.MAX_VALUE}) {
-            assertThrows(BrokenItemException.class, () -> manager.deleteBrokenItem(index));
+            InvalidBrokenItemIndexException error = assertThrows(InvalidBrokenItemIndexException.class,
+                    () -> manager.deleteBrokenItem(index));
+            assertEquals("Broken-item index " + index + " is invalid. There are 1 broken-item report(s).",
+                    error.getMessage());
             assertEquals(List.of(item), manager.getBrokenItems());
             assertEquals(8, stock());
         }
+    }
+
+    @Test
+    void deleteBrokenItem_emptyList_reportsZeroCountWithoutMutation() {
+        InvalidBrokenItemIndexException error = assertThrows(InvalidBrokenItemIndexException.class,
+                () -> manager.deleteBrokenItem(1));
+        assertEquals("Broken-item index 1 is invalid. There are 0 broken-item report(s).", error.getMessage());
+        assertEquals(10, stock());
+        assertTrue(manager.getBrokenItems().isEmpty());
     }
 
     @Test
@@ -75,7 +89,7 @@ class BrokenItemManagerTest {
         assertEquals(List.of(second), manager.getBrokenItems());
         assertSame(second, manager.deleteBrokenItem(1));
         assertEquals(10, stock());
-        assertThrows(BrokenItemException.class, () -> manager.deleteBrokenItem(1));
+        assertThrows(InvalidBrokenItemIndexException.class, () -> manager.deleteBrokenItem(1));
         assertEquals(10, stock());
     }
 
