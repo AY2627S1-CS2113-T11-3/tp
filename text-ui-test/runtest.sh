@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 mkdir -p ../build/text-ui-test
 
-java -jar ../build/libs/duke.jar < input.txt > ../build/text-ui-test/ACTUAL.txt
+java -jar ../build/libs/bob.jar < input.txt > ../build/text-ui-test/ACTUAL.txt
 
 # Normalize Windows line endings without ignoring meaningful spaces or blank lines.
 tr -d '\r' < EXPECTED.txt > ../build/text-ui-test/EXPECTED-UNIX.txt

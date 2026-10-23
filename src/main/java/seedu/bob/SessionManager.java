@@ -1,3 +1,4 @@
+//@@author gavinlimsh
 package seedu.bob;
 
 import java.util.ArrayList;
@@ -15,7 +16,14 @@ public class SessionManager {
 
     private static final Logger LOGGER = Logger.getLogger(SessionManager.class.getName());
     private static final int INDEX_OFFSET = 1;
+    /** Keeps chronological display order, which also defines one-based session positions. */
     private final ArrayList<Session> sessions = new ArrayList<>();
+
+    /**
+     * Creates an empty schedule whose sessions are sorted when added.
+     */
+    public SessionManager() {
+    }
 
     /**
      * Adds a session to the schedule, sorts it chronologically, and prints a confirmation.
@@ -63,6 +71,7 @@ public class SessionManager {
         System.out.println("Successfully removed session: " + removedSession.getName());
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether the schedule contains only nonnull, mutually compatible sessions.
      */
@@ -83,6 +92,7 @@ public class SessionManager {
         return true;
     }
 
+    //@@author
     /**
      * Returns the session at the position shown by {@code list-s}.
      *
@@ -99,6 +109,7 @@ public class SessionManager {
         return sessions.get(userIndex - INDEX_OFFSET);
     }
 
+    //@@author gavinlimsh
     /**
      * Prints all scheduled sessions with one-based positions.
      */
@@ -116,4 +127,5 @@ public class SessionManager {
         }
         System.out.println(Ui.DIVIDER);
     }
+    //@@author
 }

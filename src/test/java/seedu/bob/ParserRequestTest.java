@@ -16,8 +16,6 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Exercises student request commands through the same parser used by the console application.
- *
- * @author Lokwx
  */
 class ParserRequestTest {
 
@@ -33,6 +31,7 @@ class ParserRequestTest {
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
     private final RequestManager requests = new RequestManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -288,7 +287,7 @@ class ParserRequestTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts, requests);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

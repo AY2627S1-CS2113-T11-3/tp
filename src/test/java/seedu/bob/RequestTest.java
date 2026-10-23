@@ -18,8 +18,6 @@ import seedu.bob.exception.InvalidRequestStatusException;
 
 /**
  * Verifies validation, status changes, and ordering of the {@link Request} model.
- *
- * @author Lokwx
  */
 class RequestTest {
 

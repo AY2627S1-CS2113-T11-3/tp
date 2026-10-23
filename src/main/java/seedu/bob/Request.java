@@ -16,8 +16,6 @@ import seedu.bob.exception.InvalidRequestStatusException;
 /**
  * Represents a student's request for a quantity of an item by a deadline.
  * Implements Comparable so requests can be displayed in deadline order.
- *
- * @author Lokwx
  */
 public class Request implements Comparable<Request> {
 

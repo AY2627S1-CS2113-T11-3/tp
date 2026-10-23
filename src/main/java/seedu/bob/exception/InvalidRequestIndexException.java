@@ -2,8 +2,6 @@ package seedu.bob.exception;
 
 /**
  * Indicates that a student request index is not a valid one-based position.
- *
- * @author Lokwx
  */
 public class InvalidRequestIndexException extends CommandException {
 

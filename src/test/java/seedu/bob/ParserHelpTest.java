@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  */
 class ParserHelpTest {
 
-    /** Typed out in full, as written in the user guide, so that a typo in the application is caught. */
+    /** Defines the expected output independently so changes to the application text are detected. */
     private static final String EXPECTED_HELP =
             "--------------------------------------------------------------------\n"
             + "Available commands\n"
@@ -41,6 +41,11 @@ class ParserHelpTest {
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"
             + "  list-c\n"
+            + "Loans\n"
+            + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
+            + "  list-l [overdue]\n"
+            + "  delete-l INDEX\n"
+            + "  return INDEX\n"
             + "Other\n"
             + "  help\n"
             + "  Bye\n"
@@ -52,9 +57,13 @@ class ParserHelpTest {
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
     private final RequestManager requests = new RequestManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
+    /**
+     * Redirects standard output so each test can inspect command responses.
+     */
     @BeforeEach
     void setUp() {
         originalOutput = System.out;
@@ -62,6 +71,9 @@ class ParserHelpTest {
         System.setOut(capturedOutput);
     }
 
+    /**
+     * Restores standard output and closes the stream created for the test.
+     */
     @AfterEach
     void tearDown() {
         System.setOut(originalOutput);
@@ -106,10 +118,13 @@ class ParserHelpTest {
 
     /**
      * Executes one command and returns only that command's normalized console output.
+     *
+     * @param command Command to execute.
+     * @return Command output with Windows line endings converted to newline characters.
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts, requests);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

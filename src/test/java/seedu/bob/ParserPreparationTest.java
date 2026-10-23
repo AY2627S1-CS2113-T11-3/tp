@@ -27,6 +27,7 @@ class ParserPreparationTest {
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
     private final RequestManager requests = new RequestManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -126,7 +127,7 @@ class ParserPreparationTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts, requests);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

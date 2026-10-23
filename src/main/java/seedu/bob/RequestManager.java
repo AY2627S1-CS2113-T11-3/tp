@@ -10,8 +10,6 @@ import seedu.bob.exception.InvalidRequestIndexException;
 
 /**
  * Stores student requests in deadline order and displays request changes.
- *
- * @author Lokwx
  */
 public class RequestManager {
 
