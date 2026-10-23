@@ -36,7 +36,7 @@ class ParserHelpTest {
             + "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE\n"
             + "  delete-r INDEX\n"
             + "  list-r\n"
-            + "  mark-r INDEX STATUS\n"
+            + "  mark-r INDEX STATUS (prepared or fulfilled)\n"
             + "Contacts\n"
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"

@@ -32,7 +32,7 @@ public class Ui {
             "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE",
             "  delete-r INDEX",
             "  list-r",
-            "  mark-r INDEX STATUS",
+            "  mark-r INDEX STATUS (prepared or fulfilled)",
             "Contacts",
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
             "  delete-c INDEX",
