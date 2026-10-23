@@ -105,7 +105,7 @@ class ParserPreparationTest {
         execute("add-p s/1 i/Wire c/Components q/2");
 
         assertEquals("Item index must be a positive integer.\n", execute("delete-p s/1 i/abc q/1"));
-        assertEquals("Quantity must be a positive integer.\n", execute("delete-p s/1 i/1 q/0"));
+        assertEquals("Quantity must be greater than zero.\n", execute("delete-p s/1 i/1 q/0"));
         assertEquals("Quantity must be a positive integer.\n",
                 execute("delete-p s/1 i/1 q/1 extra"));
         assertEquals(20, sessions.getSession(1).getPreparation().getItems().get(0).getQuantity());

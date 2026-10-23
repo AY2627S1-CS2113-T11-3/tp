@@ -885,7 +885,8 @@ These are examples of the current messages:
 | `help` with extra text | `Invalid format. Use: help` | Enter `help` on its own. |
 | Missing required `add-p` arguments | `Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]` | Supply the session, item, and category in that order. |
 | Blank item name or category | `Item name cannot be blank.` or `Category cannot be blank.` | Enter a nonblank value after the prefix. |
-| Zero, negative, non-integer, or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
+| Zero or negative quantity | `Quantity must be greater than zero.` | Enter a whole number from 1 to 2147483647. |
+| Non-integer or out-of-range quantity | `Quantity must be a positive integer.` | Enter a whole number from 1 to 2147483647. |
 | Invalid headcount | `Headcount must be a positive integer.` | Enter a positive whole number after `p/`. |
 | Invalid date or lowercase month | `Date must be in the format 'd MMMM yyyy' (e.g., 16 September 2026). Ensure the month is capitalized.` | Use a real date such as `8 October 2099`, with a capitalized full month name. |
 | Past session date | `Session date cannot be before today.` | Use today's date or a future date. |

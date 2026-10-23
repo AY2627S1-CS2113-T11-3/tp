@@ -96,7 +96,7 @@ class ParserRequestTest {
                 execute("add-r n/ i/Wire q/2 d/" + deadline));
         assertEquals("Item name cannot be blank.\n",
                 execute("add-r n/Alice i/ q/2 d/" + deadline));
-        assertEquals("Quantity must be a positive integer.\n",
+        assertEquals("Quantity must be greater than zero.\n",
                 execute("add-r n/Alice i/Wire q/0 d/" + deadline));
         assertEquals("Quantity must be a positive integer.\n",
                 execute("add-r n/Alice i/Wire q/abc d/" + deadline));

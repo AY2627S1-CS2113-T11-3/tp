@@ -735,7 +735,7 @@ public class Parser {
         try {
             int quantity = Integer.parseInt(quantityText);
             if (quantity <= 0) {
-                throw new InvalidQuantityException();
+                throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
             }
             return quantity;
         } catch (NumberFormatException e) {

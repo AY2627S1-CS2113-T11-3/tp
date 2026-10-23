@@ -59,7 +59,7 @@ public class Request implements Comparable<Request> {
         }
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected request quantity: " + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
         LocalDate parsedDeadline;

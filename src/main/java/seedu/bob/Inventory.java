@@ -137,7 +137,7 @@ public class Inventory {
             throw new InvalidItemIndexException(userIndex, storedCategory, itemsInCategory.size());
         }
         if (quantity <= 0) {
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
         int index = userIndex - INDEX_OFFSET;
@@ -200,7 +200,7 @@ public class Inventory {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
@@ -242,7 +242,7 @@ public class Inventory {
         validateLoanItemDetails(name, category);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected loan stock restoration: quantity must be positive, requested=" + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
