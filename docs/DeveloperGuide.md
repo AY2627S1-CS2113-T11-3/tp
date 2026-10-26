@@ -467,6 +467,81 @@ inventory.
 An item is matched by name **and** category. Wire stored under `Tools` does not count towards Wire required under
 `Components`. A missing item counts as zero available, so a requirement can be recorded before the stock is bought.
 
+#### Design considerations and alternatives
+
+**Aspect 1: Where to store preparation**
+
+**Current approach:** Each `Session` owns a `Preparation` object.
+
+Requirements stay with the correct session when indices change, and deleting a session deletes its requirements. No
+extra lookup structure is needed.
+
+**Alternative:** Keep a separate map from session index (or session name) to requirements. Indices change after sorting
+and deletion, and session names are not unique, so the map would need its own key and cleanup logic.
+
+**Aspect 2: Reserving stock**
+
+**Current approach:** Preparation does not reserve stock. It reads availability each time it is displayed.
+
+This is simple, never leaves inventory and preparation out of sync, and reflects loans and stock changes immediately.
+The cost is that two sessions needing the same item can both appear sufficient even when stock covers only one of them.
+
+**Alternative:** Deduct or reserve stock when a requirement is added. This would prevent double counting between
+sessions, but every preparation, session deletion, and loan would then need matching release and rollback rules.
+
+**Aspect 3: Storing the total or the per-attendee quantity**
+
+**Current approach:** Store the total (`quantityPerPerson × headcount`) when the item is added.
+
+Repeated additions with different per-attendee quantities merge naturally into one total, and `delete-p` can remove an
+exact number of units (for example, spares that are no longer needed).
+
+**Alternative:** Store the per-attendee quantity and multiply at display time. Totals would then follow headcount
+changes automatically, but repeated additions with different per-attendee quantities could not be merged into one
+value. The current approach is sufficient because sessions do not yet support editing the headcount.
+
+**Aspect 4: Identifying an item**
+
+**Current approach:** Match by name and category together, ignoring case, and keep the first spelling.
+
+This matches how `Inventory` identifies stock, so the comparison in `list-p` is consistent with what inventory holds.
+
+**Alternative:** Use inventory item IDs. This would survive renaming, but inventory does not have permanent IDs, and
+requirements must be allowed for items that are not yet in stock.
+
+#### Preparation validation, assertions, and testing
+
+| Component | Responsibility |
+| --- | --- |
+| `Parser` | Exact prefix order, optional `q/` for `add-p`, and positive integer conversion of indices and quantities. |
+| `SessionManager` | Valid one-based session index. |
+| `Preparation` | Nonblank name and category, positive quantity and headcount, valid item index, removal not exceeding the requirement, and overflow-safe totals. |
+| `Inventory` | Case-insensitive stock lookup that never changes stock. |
+
+After every successful change, `Preparation` asserts that no stored item is blank or non-positive and that no two items
+share the same name and category. User-input errors are reported with exceptions, so they still work when assertions
+are disabled.
+
+`PreparationTest` covers headcount multiplication, case-insensitive merging, partial and full removal, invalid input,
+and overflow. `ParserPreparationTest` covers category-specific shortages, recalculation after stock changes, and malformed or invalid
+commands leaving state unchanged. Console
+scenarios are recorded as `UI-PREP-*` in the [UI test plan](../test/ui-test-plan.md).
+
+#### Preparation limitations
+
+- Stock is not reserved, so several sessions can rely on the same units.
+- Totals are fixed when added and do not follow later headcount changes.
+- Item indices are list positions, so they shift after an item is fully removed.
+- `listPreparation()` prints directly from `Parser`, rather than through `Ui` as loan tracking does. Moving it into
+  `Ui` would make the output easier to test and keep display code in one place.
+- Preparation, like all application data, exists only in memory and is discarded on exit.
+
+#### Preparation diagram sources
+
+Editable PlantUML sources: [class diagram](diagrams/preparation-class.puml) and
+[addition sequence](diagrams/preparation-add-sequence.puml). They reuse [loan-style.puml](diagrams/loan-style.puml)
+so all implementation diagrams share one style.
+
 ### Contact management
 
 `add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
