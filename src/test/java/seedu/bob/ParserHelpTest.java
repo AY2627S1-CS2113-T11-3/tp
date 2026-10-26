@@ -24,6 +24,7 @@ class ParserHelpTest {
             + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
             + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
             + "  list-i\n"
+            + "  find-i KEYWORD\n"
             + "Lab sessions\n"
             + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
             + "  delete-s INDEX\n"
