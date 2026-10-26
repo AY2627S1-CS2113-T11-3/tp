@@ -2,6 +2,7 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -342,6 +343,24 @@ public class Inventory {
         LOGGER.fine(() -> "Checked total availability for " + name + ": " + total);
         return total;
     }
+
+    //@@author J-unn-y
+    /**
+     * Returns copies of all stored items in display order: categories first, then items within each category.
+     * Changing the returned items cannot change inventory stock.
+     *
+     * @return Independent item snapshots.
+     */
+    public List<InventoryItem> getItemSnapshots() {
+        List<InventoryItem> snapshots = new ArrayList<>();
+        for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
+            for (InventoryItem item : itemsInCategory) {
+                snapshots.add(new InventoryItem(item.getName(), item.getCategory(), item.getQuantity()));
+            }
+        }
+        return List.copyOf(snapshots);
+    }
+    //@@author
 
     /**
      * Prints inventory items by category with one-based positions and
