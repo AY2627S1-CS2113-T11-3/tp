@@ -117,6 +117,7 @@ Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -212,6 +213,41 @@ Equipment
 ```
 
 An empty inventory displays `No items in inventory.` between the inventory heading and the closing divider.
+
+### Find an item: `find-i`
+
+Searches for items whose name **or** category contains a keyword, and shows where every unit is: in stock or on
+loan. Use it to answer "Do we have any of these, and can I hand one out now?" without scanning the whole `list-i`.
+
+**Format:** `find-i KEYWORD`
+
+- The keyword is required and can contain spaces. Everything after `find-i` is treated as one keyword.
+- Matching ignores capitalization and finds partial words. `meter` matches `Multimeter`, and `equip` matches every
+  item in `Equipment`.
+- Each result shows the item, its category, units available, units on active loans, and a status:
+  - `Available`: at least one unit is in stock.
+  - `All on loan`: every unit is lent out. These items are still found, even though they no longer appear in
+    `list-i`.
+- Items with the same name in different categories are shown as separate results.
+- Searching does not change inventory or loans.
+
+With 15 Wire in Components and 1 Oscilloscope in Equipment, enter:
+
+```text
+find-i wire
+```
+
+Expected output:
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 15, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+If nothing matches, Bob displays `No items match "KEYWORD".` between the dividers.
 
 ### Remove inventory units: `delete-i`
 
@@ -901,6 +937,7 @@ These are examples of the current messages:
 | Stock restoration exceeds the limit | `Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.` | Check re-added stock before retrying; the loan remains active. |
 | Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
+| `find-i` without a keyword | `Invalid format. Use: find-i KEYWORD` | Add the text to search for, such as `find-i wire`. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
 | Removal exceeds stock | `Cannot remove 20 Wire. Only 15 are available.` | Remove no more than the available quantity. |
 | No session exists for preparation | `Session index 1 is invalid. There are 0 scheduled session(s).` | Create a session with `add-s` first. |
@@ -930,6 +967,9 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 - Requests cannot be edited in place. Delete the old request and add the corrected one.
 - Session dates are checked against today's date on the computer running Bob. For a session dated today, its start
   time is not checked against the current clock time. Sessions do not disappear automatically after their dates pass.
+- `find-i` searches inventory and active loans only. It does not show item locations, and it cannot use special
+  search patterns such as wildcards. If every unit of an item is on loan, the result uses the spelling typed in the
+  first matching loan.
 - Commands cannot be chained on one line. Each add or delete command affects one item, session, contact, or request.
 
 ## FAQ
@@ -976,6 +1016,7 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add an inventory item | `add-i n/NAME c/CATEGORY [q/QUANTITY]` |
 | Remove inventory units | `delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY` |
 | List inventory | `list-i` |
+| Find items by name or category | `find-i KEYWORD` |
 | Add a session | `add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT` |
 | Delete a session and its preparation | `delete-s INDEX` |
 | List sessions | `list-s` |
