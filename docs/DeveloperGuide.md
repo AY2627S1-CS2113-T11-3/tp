@@ -351,13 +351,44 @@ level, and conflicts or invalid indices at `WARNING` level.
 
 ### Session preparation
 
-Each `Session` owns a `Preparation`. `add-p` converts a per-attendee quantity into a total using the session headcount.
-Repeated name/category pairs are accumulated case-insensitively. `delete-p` removes a total quantity from the displayed
-preparation row.
+Session preparation helps a lab technician work out what a session needs and whether current stock is enough. It
+supports adding a per-attendee requirement (`add-p`), removing part or all of a requirement (`delete-p`), and listing
+requirements against live stock (`list-p`). Every successful preparation command ends by displaying the updated list, so
+shortages are visible immediately.
 
-Preparation does not reserve or deduct inventory. At display time, it queries the live inventory and marks each row as
-insufficient when available stock is below the required total. This means a loan or inventory deletion immediately affects
-preparation availability.
+#### Detailed preparation design
+
+Preparation divides responsibilities as follows:
+
+- **Parser** validates prefixes, resolves the session, supplies its headcount, and renders the preparation list.
+- **Session** owns exactly one `Preparation`, created with the session.
+- **Preparation** stores required totals in insertion order, merges repeated items, and validates every change.
+- **PreparationItem** is an immutable value holding an item name, category, and total required quantity.
+- **Inventory** answers availability queries through `getAvailableQuantity()` without reserving or changing stock.
+
+![Session preparation class diagram](images/preparation-class.png)
+
+*Figure 4: Selected preparation classes. The filled diamond shows that a session owns its preparation. The dashed arrow
+shows that items are matched against inventory only when the list is displayed; no reference to stock is stored.
+Parser, UI, constructors, and private helpers are omitted.*
+
+Because the `Preparation` lives inside its `Session`, the requirements move with the session when the schedule is
+re-sorted or another session is deleted. A preparation keyed by session index would instead attach requirements to the
+wrong session after renumbering.
+
+`PreparationItem` is immutable. Each change replaces the stored item with a new one, and `getItems()` returns a
+`List.copyOf()` snapshot. Code that reads the list therefore cannot change the stored requirements by accident.
+
+#### Key operations
+
+- `Preparation#addItem(String name, String category, int quantityPerPerson, int headcount)` validates the input,
+  multiplies the per-attendee quantity by the headcount, and adds the result to any existing requirement with the same
+  name and category (ignoring case). It returns the updated item.
+- `Preparation#removeItem(int userIndex, int quantity)` subtracts a **total** quantity from the item at a one-based
+  position. The item is removed when its required total reaches zero. It returns the item as it was before the removal.
+- `Preparation#getItems()` returns an immutable snapshot in displayed order.
+- `Inventory#getAvailableQuantity(String name, String category)` returns matching stock, or zero when the item or
+  category does not exist.
 
 ### Contact management
 
@@ -401,7 +432,7 @@ item and borrower match another loan. The displayed index is a one-based positio
 
 ![Loan tracking class diagram](images/loan-tracking-class.png)
 
-*Figure 4: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
+*Figure 5: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
 snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
 result classes, constructors, routine getters, and inventory internals are omitted.*
 
@@ -498,7 +529,7 @@ omitted. `Ui` is shown by its class name because its display methods are static.
 
 ![Successful loan addition sequence diagram](images/loan-add-sequence.png)
 
-*Figure 5: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
+*Figure 6: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
 
 If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
 stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
@@ -511,7 +542,7 @@ and successful restoration. A correction follows the same model interaction, fol
 
 ![Successful full loan return sequence diagram](images/loan-return-sequence.png)
 
-*Figure 6: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+*Figure 7: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
 
 Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
 inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
@@ -531,7 +562,7 @@ rewriting an earlier snapshot. `Ui` renders supplied flags rather than consultin
 
 ![Loan listing and overdue filtering activity diagram](images/loan-overdue-activity.png)
 
-*Figure 7: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
+*Figure 8: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
 active records.*
 
 For example, when only loans 2 and 4 are overdue, `list-l overdue` displays indices **2** and **4**, rather than 1 and 2.
