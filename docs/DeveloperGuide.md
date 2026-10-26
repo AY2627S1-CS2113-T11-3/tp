@@ -390,6 +390,83 @@ wrong session after renumbering.
 - `Inventory#getAvailableQuantity(String name, String category)` returns matching stock, or zero when the item or
   category does not exist.
 
+#### Example walkthrough
+
+Start with this inventory and a session of 10 attendees, shown as session 1 by `list-s`:
+
+```text
+add-i n/Wire c/Components q/15
+add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
+```
+
+**Step 1: Add a requirement**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+`Parser` reads the headcount (10) from session 1 and calls `addItem("Wire", "Components", 2, 10)`. No matching item
+exists, so `Preparation` appends a `PreparationItem` with a total of 20. The list shows 15 available and a shortfall of
+5. Inventory still holds 15 Wire, because preparation only reads stock.
+
+**Step 2: Add the same item again with different capitalisation**
+
+```text
+add-p s/1 i/wire c/components
+```
+
+The quantity defaults to 1 per attendee. `findItemIndex()` matches the existing row ignoring case, so the total becomes
+30 and the spelling from the first addition (`Wire [Components]`) is kept. No duplicate row is created.
+
+**Step 3: Remove part of a requirement**
+
+```text
+delete-p s/1 i/1 q/12
+```
+
+Unlike `add-p`, `q/` here is a total, not a per-attendee quantity. The requirement drops from 30 to 18. Asking to
+remove more than 18 is rejected without changing the preparation.
+
+**Step 4: Stock changes elsewhere**
+
+```text
+add-i n/Wire c/Components q/5
+list-p s/1
+```
+
+Inventory now holds 20 Wire. `list-p` queries inventory again, so the shortage warning disappears without any change to
+the preparation itself. A loan of Wire would have the opposite effect.
+
+| After operation | Required Wire | Available Wire | Displayed warning |
+| --- | --- | --- | --- |
+| Step 1: `add-p ... q/2` | 20 | 15 | Shortfall: 5 |
+| Step 2: `add-p ...` (default 1) | 30 | 15 | Shortfall: 15 |
+| Step 3: `delete-p ... q/12` | 18 | 15 | Shortfall: 3 |
+| Step 4: `add-i ... q/5` | 18 | 20 | None |
+
+#### Interactions during preparation addition
+
+The sequence below shows a successful `add-p` command after `Bob` passes the input to `Parser`. The reference frame
+summarises prefix validation and number parsing. Print statements, assertions, and logging are omitted.
+
+![Successful preparation addition sequence diagram](images/preparation-add-sequence.png)
+
+*Figure 5: The headcount is read from the session before `addItem()` is called. After the change, `listPreparation()`
+queries inventory once per required item.*
+
+If the session index is invalid, `getSession()` throws before the preparation is touched. If the quantity is invalid
+or the new total would exceed `Integer.MAX_VALUE`, `addItem()` throws before changing its list. The overflow check uses
+`Math.multiplyExact()` and `Math.addExact()`, so an oversized request cannot silently wrap around to a negative total.
+
+#### Calculating availability and shortfalls
+
+For each required item, `listPreparation()` looks up the live stock. When the available quantity is below the required
+total, it prints the row with a shortfall of `required - available`. Listing changes neither the preparation nor the
+inventory.
+
+An item is matched by name **and** category. Wire stored under `Tools` does not count towards Wire required under
+`Components`. A missing item counts as zero available, so a requirement can be recorded before the stock is bought.
+
 ### Contact management
 
 `add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
@@ -432,7 +509,7 @@ item and borrower match another loan. The displayed index is a one-based positio
 
 ![Loan tracking class diagram](images/loan-tracking-class.png)
 
-*Figure 5: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
+*Figure 6: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
 snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
 result classes, constructors, routine getters, and inventory internals are omitted.*
 
@@ -529,7 +606,7 @@ omitted. `Ui` is shown by its class name because its display methods are static.
 
 ![Successful loan addition sequence diagram](images/loan-add-sequence.png)
 
-*Figure 6: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
+*Figure 7: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
 
 If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
 stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
@@ -542,7 +619,7 @@ and successful restoration. A correction follows the same model interaction, fol
 
 ![Successful full loan return sequence diagram](images/loan-return-sequence.png)
 
-*Figure 7: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+*Figure 8: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
 
 Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
 inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
@@ -562,7 +639,7 @@ rewriting an earlier snapshot. `Ui` renders supplied flags rather than consultin
 
 ![Loan listing and overdue filtering activity diagram](images/loan-overdue-activity.png)
 
-*Figure 8: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
+*Figure 9: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
 active records.*
 
 For example, when only loans 2 and 4 are overdue, `list-l overdue` displays indices **2** and **4**, rather than 1 and 2.
