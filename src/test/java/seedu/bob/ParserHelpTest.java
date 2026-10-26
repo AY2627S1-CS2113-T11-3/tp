@@ -41,11 +41,13 @@ class ParserHelpTest {
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"
             + "  list-c\n"
+            //@@author DaynaG3
             + "Loans\n"
             + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
             + "  list-l [overdue]\n"
             + "  delete-l INDEX\n"
             + "  return INDEX\n"
+            //@@author
             + "Other\n"
             + "  help\n"
             + "  Bye\n"

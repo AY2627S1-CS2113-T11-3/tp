@@ -63,7 +63,9 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after addition";
+        //@@author
         return updated;
     }
 
@@ -84,6 +86,7 @@ public class Preparation {
         return -1;
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether all stored requirements satisfy preparation invariants.
      */
@@ -110,6 +113,7 @@ public class Preparation {
         }
         return true;
     }
+    //@@author
 
     /**
      * Removes a total quantity, deleting the item when no units remain required.
@@ -142,7 +146,9 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after removal";
+        //@@author
         return item;
     }
 

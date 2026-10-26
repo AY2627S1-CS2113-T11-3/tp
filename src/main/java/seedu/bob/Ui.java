@@ -37,11 +37,13 @@ public class Ui {
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
             "  delete-c INDEX",
             "  list-c",
+            //@@author DaynaG3
             "Loans",
             "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE",
             "  list-l [overdue]",
             "  delete-l INDEX",
             "  return INDEX",
+            //@@author
             "Other",
             "  help",
             "  Bye",
@@ -53,6 +55,7 @@ public class Ui {
     public Ui() {
     }
 
+    //@@author DaynaG3
     /**
      * Prints a successful loan addition and its warning if it was already overdue when recorded.
      *
@@ -111,4 +114,5 @@ public class Ui {
         }
         System.out.println(DIVIDER);
     }
+    //@@author
 }

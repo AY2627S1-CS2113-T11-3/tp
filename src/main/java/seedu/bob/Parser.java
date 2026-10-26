@@ -23,6 +23,7 @@ import seedu.bob.exception.InvalidSessionIndexException;
  */
 public class Parser {
 
+    //@@author DaynaG3
     private static final Logger LOGGER = Logger.getLogger(Parser.class.getName());
     private static final int DEFAULT_ITEM_QUANTITY = 1;
 
@@ -47,6 +48,7 @@ public class Parser {
             + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
     private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
     private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
+    //@@author
 
     private static final String ADD_PREPARATION_USAGE =
             "Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]";
@@ -64,11 +66,13 @@ public class Parser {
     private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
 
+    //@@author DaynaG3
     private static final String ADD_LOAN_USAGE =
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
+    //@@author
     private static final String HELP_USAGE = "Invalid format. Use: help";
 
     /** Accepted required and optional contact prefixes, in command order. */
@@ -78,8 +82,10 @@ public class Parser {
             List.of("n", "t", "r"),
             List.of("n", "t", "e", "r"));
 
+    //@@author DaynaG3
     /** Matches a single-letter command prefix occurring at the start of a token. */
     private static final Pattern ARGUMENT_PREFIX_PATTERN = Pattern.compile("(?<!\\S)([A-Za-z])/");
+    //@@author
 
     /**
      * Creates a parser that dispatches commands to the managers supplied for each invocation.
@@ -101,12 +107,14 @@ public class Parser {
      */
     public void handleCommand(String input, Inventory inventory, SessionManager sessionManager,
             ContactManager contactManager, RequestManager requestManager, LoanManager loanManager) {
+        //@@author DaynaG3
         try {
             handleCommandInternal(input, inventory, sessionManager, contactManager, requestManager, loanManager);
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Unexpected failure while processing a command", e);
             System.out.println(UNEXPECTED_ERROR_MESSAGE);
         }
+        //@@author
     }
 
     /**
@@ -120,51 +128,63 @@ public class Parser {
         switch (command) {
             case "add-i" -> {
                 try {
+                    //@@author DaynaG3
                     String arguments = parts.length == 2 ? parts[1] : "";
                     addItem(arguments, inventory);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
+                    //@@author
                 }
             }
             case "delete-i" -> {
                 try {
+                    //@@author DaynaG3
                     String arguments = parts.length == 2 ? parts[1] : "";
                     deleteItem(arguments, inventory);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
+                    //@@author
                 }
             }
             case "list-i" -> {
+                //@@author DaynaG3
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     listItems(arguments, inventory);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
+                //@@author
             }
             case "add-s" -> {
                 try {
+                    //@@author DaynaG3
                     String arguments = parts.length == 2 ? parts[1] : "";
                     addSession(arguments, sessionManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
+                    //@@author
                 }
             }
             case "delete-s" -> {
                 try {
+                    //@@author DaynaG3
                     String arguments = parts.length == 2 ? parts[1] : "";
                     deleteSession(arguments, sessionManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
+                    //@@author
                 }
             }
             case "list-s" -> {
+                //@@author DaynaG3
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
                     listSessions(arguments, sessionManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
+                //@@author
             }
             case "help" -> {
                 try {
@@ -214,6 +234,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            //@@author DaynaG3
             case "add-l", "list-l", "delete-l", "return" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
@@ -223,6 +244,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            //@@author
             default -> {
                 System.out.println("Invalid command");
             }
@@ -242,6 +264,7 @@ public class Parser {
         System.out.println(Ui.HELP_MESSAGE);
     }
 
+    //@@author DaynaG3
     /**
      * Parses loan commands, validating input before the manager changes loans or stock.
      *
@@ -345,9 +368,11 @@ public class Parser {
 
         int index = parseItemIndex(values.get(1));
         int quantity = parseQuantity(values.get(2));
+        //@@author
         inventory.removeItem(category, index, quantity);
     }
 
+    //@@author DaynaG3
     /**
      * Validates and executes a list-items command.
      *
@@ -382,11 +407,13 @@ public class Parser {
         String startTime = values.get(3);
         String endTime = values.get(4);
         int headcount = parseHeadcount(values.get(5));
+        //@@author
 
         Session session = new Session(name, date, location, startTime, endTime, headcount);
         sessionManager.addSession(session);
     }
 
+    //@@author DaynaG3
     /**
      * Parses and executes a delete-session command.
      *
@@ -401,9 +428,11 @@ public class Parser {
         }
 
         int index = parseSessionIndex(trimmedArguments);
+        //@@author
         sessionManager.deleteSession(index);
     }
 
+    //@@author DaynaG3
     /**
      * Validates and executes a list-sessions command.
      *
@@ -417,6 +446,7 @@ public class Parser {
         }
         sessionManager.listSessions();
     }
+    //@@author
 
     /**
      * Dispatches a preparation command and displays the resulting requirements against current stock.
@@ -652,6 +682,7 @@ public class Parser {
         requestManager.markRequest(parseRequestIndex(parts[0]), Request.normalizeStatus(parts[1]));
     }
 
+    //@@author DaynaG3
     /**
      * Returns all single-letter argument prefixes in their encountered order.
      *
@@ -799,6 +830,7 @@ public class Parser {
             throw new InvalidLoanIndexException(e);
         }
     }
+    //@@author
 
     /**
      * Parses a positive one-based contact index.

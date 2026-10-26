@@ -35,11 +35,13 @@ public class Bob {
         System.out.println("What is your name?");
 
         Scanner in = new Scanner(System.in);
+        //@@author DaynaG3
         if (!in.hasNextLine()) {
             LOGGER.info("Input ended before a user name was provided");
             LOGGER.info("Exiting Bob application cleanly");
             return;
         }
+        //@@author
         System.out.println("Hello " + in.nextLine() + ", welcome to Bob!");
         System.out.println(Ui.DIVIDER);
 
@@ -48,8 +50,10 @@ public class Bob {
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
         RequestManager requestManager = new RequestManager();
+        //@@author DaynaG3
         LoanManager loanManager = new LoanManager(inventory);
         while (in.hasNextLine()) {
+            //@@author
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
