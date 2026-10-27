@@ -4,8 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Displays loan and item-lookup results and listings and provides shared constants for console output.
- * Displays loan and broken-item results and listings and provides shared constants for console output.
+ * Displays loan, item-lookup, and broken-item results and provides shared console constants.
  */
 public class Ui {
 
@@ -138,6 +137,10 @@ public class Ui {
         }
         for (int i = 0; i < entries.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, entries.get(i));
+        }
+        System.out.println(DIVIDER);
+    }
+
     //@@author gavinlimsh
     /**
      * Confirms a report after its quantity has been removed from usable inventory.
