@@ -64,9 +64,12 @@ class RequestLoggingTest {
                 () -> new Request("Alice", "Wire", 0, date(2)));
         assertThrows(InvalidRequestDeadlineException.class,
                 () -> new Request("Alice", "Wire", 1, "1 January 2000"));
+        assertThrows(InvalidRequestDeadlineException.class,
+                () -> new Request("Alice", "Wire", 1, null));
 
         assertTrue(handler.contains("Rejected request quantity: 0"));
         assertTrue(handler.contains("Rejected request deadline: 1 January 2000"));
+        assertTrue(handler.contains("Rejected request deadline: null"));
     }
 
     @Test

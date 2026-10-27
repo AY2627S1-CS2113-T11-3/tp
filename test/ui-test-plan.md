@@ -91,7 +91,7 @@ Clock-controlled unit tests cover midnight rollover, calendar boundaries, and ti
 
 ## Defensive programming: phase 1 exception contract
 
-Loan command syntax and stdout remain unchanged. Invalid dates and non-integer loan indices retain
+Loan command syntax and stdout remain unchanged. Invalid dates and loan indices that are not integers retain
 their parsing causes in checked exceptions without exposing stack traces to the user. Loan inventory
 helpers reject invalid names, categories, and quantities before mutation, including direct domain calls.
 UI-LOAN-DEFENSIVE-001 records recovery after rejected commands; the existing overflow, date, index,
@@ -104,7 +104,7 @@ Expected outputs are recorded before implementation and before running the affec
 Assertions check loan invariants and exact stock/list-size changes during additions, corrections, and
 returns. Private deduction helpers assert their already-validated preconditions. Expected user errors
 still use checked exceptions with assertions disabled. Duplicate loans and past due dates remain valid.
-After this phase, run the full plan normally and again with `java -ea -jar build/libs/duke.jar`.
+After this phase, run the full plan normally and again with `java -ea -jar build/libs/bob.jar`.
 Both runs must produce the same expected stdout. Unit tests use faulty
 inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
 The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/bob.jar`.
@@ -325,7 +325,7 @@ add-i n/Wire c/Components q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 4
@@ -339,7 +339,7 @@ add-i n/Wire c/Components q/-5
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 5
@@ -553,7 +553,7 @@ delete-i c/Components i/1 q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 5
@@ -623,7 +623,7 @@ delete-i c/Components i/1 q/-5
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 ### UI-DELETE-003: Handle inventory deletion rules
@@ -2009,7 +2009,7 @@ add-p s/1 i/Wire c/Components q/0
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 10
@@ -2139,7 +2139,7 @@ delete-p s/1 i/1 q/-1
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 ### UI-PREP-004: Keep preparation attached to its session
@@ -2434,7 +2434,7 @@ Student requests
   add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
   delete-r INDEX
   list-r
-  mark-r INDEX STATUS
+  mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -2444,6 +2444,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye
@@ -2480,7 +2485,7 @@ Student requests
   add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
   delete-r INDEX
   list-r
-  mark-r INDEX STATUS
+  mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -2490,6 +2495,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye
@@ -2595,7 +2605,7 @@ Bye
 **Input**
 
 ```text
-add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+add-c n/NUS Infrastructure t/65161234 r/Air conditioning and lighting repairs
 ```
 
 **Expected output**
@@ -2674,7 +2684,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -2710,7 +2720,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -3632,7 +3642,7 @@ Lab preparation: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10
 --------------------------------------------------------------------
 ```
 
-### UI-SESSION-LIST-003: Sort sessions by date then time then name
+### UI-SESSION-LIST-003: Sort sessions by date, time, and name
 
 **Aim:** Verify the chronological ordering contract, including alphabetical ties, using out-of-order additions.
 
@@ -4281,7 +4291,7 @@ add-l n/Wire c/Components q/0 b/Alex Tan t/91234567 d/{{TOMORROW}}
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 6
@@ -4295,7 +4305,7 @@ add-l n/Wire c/Components q/-1 b/Alex Tan t/91234567 d/{{TOMORROW}}
 **Expected output**
 
 ```text
-Quantity must be a positive integer.
+Quantity must be greater than zero.
 ```
 
 #### Step 7

@@ -164,7 +164,7 @@ Student requests
   add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
   delete-r INDEX
   list-r
-  mark-r INDEX STATUS
+  mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
   delete-c INDEX
@@ -174,6 +174,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye

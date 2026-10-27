@@ -15,6 +15,8 @@ public class RequestManager {
 
     private static final Logger LOGGER = Logger.getLogger(RequestManager.class.getName());
     private static final int INDEX_OFFSET = 1;
+    private static final String LIST_UPDATED_MESSAGE =
+            "Request list updated. Run list-r to see the latest order.";
 
     /** Kept sorted by deadline so displayed positions can be used by {@code delete-r} and {@code mark-r}. */
     private final ArrayList<Request> requests = new ArrayList<>();
@@ -28,12 +30,19 @@ public class RequestManager {
     public void addRequest(Request request) {
         Objects.requireNonNull(request, "Request to add must not be null");
         requests.add(request);
-        // Sorting on every addition keeps the displayed indices in deadline order.
-        Collections.sort(requests);
+        sortRequests();
 
         assert hasValidState() : "Request list must remain valid after addition";
         LOGGER.fine(() -> "Added request for " + request.getStudentName());
         System.out.println("Successfully added request: " + request);
+        System.out.println(LIST_UPDATED_MESSAGE);
+    }
+
+    /**
+     * Keeps the displayed order and the stored order aligned by deadline.
+     */
+    private void sortRequests() {
+        Collections.sort(requests);
     }
 
     /**
@@ -49,6 +58,7 @@ public class RequestManager {
         assert hasValidState() : "Request list must remain valid after deletion";
         LOGGER.fine(() -> "Removed request for " + removedRequest.getStudentName());
         System.out.println("Successfully removed request: " + removedRequest);
+        System.out.println(LIST_UPDATED_MESSAGE);
     }
 
     /**
@@ -120,10 +130,7 @@ public class RequestManager {
                 Request request = requests.get(i);
                 // Availability is recalculated on every listing because stock may have changed.
                 int available = inventory.getTotalAvailableQuantity(request.getItemName());
-                boolean isInsufficient = available < request.getQuantity();
-                String shortage = isInsufficient
-                        ? " !! Insufficient stock (Shortfall: " + (request.getQuantity() - available) + ")"
-                        : "";
+                String shortage = formatShortage(available, request.getQuantity());
                 System.out.printf("%d. [%s] %s (Available: %d)%s%n",
                         i + INDEX_OFFSET, displayStatus(request.getStatus()), request, available, shortage);
             }
@@ -132,9 +139,24 @@ public class RequestManager {
     }
 
     /**
-     * Capitalizes a stored lowercase status for display.
+     * Returns the shortage warning for a request, or an empty string when stock is sufficient.
+     */
+    private static String formatShortage(int available, int required) {
+        if (available >= required) {
+            return "";
+        }
+        return " !! Insufficient stock (Shortfall: " + (required - available) + ")";
+    }
+
+    /**
+     * Capitalizes a stored lowercase status for display, falling back to {@code Unknown}
+     * when a malformed value reaches this rendering layer.
      */
     private static String displayStatus(String status) {
+        if (status == null || status.isBlank()) {
+            LOGGER.warning(() -> "Request has an invalid stored status: " + status);
+            return "Unknown";
+        }
         return Character.toUpperCase(status.charAt(0)) + status.substring(1);
     }
 }

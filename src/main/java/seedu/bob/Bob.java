@@ -49,13 +49,15 @@ public class Bob {
         ContactManager contactManager = new ContactManager();
         RequestManager requestManager = new RequestManager();
         LoanManager loanManager = new LoanManager(inventory);
+        BrokenItemManager brokenItemManager = new BrokenItemManager(inventory, contactManager);
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager, loanManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager,
+                    loanManager, brokenItemManager);
             System.out.println();
         }
 

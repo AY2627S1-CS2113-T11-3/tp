@@ -1,10 +1,12 @@
 package seedu.bob;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
@@ -43,50 +45,74 @@ public class Request implements Comparable<Request> {
     /**
      * Creates a validated student request.
      *
-     * @param studentName Name of the student making the request.
-     * @param itemName Name of the requested item.
+     * @param studentName Name of the student making the request; surrounding whitespace is ignored.
+     * @param itemName Name of the requested item; surrounding whitespace is ignored.
      * @param quantity Number of units requested.
-     * @param deadlineText Deadline in {@code d MMMM uuuu} format, which must not be before today.
+     * @param deadlineText Deadline in {@code d MMMM uuuu} format; surrounding whitespace is ignored.
      * @throws CommandException If a value is blank, the quantity is not positive, or the deadline is invalid.
      */
     public Request(String studentName, String itemName, int quantity, String deadlineText)
             throws CommandException {
-        if (studentName == null || studentName.isBlank()) {
+        this(studentName, itemName, quantity, deadlineText, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates a validated student request using the supplied clock for the today check.
+     *
+     * @param studentName Name of the student making the request; surrounding whitespace is ignored.
+     * @param itemName Name of the requested item; surrounding whitespace is ignored.
+     * @param quantity Number of units requested.
+     * @param deadlineText Deadline in {@code d MMMM uuuu} format; surrounding whitespace is ignored.
+     * @param clock Clock used to determine today's date.
+     * @throws CommandException If a value is blank, the quantity is not positive, or the deadline is invalid.
+     */
+    Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock)
+            throws CommandException {
+        Objects.requireNonNull(clock, "Clock must not be null");
+        String trimmedStudentName = studentName == null ? "" : studentName.trim();
+        String trimmedItemName = itemName == null ? "" : itemName.trim();
+        if (trimmedStudentName.isEmpty()) {
             throw new CommandFormatException("Student name cannot be blank.");
         }
-        if (itemName == null || itemName.isBlank()) {
+        if (trimmedItemName.isEmpty()) {
             throw new CommandFormatException("Item name cannot be blank.");
         }
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected request quantity: " + quantity);
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
+        String trimmedDeadlineText = deadlineText == null ? "" : deadlineText.trim();
+        if (trimmedDeadlineText.isEmpty()) {
+            LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
+            throw new InvalidRequestDeadlineException(
+                    InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
+        }
         LocalDate parsedDeadline;
         try {
-            parsedDeadline = LocalDate.parse(deadlineText, DATE_FORMATTER);
+            parsedDeadline = LocalDate.parse(trimmedDeadlineText, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
-                    "Deadline must be a valid date in d MMMM yyyy format.");
+                    InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
         }
         // A deadline is a calendar date, so requests due today are still accepted.
-        if (parsedDeadline.isBefore(LocalDate.now())) {
+        if (parsedDeadline.isBefore(LocalDate.now(clock))) {
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
-            throw new InvalidRequestDeadlineException("Request deadline cannot be before today.");
+            throw new InvalidRequestDeadlineException(
+                    InvalidRequestDeadlineException.PAST_DATE_MESSAGE);
         }
 
-        this.studentName = studentName;
-        this.itemName = itemName;
+        this.studentName = trimmedStudentName;
+        this.itemName = trimmedItemName;
         this.quantity = quantity;
         this.deadline = parsedDeadline;
 
-        assert studentName != null && !studentName.isBlank()
-                : "Validated student name must not be blank";
-        assert itemName != null && !itemName.isBlank() : "Validated item name must not be blank";
+        assert !this.studentName.isEmpty() : "Validated student name must not be blank";
+        assert !this.itemName.isEmpty() : "Validated item name must not be blank";
         assert quantity > 0 : "Validated quantity must be positive";
         assert deadline != null : "Validated deadline must not be null";
-        LOGGER.fine(() -> "Created request for " + studentName + " for " + itemName);
+        LOGGER.fine(() -> "Created request for " + this.studentName + " for " + this.itemName);
     }
 
     public String getStudentName() {
@@ -110,19 +136,30 @@ public class Request implements Comparable<Request> {
     }
 
     /**
-     * Marks this request as prepared or fulfilled.
+     * Normalizes and validates a status entered by the user.
      *
-     * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
-     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     * @param newStatus Status text, ignoring case.
+     * @return Lowercase status.
+     * @throws InvalidRequestStatusException If the status is not prepared or fulfilled.
      */
-    public void markAs(String newStatus) throws InvalidRequestStatusException {
+    public static String normalizeStatus(String newStatus) throws InvalidRequestStatusException {
         // Normalize once so callers may type prepared, Prepared, or PREPARED.
         String normalizedStatus = newStatus == null ? "" : newStatus.trim().toLowerCase(Locale.ENGLISH);
         if (!STATUS_PREPARED.equals(normalizedStatus) && !STATUS_FULFILLED.equals(normalizedStatus)) {
             LOGGER.fine(() -> "Rejected request status: " + newStatus);
             throw new InvalidRequestStatusException();
         }
-        this.status = normalizedStatus;
+        return normalizedStatus;
+    }
+
+    /**
+     * Marks this request as prepared or fulfilled.
+     *
+     * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
+     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     */
+    public void markAs(String newStatus) throws InvalidRequestStatusException {
+        this.status = normalizeStatus(newStatus);
 
         assert STATUS_PREPARED.equals(status) || STATUS_FULFILLED.equals(status)
                 : "Validated request status must be prepared or fulfilled";

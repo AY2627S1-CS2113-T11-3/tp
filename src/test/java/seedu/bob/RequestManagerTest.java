@@ -1,8 +1,10 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -23,6 +25,9 @@ import seedu.bob.exception.InvalidRequestStatusException;
  * Verifies deadline ordering, status changes, and availability display in {@link RequestManager}.
  */
 class RequestManagerTest {
+
+    private static final String LIST_UPDATED =
+            "Request list updated. Run list-r to see the latest order.\n";
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private PrintStream originalOutput;
@@ -62,7 +67,9 @@ class RequestManagerTest {
         assertSame(earlier, manager.getRequest(1));
         assertSame(later, manager.getRequest(2));
         assertEquals("Successfully added request: Bob - 2x Battery by " + laterDeadline + "\n"
-                + "Successfully added request: Alice - 5x Wire by " + earlierDeadline + "\n", printed());
+                + LIST_UPDATED
+                + "Successfully added request: Alice - 5x Wire by " + earlierDeadline + "\n"
+                + LIST_UPDATED, printed());
     }
 
     @Test
@@ -118,7 +125,8 @@ class RequestManagerTest {
 
         manager.deleteRequest(1);
 
-        assertEquals("Successfully removed request: Alice - 5x Wire by " + firstDeadline + "\n", printed());
+        assertEquals("Successfully removed request: Alice - 5x Wire by " + firstDeadline + "\n"
+                + LIST_UPDATED, printed());
         assertSame(second, manager.getRequest(1));
         assertThrows(InvalidRequestIndexException.class, () -> manager.getRequest(2));
     }
@@ -185,6 +193,8 @@ class RequestManagerTest {
         manager.addRequest(request);
 
         assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "pending"));
+        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, null));
+        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "   "));
         assertEquals("pending", request.getStatus());
     }
 
@@ -226,6 +236,51 @@ class RequestManagerTest {
                 + " (Available: 15) !! Insufficient stock (Shortfall: 5)\n"
                 + "2. [Pending] Bob - 5x Battery by " + laterDeadline
                 + " (Available: 1) !! Insufficient stock (Shortfall: 4)\n"
+                + Ui.DIVIDER + "\n", printed());
+    }
+
+    @Test
+    void listRequests_saturatedAvailability_noShortfall() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
+        String deadline = date(2);
+        inventory.addItem(new InventoryItem("Wire", "Components", Integer.MAX_VALUE));
+        inventory.addItem(new InventoryItem("Wire", "Spares", Integer.MAX_VALUE));
+        manager.addRequest(new Request("Alice", "Wire", Integer.MAX_VALUE, deadline));
+        output.reset();
+
+        manager.listRequests(inventory);
+
+        assertTrue(printed().contains("(Available: 2147483647)"));
+        assertFalse(printed().contains("Insufficient"));
+    }
+
+    @Test
+    void listRequests_invalidStoredStatus_printsUnknownInsteadOfThrowing() throws CommandException {
+        RequestManager manager = new RequestManager();
+        String earlierDeadline = date(2);
+        String laterDeadline = date(3);
+        manager.addRequest(new Request("Alice", "Wire", 1, earlierDeadline) {
+            @Override
+            public String getStatus() {
+                return "";
+            }
+        });
+        manager.addRequest(new Request("Bob", "Battery", 1, laterDeadline) {
+            @Override
+            public String getStatus() {
+                return null;
+            }
+        });
+        output.reset();
+
+        manager.listRequests(new Inventory());
+
+        assertEquals(Ui.DIVIDER + "\nStudent requests\n" + Ui.DIVIDER + "\n"
+                + "1. [Unknown] Alice - 1x Wire by " + earlierDeadline
+                + " (Available: 0) !! Insufficient stock (Shortfall: 1)\n"
+                + "2. [Unknown] Bob - 1x Battery by " + laterDeadline
+                + " (Available: 0) !! Insufficient stock (Shortfall: 1)\n"
                 + Ui.DIVIDER + "\n", printed());
     }
 

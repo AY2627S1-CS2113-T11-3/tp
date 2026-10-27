@@ -22,7 +22,7 @@ public class InvalidRequestIndexException extends CommandException {
      * @param requestCount Number of requests currently recorded.
      */
     public InvalidRequestIndexException(int index, int requestCount) {
-        super(String.format("Request index %d is invalid. There are %d request(s).",
+        super(String.format("Request index %d is invalid. There are %d recorded request(s).",
                 index, requestCount));
     }
 }
