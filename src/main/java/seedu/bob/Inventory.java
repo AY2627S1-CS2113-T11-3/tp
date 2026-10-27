@@ -378,6 +378,7 @@ public class Inventory {
     }
     //@@author
 
+    //@@author J-unn-y
     /**
      * Returns current stock matching a preparation or loan item's name and category.
      * Matching is case-insensitive and does not reserve or remove stock.
@@ -400,6 +401,7 @@ public class Inventory {
         return 0;
     }
 
+    //@@author
     /**
      * Returns current stock for an item name across all categories.
      * Matching is case-insensitive and does not reserve or remove stock.

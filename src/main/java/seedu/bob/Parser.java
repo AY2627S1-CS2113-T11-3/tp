@@ -49,11 +49,13 @@ public class Parser {
     private static final String DELETE_SESSION_USAGE = "Invalid format. Use: delete-s INDEX";
     private static final String LIST_SESSION_USAGE = "Invalid format. Use: list-s";
 
+    //@@author J-unn-y
     private static final String ADD_PREPARATION_USAGE =
             "Invalid format. Use: add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]";
     private static final String DELETE_PREPARATION_USAGE =
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
+    //@@author
     private static final String ADD_REQUEST_USAGE =
             "Invalid format. Use: add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE";
     private static final String DELETE_REQUEST_USAGE = "Invalid format. Use: delete-r INDEX";
@@ -465,6 +467,7 @@ public class Parser {
         sessionManager.listSessions();
     }
 
+    //@@author J-unn-y
     /**
      * Dispatches a preparation command and displays the resulting requirements against current stock.
      *
@@ -557,6 +560,7 @@ public class Parser {
         System.out.println(Ui.DIVIDER);
     }
 
+    //@@author
     /**
      * Parses and executes an add-contact command.
      *
