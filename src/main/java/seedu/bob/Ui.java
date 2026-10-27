@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Displays loan and broken-item results and listings and provides shared constants for console output.
+ * Displays loan, item-lookup, and broken-item results and provides shared console constants.
  */
 public class Ui {
 
@@ -20,6 +20,7 @@ public class Ui {
             "  add-i n/NAME c/CATEGORY [q/QUANTITY]",
             "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY",
             "  list-i",
+            "  find-i KEYWORD",
             "Lab sessions",
             "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT",
             "  delete-s INDEX",
@@ -113,6 +114,29 @@ public class Ui {
         }
         if (entries.isEmpty()) {
             System.out.println(isOverdueOnly ? "No overdue loans." : "No active loans.");
+        }
+        System.out.println(DIVIDER);
+    }
+
+    //@@author J-unn-y
+    /**
+     * Displays quick-lookup results with one-based positions, or a message when nothing matches.
+     *
+     * @param keyword Keyword the user searched for.
+     * @param entries Results already selected by {@link ItemFinder}.
+     * @throws NullPointerException If the keyword or entries are null.
+     */
+    public static void showLookupResults(String keyword, List<ItemLookupEntry> entries) {
+        Objects.requireNonNull(keyword, "Search keyword must not be null");
+        Objects.requireNonNull(entries, "Search results must not be null");
+        System.out.println(DIVIDER);
+        System.out.println("Search results for \"" + keyword + "\"");
+        System.out.println(DIVIDER);
+        if (entries.isEmpty()) {
+            System.out.println("No items match \"" + keyword + "\".");
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            System.out.printf("%d. %s%n", i + 1, entries.get(i));
         }
         System.out.println(DIVIDER);
     }

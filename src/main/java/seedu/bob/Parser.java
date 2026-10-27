@@ -43,6 +43,9 @@ public class Parser {
     private static final String DELETE_ITEM_USAGE =
             "Invalid format. Use: delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY";
     private static final String LIST_ITEM_USAGE = "Invalid format. Use: list-i";
+    //@@author J-unn-y
+    private static final String FIND_ITEM_USAGE = "Invalid format. Use: find-i KEYWORD";
+    //@@author
 
     private static final String ADD_SESSION_USAGE = "Invalid format. Use: add-s n/NAME d/DATE "
             + "l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT";
@@ -182,6 +185,16 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            //@@author J-unn-y
+            case "find-i" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    findItems(arguments, inventory, loanManager);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            //@@author
             case "add-s" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
@@ -410,6 +423,26 @@ public class Parser {
         }
         inventory.listItems();
     }
+
+    //@@author J-unn-y
+    /**
+     * Searches stock and active loans for items whose name or category contains the keyword.
+     * The whole argument text is the keyword, so it may contain spaces.
+     *
+     * @param arguments Text following the {@code find-i} command word.
+     * @param inventory Stock to search.
+     * @param loanManager Active loans to search.
+     * @throws CommandFormatException If no keyword is supplied.
+     */
+    private void findItems(String arguments, Inventory inventory, LoanManager loanManager)
+            throws CommandFormatException {
+        String keyword = arguments.strip();
+        if (keyword.isEmpty()) {
+            throw new CommandFormatException(FIND_ITEM_USAGE);
+        }
+        Ui.showLookupResults(keyword, ItemFinder.findItems(keyword, inventory, loanManager));
+    }
+    //@@author
 
     /**
      * Parses and executes an add-session command.
