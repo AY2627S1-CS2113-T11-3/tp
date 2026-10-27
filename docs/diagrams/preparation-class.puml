@@ -1,0 +1,51 @@
+@startuml
+' Reuses the loan diagrams' styling so all implementation diagrams look consistent.
+!include loan-style.puml
+hide circle
+hide empty members
+top to bottom direction
+skinparam nodesep 45
+skinparam ranksep 55
+
+class SessionManager {
+    +getSession(userIndex: int): Session
+}
+
+class Session {
+    -headcount: int
+    +getHeadcount(): int
+    +getPreparation(): Preparation
+}
+
+class Preparation {
+    +addItem(name: String, category: String,\n  quantityPerPerson: int, headcount: int): PreparationItem
+    +removeItem(userIndex: int, quantity: int): PreparationItem
+    +getItems(): List<PreparationItem>
+}
+
+class PreparationItem <<immutable>> {
+    -name: String
+    -category: String
+    -quantity: int
+}
+
+class Inventory {
+    +getAvailableQuantity(name: String, category: String): int
+}
+
+SessionManager -down-> "0..*" Session : -sessions\n{ordered}
+Session *-down-> Preparation : -preparation
+Preparation -down-> "0..*" PreparationItem : -items\n{ordered}
+PreparationItem .right.> Inventory
+
+note left of PreparationItem
+  quantity is the total for the
+  whole session, not per attendee.
+end note
+
+note top of Inventory
+  Queried by name and category only
+  when the list is displayed.
+  No stock reference is stored.
+end note
+@enduml

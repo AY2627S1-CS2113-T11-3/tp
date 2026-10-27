@@ -1,5 +1,6 @@
 package seedu.bob;
 
+//@@author J-unn-y
 /**
  * Represents an immutable total requirement for a named item in an inventory category.
  */
