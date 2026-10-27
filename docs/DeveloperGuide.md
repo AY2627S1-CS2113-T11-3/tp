@@ -19,6 +19,8 @@
   - [Session preparation](#session-preparation)
   - [Contact management](#contact-management)
   - [Loan tracking](#loan-tracking)
+  - [Student request tracking](#student-request-tracking)
+  - [Broken-item tracking](#broken-item-tracking)
   - [Validation and error handling](#validation-and-error-handling)
 - [Documentation, logging, testing, and DevOps](#documentation-logging-testing-and-devops)
 - [Appendix: Requirements](#appendix-requirements)
@@ -659,7 +661,7 @@ delete-l 1
 ```
 
 This uses the same restoration path as a return but displays a correction confirmation. All five units are available
-again, and the active loan list is empty. Neither removal command changes supplier contacts or session requirements.
+again, and the active loan list is empty. Neither removal command changes supplier contacts nor session requirements.
 
 | After operation | Available Multimeters | Active loans, in displayed order |
 | --- | --- | --- |
@@ -887,6 +889,95 @@ status shown by the next `list-r`. None of these commands changes inventory stoc
 `Request` uses assertions for its validated fields. Invalid statuses raise `InvalidRequestStatusException`, and
 creation, rejection, and status changes emit FINE diagnostics. The user guide documents the command syntax and exact
 output; `help` lists the commands under **Student requests**.
+
+### Broken-item tracking
+
+`add-b`, `list-b`, and `delete-b` track damaged units separately from usable inventory. Recording damage deducts
+usable stock; deleting a fully repaired or incorrectly recorded report restores its entire quantity. This is a
+stock-changing operation, not a general-purpose record deletion. See the [User Guide](UserGuide.md#broken-item-tracking)
+for command syntax and user-facing messages.
+
+#### Responsibilities and relationships
+
+`Bob` creates one `BrokenItemManager` with the same `Inventory` and `ContactManager` used by other features, and
+passes it to `Parser`. `BrokenItem` validates and stores report details; `BrokenItemManager` coordinates reports
+and stock; `Inventory` validates and performs quantity changes; `Ui` displays the returned results.
+
+![Broken-item classes and shared dependencies](images/broken-item-class.png)
+
+*Figure 10: Selected broken-item relationships. The manager stores reports in insertion order and shares inventory
+and contacts with the application. A report may retain a reference to a contact that has since been deleted.*
+
+| Operation | Implementation and state change |
+| --- | --- |
+| Add | `Parser` resolves the optional contact and constructs a validated `BrokenItem`. `BrokenItemManager#addBrokenItem` checks contact membership, calls `Inventory#removeBrokenStock`, then appends the report. |
+| List | `getBrokenItems()` returns an unmodifiable snapshot. `Ui#showBrokenItems` displays one-based positions and resolves each contact through `getAvailableContact()`. No stock changes. |
+| Delete | `deleteBrokenItem(index)` validates the position, calls `Inventory#restoreBrokenStock`, then removes the report. Remaining positions shift. |
+
+#### Example and stock consistency
+
+Assume five Multimeters in Equipment and no existing reports. Reporting two broken units leaves three usable
+units and one report for two units. `list-b` changes neither quantity. After both units are repaired,
+`delete-b 1` restores usable stock to five and removes the report. Reports for the same item remain separate,
+so deleting one restores only that report's quantity.
+
+![Successful broken-item addition](images/broken-item-add-sequence.png)
+
+*Figure 11: Successful `add-b` after argument parsing and optional contact resolution. Report construction validates
+details before stock changes; the manager appends the report only after stock deduction succeeds. Routine getters,
+assertions, and logging are omitted.*
+
+For deletion, the order is deliberately reversed: restore stock first, then remove the report. If restoration
+would exceed `Integer.MAX_VALUE`, an exception leaves both stock and the report unchanged. Missing stock entries
+or categories are recreated on successful restoration. These guarantees cover expected validation failures in
+the single-threaded application; they are not database transactions or recovery from process failure.
+
+Preparation and request availability read the shared inventory, so they reflect deductions and restorations
+without updating a second stock total. Loans also use this inventory. Damaged units returned from a loan must
+first be returned through the loan workflow, then reported with `add-b`; the two commands are not atomic.
+`find-i` currently combines usable inventory and active loans only. It does not include broken quantities, and
+an item with all units broken and none on loan may be absent from its results.
+
+#### Validation and contact handling
+
+- `Parser` requires prefixes in order (`n/ c/ q/ f/ d/`, optionally `m/`), nonempty values, and valid integers.
+  `list-b` rejects arguments; `delete-b` requires one positive index within the current report list.
+- `BrokenItem` strips surrounding whitespace, rejects blank fields and nonpositive quantities, and parses
+  English dates strictly using `d MMMM uuuu`. Report dates may be today or earlier. An injected `Clock`
+  supports deterministic date tests.
+- The manager checks an assigned contact is still registered before deduction. Inventory matches item name
+  and category ignoring case and rejects missing or insufficient stock before changing quantities.
+- A report stores the selected `Contact` object. Membership uses identity, so renumbering contacts cannot
+  redirect a report, and adding identical contact details does not revive a deleted link. Listing distinguishes
+  `Not assigned` from `Unavailable (contact deleted)`; a deleted contact does not prevent stock restoration.
+- Expected failures use the `CommandException` hierarchy, including `BrokenItemException` and
+  `InvalidBrokenItemIndexException`. `Parser` prints their messages. Assertions check internal report validity
+  and exact stock changes; FINE logging records diagnostics without adding normal console output.
+
+#### Design choices and limitations
+
+**Separate reports rather than a broken flag on inventory items.** A report preserves its quantity, fault,
+reported date, and optional contact even if deduction removes the last usable inventory entry. A single flag
+would not represent multiple faults or batches with different contacts.
+
+**Store a contact reference rather than its displayed index.** This prevents accidental reassignment after
+deletion or renumbering. Persistent contact IDs would be preferable if storage is introduced; object identity
+is sufficient for the current in-memory application.
+
+Reports cannot be edited, partially repaired, disposed of, or reassigned to another contact. Deletion restores
+all units and keeps no repair history. Data is lost when the application exits. Future persistence or concurrent
+commands would require coordinated storage of reports and inventory changes.
+
+#### Verification and diagram sources
+
+`BrokenItemTest` covers field validation and fixed-clock date boundaries. `BrokenItemManagerTest` covers exact
+stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, and interaction
+with loans. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, and stock visibility across
+features. `ParserHelpTest` and the console regression fixture check the advertised commands.
+
+Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
+[addition sequence](diagrams/broken-item-add-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs
+in `docs/images/` after changing their sources.
 
 ### Validation and error handling
 

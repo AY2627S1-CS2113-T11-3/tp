@@ -1,0 +1,39 @@
+@startuml
+!pragma layout smetana
+!include loan-style.puml
+hide circle
+hide empty members
+top to bottom direction
+
+class BrokenItemManager {
+    +addBrokenItem(report: BrokenItem): BrokenItem
+    +deleteBrokenItem(userIndex: int): BrokenItem
+    +getBrokenItems(): List<BrokenItem>
+    +getAvailableContact(report: BrokenItem): Contact
+}
+class BrokenItem {
+    -name: String
+    -category: String
+    -quantity: int
+    -faultDescription: String
+    -reportedDate: LocalDate
+}
+class Inventory {
+    ~removeBrokenStock(name, category, quantity)
+    ~restoreBrokenStock(name, category, quantity)
+}
+class ContactManager {
+    +containsContact(contact: Contact): boolean
+}
+class Contact
+
+BrokenItemManager --> "0..*" BrokenItem : reports {ordered}
+BrokenItemManager --> "1" Inventory : shared inventory
+BrokenItemManager --> "1" ContactManager : shared contacts
+BrokenItem --> "0..1" Contact : selected contact
+ContactManager --> "0..*" Contact : registered contacts
+note bottom of BrokenItem
+  Report fields are final.
+  Duplicate reports stay separate.
+end note
+@enduml
