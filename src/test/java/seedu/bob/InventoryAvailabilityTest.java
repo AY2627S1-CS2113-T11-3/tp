@@ -12,6 +12,7 @@ import seedu.bob.exception.CommandException;
  */
 class InventoryAvailabilityTest {
 
+    //@@author J-unn-y
     @Test
     void getAvailableQuantity_caseVaries_matchesNameAndCategory() throws CommandException {
         Inventory inventory = new Inventory();
@@ -36,6 +37,7 @@ class InventoryAvailabilityTest {
         assertEquals(0, inventory.getAvailableQuantity("Wire", "Components"));
     }
 
+    //@@author
     @Test
     void getTotalAvailableQuantity_caseVaries_sumsAllCategories() throws CommandException {
         Inventory inventory = new Inventory();

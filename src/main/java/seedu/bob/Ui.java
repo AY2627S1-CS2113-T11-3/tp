@@ -5,6 +5,7 @@ import java.util.Objects;
 
 /**
  * Displays loan and item-lookup results and listings and provides shared constants for console output.
+ * Displays loan and broken-item results and listings and provides shared constants for console output.
  */
 public class Ui {
 
@@ -43,6 +44,11 @@ public class Ui {
             "  list-l [overdue]",
             "  delete-l INDEX",
             "  return INDEX",
+            "Broken items",
+            "  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]",
+            "  list-b",
+            "  delete-b INDEX",
+            "    Deletion restores all units: use only for full repairs or incorrect reports.",
             "Other",
             "  help",
             "  Bye",
@@ -132,6 +138,54 @@ public class Ui {
         }
         for (int i = 0; i < entries.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, entries.get(i));
+    //@@author gavinlimsh
+    /**
+     * Confirms a report after its quantity has been removed from usable inventory.
+     *
+     * @param item Successfully recorded broken item.
+     */
+    public static void showBrokenItemAdded(BrokenItem item) {
+        Objects.requireNonNull(item, "Added broken item must not be null");
+        System.out.println("Successfully recorded broken item: " + item + ". Available inventory reduced.");
+    }
+
+    /**
+     * Confirms deletion and explicitly states that all recorded units were restored.
+     *
+     * @param item Report removed after successful stock restoration.
+     */
+    public static void showBrokenItemDeleted(BrokenItem item) {
+        Objects.requireNonNull(item, "Deleted broken item must not be null");
+        System.out.println("Successfully deleted broken-item report: " + item + ". All units restored to inventory.");
+    }
+
+    /**
+     * Displays reports in deletion order and resolves contact availability at display time.
+     * Listing never removes reports or changes stock.
+     *
+     * @param manager Manager supplying current reports and contact membership checks.
+     */
+    public static void showBrokenItems(BrokenItemManager manager) {
+        Objects.requireNonNull(manager, "Broken-item manager must not be null");
+        List<BrokenItem> items = manager.getBrokenItems();
+        System.out.println(DIVIDER);
+        System.out.println("Broken items");
+        System.out.println(DIVIDER);
+        if (items.isEmpty()) {
+            System.out.println("No broken items recorded.");
+        }
+        for (int i = 0; i < items.size(); i++) {
+            BrokenItem item = items.get(i);
+            Contact contact = manager.getAvailableContact(item);
+            String contactDetails;
+            if (contact != null) {
+                contactDetails = contact.toString();
+            } else if (item.getContact() == null) {
+                contactDetails = "Not assigned";
+            } else {
+                contactDetails = "Unavailable (contact deleted)";
+            }
+            System.out.printf("%d. %s%n   Contact: %s%n", i + 1, item, contactDetails);
         }
         System.out.println(DIVIDER);
     }

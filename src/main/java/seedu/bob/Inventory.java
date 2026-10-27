@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import seedu.bob.exception.BrokenItemException;
 import seedu.bob.exception.CategoryNotFoundException;
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
@@ -160,7 +161,8 @@ public class Inventory {
 
     /**
      * Deducts a validated quantity without displaying an inventory-deletion confirmation.
-     * Both manual deletion and lending use this path to remove depleted items and categories consistently.
+     * Manual deletion, lending, and broken-item reporting share this path
+     * to remove depleted items and categories consistently.
      *
      * @param storedCategory Existing category's stored display name.
      * @param index Zero-based position within the category.
@@ -198,7 +200,7 @@ public class Inventory {
      * @throws CommandException If the quantity is invalid, the item is absent, or stock is insufficient.
      */
     void lendItem(String name, String category, int quantity) throws CommandException {
-        validateLoanItemDetails(name, category);
+        validateStockItemDetails(name, category, false);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
@@ -230,6 +232,48 @@ public class Inventory {
         throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
     }
 
+    //@@author gavinlimsh
+    /**
+     * Removes broken units from usable stock without printing an inventory-deletion confirmation.
+     * Validates the name, category, and available quantity before changing inventory.
+     *
+     * @param name Item name, matched without regard to case.
+     * @param category Item category, matched without regard to case.
+     * @param quantity Positive number of broken units to remove from usable stock.
+     * @throws CommandException If identifiers or quantity are invalid, the item is missing,
+     *     or usable stock is insufficient.
+     */
+    void removeBrokenStock(String name, String category, int quantity) throws CommandException {
+        validateStockItemDetails(name, category, true);
+        if (quantity <= 0) {
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            throw new CategoryNotFoundException(category);
+        }
+        ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        for (int i = 0; i < itemsInCategory.size(); i++) {
+            InventoryItem item = itemsInCategory.get(i);
+            if (!item.getName().equalsIgnoreCase(name)) {
+                continue;
+            }
+            if (quantity > item.getQuantity()) {
+                LOGGER.fine(() -> "Rejected broken stock deduction: " + item.getName()
+                        + " in category " + storedCategory + ", requested=" + quantity
+                        + ", available=" + item.getQuantity());
+                throw new BrokenItemException(String.format("Cannot report %d %s as broken. Only %d are available.",
+                        quantity, item.getName(), item.getQuantity()));
+            }
+            deductQuantity(storedCategory, i, quantity);
+            LOGGER.fine(() -> "Removed broken stock: " + item.getName() + " in category " + storedCategory
+                    + ", quantity=" + quantity);
+            return;
+        }
+        throw new BrokenItemException(String.format("Item \"%s\" does not exist in category \"%s\".",
+                name, storedCategory));
+    }
+
     /**
      * Restores a loan's stock without printing an inventory-addition confirmation.
      * Matches existing names and categories ignoring case, or appends missing entries.
@@ -240,9 +284,26 @@ public class Inventory {
      * @throws CommandException If the quantity is invalid or restoration would overflow existing stock.
      */
     void restoreStock(String name, String category, int quantity) throws CommandException {
-        validateLoanItemDetails(name, category);
+        restoreStock(name, category, quantity, false);
+    }
+
+    /**
+     * Shares stock restoration while preserving each feature's diagnostics and overflow exception.
+     * All user-input and overflow checks complete before any quantity or category is changed.
+     *
+     * @param name Item name to restore.
+     * @param category Item category to restore.
+     * @param quantity Positive units to restore.
+     * @param isBrokenStock Whether this restoration resolves a broken-item report instead of a loan.
+     * @throws CommandException If identifiers or quantity are invalid, or restored stock would overflow.
+     */
+    private void restoreStock(String name, String category, int quantity, boolean isBrokenStock)
+            throws CommandException {
+        validateStockItemDetails(name, category, isBrokenStock);
+        String stockDescription = isBrokenStock ? "broken-item stock" : "loan stock";
         if (quantity <= 0) {
-            LOGGER.fine(() -> "Rejected loan stock restoration: quantity must be positive, requested=" + quantity);
+            LOGGER.fine(() -> "Rejected " + stockDescription
+                    + " restoration: quantity must be positive, requested=" + quantity);
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         String storedCategory = findCategory(category);
@@ -258,45 +319,67 @@ public class Inventory {
                     continue;
                 }
                 if (quantity > Integer.MAX_VALUE - item.getQuantity()) {
-                    LOGGER.fine(() -> "Rejected loan stock restoration: " + item.getName()
+                    LOGGER.fine(() -> "Rejected " + stockDescription + " restoration: " + item.getName()
                             + " in category " + storedCategory + ", requested=" + quantity
                             + ", available=" + item.getQuantity() + ", maximum=" + Integer.MAX_VALUE);
-                    throw new LoanException(String.format(
+                    String message = String.format(
                             "Cannot restore %d %s. Inventory quantity must not exceed %d.",
-                            quantity, item.getName(), Integer.MAX_VALUE));
+                            quantity, item.getName(), Integer.MAX_VALUE);
+                    if (isBrokenStock) {
+                        throw new BrokenItemException(message);
+                    }
+                    throw new LoanException(message);
                 }
                 item.addQuantity(quantity);
                 assert hasValidState() : "Inventory state must remain valid after restoration";
-                LOGGER.fine(() -> "Restored loan stock: " + item.getName() + " in category " + storedCategory
+                LOGGER.fine(() -> "Restored " + stockDescription + ": " + item.getName()
+                        + " in category " + storedCategory
                         + ", quantity=" + quantity + ", available=" + item.getQuantity());
                 return;
             }
             itemsInCategory.add(new InventoryItem(name, storedCategory, quantity));
         }
         assert hasValidState() : "Inventory state must remain valid after restoration";
-        LOGGER.fine(() -> "Recreated loan stock: " + name + " in category " + category
+        LOGGER.fine(() -> "Recreated " + stockDescription + ": " + name + " in category " + category
                 + ", quantity=" + quantity);
     }
 
     /**
-     * Validates loan item identifiers before either stock path can modify inventory.
-     * Direct domain calls receive the same checked errors as loan construction.
+     * Restores all units from a repaired or incorrectly recorded broken-item report.
+     * Missing items and categories are recreated using the same rules as loan returns.
      *
-     * @param name Loan item name.
-     * @param category Loan item category.
+     * @param name Item name from the report.
+     * @param category Item category from the report.
+     * @param quantity Positive number of units to restore.
+     * @throws CommandException If identifiers or quantity are invalid, or restored stock would overflow.
+     */
+    void restoreBrokenStock(String name, String category, int quantity) throws CommandException {
+        restoreStock(name, category, quantity, true);
+    }
+
+    /**
+     * Validates stock identifiers before either feature can modify inventory.
+     *
+     * @param name Item name.
+     * @param category Item category.
+     * @param isBrokenStock Whether the operation belongs to broken-item tracking.
      * @throws CommandFormatException If the name or category is null or blank.
      */
-    private void validateLoanItemDetails(String name, String category) throws CommandFormatException {
+    private void validateStockItemDetails(String name, String category, boolean isBrokenStock)
+            throws CommandFormatException {
+        String stockDescription = isBrokenStock ? "broken-item stock" : "loan stock";
         if (name == null || name.isBlank()) {
-            LOGGER.fine("Rejected loan stock operation: item name is blank");
+            LOGGER.fine("Rejected " + stockDescription + " operation: item name is blank");
             throw new CommandFormatException("Item name cannot be blank.");
         }
         if (category == null || category.isBlank()) {
-            LOGGER.fine("Rejected loan stock operation: category is blank");
+            LOGGER.fine("Rejected " + stockDescription + " operation: category is blank");
             throw new CommandFormatException("Category cannot be blank.");
         }
     }
+    //@@author
 
+    //@@author J-unn-y
     /**
      * Returns current stock matching a preparation or loan item's name and category.
      * Matching is case-insensitive and does not reserve or remove stock.
@@ -319,6 +402,7 @@ public class Inventory {
         return 0;
     }
 
+    //@@author
     /**
      * Returns current stock for an item name across all categories.
      * Matching is case-insensitive and does not reserve or remove stock.
