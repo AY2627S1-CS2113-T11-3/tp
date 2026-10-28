@@ -1,3 +1,4 @@
+//@@author DaynaG3
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +27,9 @@ class ParserLoanTest {
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
+    //@@author
     private final RequestManager requests = new RequestManager();
+    //@@author DaynaG3
     private final LoanManager loans = new LoanManager(inventory,
             Clock.fixed(Instant.parse("2026-10-22T04:00:00Z"), ZoneId.of("Asia/Singapore")));
     private final Parser parser = new Parser();
@@ -185,3 +188,4 @@ class ParserLoanTest {
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }
+//@@author

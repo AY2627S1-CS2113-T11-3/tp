@@ -1,13 +1,16 @@
+//@@author DaynaG3
 package seedu.bob.exception;
 
 /**
  * Indicates that a quantity is not a positive integer.
  */
 public class InvalidQuantityException extends CommandException {
+    //@@author
 
     /** Message for a parsed quantity that is zero or negative. */
     public static final String NON_POSITIVE_MESSAGE = "Quantity must be greater than zero.";
 
+    //@@author DaynaG3
     private static final String MESSAGE = "Quantity must be a positive integer.";
 
     /**
@@ -16,6 +19,7 @@ public class InvalidQuantityException extends CommandException {
     public InvalidQuantityException() {
         super(MESSAGE);
     }
+    //@@author
 
     /**
      * Creates an invalid-quantity exception with a specific explanation.

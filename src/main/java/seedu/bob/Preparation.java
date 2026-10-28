@@ -66,7 +66,9 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after addition";
+        //@@author J-unn-y
         return updated;
     }
 
@@ -87,7 +89,7 @@ public class Preparation {
         return -1;
     }
 
-    //@@author
+    //@@author DaynaG3
     /**
      * Returns whether all stored requirements satisfy preparation invariants.
      */
@@ -114,6 +116,7 @@ public class Preparation {
         }
         return true;
     }
+    //@@author
 
     //@@author J-unn-y
     /**
@@ -147,7 +150,9 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after removal";
+        //@@author J-unn-y
         return item;
     }
 

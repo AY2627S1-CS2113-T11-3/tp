@@ -45,30 +45,39 @@ public class Inventory {
      * @throws DuplicateItemException If an item with the same name already exists in the category.
      */
     public void addItem(InventoryItem item) throws DuplicateItemException {
+        //@@author DaynaG3
         Objects.requireNonNull(item, "Item to add must not be null");
         String category = findCategory(item.getCategory());
 
         if (category == null) {
             category = item.getCategory();
+            //@@author
             items.put(category, new ArrayList<>());
         }
 
         ArrayList<InventoryItem> itemsInCategory = items.get(category);
+        //@@author DaynaG3
         for (InventoryItem existingItem : itemsInCategory) {
             if (existingItem.getName().equalsIgnoreCase(item.getName())) {
+                //@@author
                 LOGGER.fine(() -> "Rejected duplicate inventory item: " + item.getName()
                         + " in category " + item.getCategory());
+                //@@author DaynaG3
                 throw new DuplicateItemException(item.getName(), category);
             }
         }
+        //@@author
         itemsInCategory.add(item);
+        //@@author DaynaG3
         assert hasValidState() : "Inventory state must remain valid after addition";
+        //@@author
         LOGGER.fine(() -> "Added inventory item: " + item.getName() + " in category "
                 + item.getCategory() + ", quantity=" + item.getQuantity());
 
         System.out.printf("Successfully added: %dx %s to the inventory\n", item.getQuantity(), item.getName());
     }
 
+    //@@author DaynaG3
     /**
      * Finds the stored display name for a category without requiring matching capitalization.
      *
@@ -113,6 +122,7 @@ public class Inventory {
         }
         return true;
     }
+    //@@author
 
     /**
      * Removes the requested quantity and prints a confirmation. Removes the item
@@ -129,6 +139,7 @@ public class Inventory {
     public void removeItem(String category, int userIndex, int quantity)
             throws CategoryNotFoundException, InvalidItemIndexException,
             InvalidQuantityException, InsufficientStockException {
+        //@@author DaynaG3
         String storedCategory = findCategory(category);
         if (storedCategory == null) {
             throw new CategoryNotFoundException(category);
@@ -141,19 +152,26 @@ public class Inventory {
         if (quantity <= 0) {
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
+        //@@author
 
         int index = userIndex - INDEX_OFFSET;
         InventoryItem item = itemsInCategory.get(index);
+        //@@author DaynaG3
         if (quantity > item.getQuantity()) {
+            //@@author
             LOGGER.fine(() -> "Rejected stock removal: " + item.getName() + " in category "
                     + storedCategory + ", requested=" + quantity + ", available=" + item.getQuantity());
+            //@@author DaynaG3
             throw new InsufficientStockException(item.getName(), quantity, item.getQuantity());
         }
+        //@@author
 
         int remainingQuantity = item.getQuantity() - quantity;
         deductQuantity(storedCategory, index, quantity);
 
+        //@@author DaynaG3
         assert hasValidState() : "Inventory state must remain valid after removal";
+        //@@author
         LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
                 + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
         System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
@@ -169,27 +187,40 @@ public class Inventory {
      * @param quantity Positive units to deduct, not exceeding the item's available stock.
      */
     private void deductQuantity(String storedCategory, int index, int quantity) {
+        //@@author DaynaG3
         assert hasValidState() : "Stock deduction requires valid inventory";
+        //@@author
         ArrayList<InventoryItem> itemsInCategory = items.get(storedCategory);
+        //@@author DaynaG3
         assert itemsInCategory != null && index >= 0 && index < itemsInCategory.size()
                 : "Stock deduction requires an existing category and valid item position";
+        //@@author
         InventoryItem item = itemsInCategory.get(index);
+        //@@author DaynaG3
         assert quantity > 0 && quantity <= item.getQuantity()
                 : "Stock deduction requires a validated positive quantity within available stock";
+        //@@author
         int remainingQuantity = item.getQuantity() - quantity;
         assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {
             itemsInCategory.remove(index);
+            //@@author DaynaG3
             if (itemsInCategory.isEmpty()) {
                 items.remove(storedCategory);
             }
+        //@@author
         } else {
+            //@@author DaynaG3
             item.removeQuantity(quantity);
+            //@@author
         }
 
+        //@@author DaynaG3
         assert hasValidState() : "Inventory state must remain valid after deduction";
+        //@@author
     }
 
+    //@@author DaynaG3
     /**
      * Deducts loaned units by case-insensitive item name and category without printing a confirmation.
      * All validation completes before stock changes. Missing items cannot be loaned.
@@ -454,9 +485,11 @@ public class Inventory {
         System.out.println(Ui.DIVIDER);
         System.out.println("Inventory");
         System.out.println(Ui.DIVIDER);
+        //@@author DaynaG3
         if (items.isEmpty()) {
             System.out.println("No items in inventory.");
         }
+        //@@author
         for (String category : items.keySet()) {
             ArrayList<InventoryItem> itemsInCategory = items.get(category);
 

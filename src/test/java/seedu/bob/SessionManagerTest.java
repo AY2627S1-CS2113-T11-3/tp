@@ -30,6 +30,7 @@ class SessionManagerTest {
     /**
      * Verifies that adding a null session throws a NullPointerException and preserves the schedule.
      */
+    //@@author DaynaG3
     @Test
     void addSession_nullSession_throwsNullPointerExceptionWithoutChangingSchedule() {
         SessionManager manager = new SessionManager();
@@ -40,6 +41,7 @@ class SessionManagerTest {
         assertEquals("Session to add must not be null", exception.getMessage());
         assertThrows(InvalidSessionIndexException.class, () -> manager.getSession(1));
     }
+    //@@author
 
     /**
      * Verifies that attempting to retrieve an out-of-bounds index throws an InvalidSessionIndexException.
@@ -82,6 +84,7 @@ class SessionManagerTest {
      *
      * @throws CommandException If test sessions fail to initialize.
      */
+    //@@author DaynaG3
     @Test
     void addSession_conflictingSession_throwsExceptionAndPreservesSchedule() throws CommandException {
         SessionManager manager = new SessionManager();
@@ -96,12 +99,14 @@ class SessionManagerTest {
         assertSame(existingSession, manager.getSession(1));
         assertThrows(InvalidSessionIndexException.class, () -> manager.getSession(2));
     }
+    //@@author
 
     /**
      * Verifies that attempting to delete an out-of-bounds index throws an exception and protects existing data.
      *
      * @throws CommandException If test sessions fail to initialize.
      */
+    //@@author DaynaG3
     @Test
     void deleteSession_invalidIndex_throwsExceptionAndPreservesSchedule() throws CommandException {
         SessionManager manager = new SessionManager();
@@ -114,6 +119,7 @@ class SessionManagerTest {
         assertEquals("Session index 2 is invalid. There are 1 scheduled session(s).", exception.getMessage());
         assertSame(existingSession, manager.getSession(1));
     }
+    //@@author
 
     /**
      * Verifies that sessions added in random order are automatically restructured chronologically by date and time.

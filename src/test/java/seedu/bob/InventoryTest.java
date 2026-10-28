@@ -16,6 +16,7 @@ import seedu.bob.exception.InvalidQuantityException;
  */
 class InventoryTest {
 
+    //@@author DaynaG3
     @Test
     void addItem_nullItem_throwsNullPointerExceptionWithoutChangingInventory() {
         Inventory inventory = new Inventory();
@@ -26,6 +27,7 @@ class InventoryTest {
         assertEquals("Item to add must not be null", exception.getMessage());
         assertEquals(0, inventory.getAvailableQuantity("Screws", "Fasteners"));
     }
+    //@@author
 
     @Test
     void addItem_validItem_success() throws DuplicateItemException {
@@ -46,6 +48,7 @@ class InventoryTest {
                 inventory.addItem(new InventoryItem("screws", "Fasteners", 50)));
     }
 
+    //@@author DaynaG3
     @Test
     void addItem_duplicateWithDifferentCategoryCase_throwsExceptionAndPreservesStock()
             throws DuplicateItemException {
@@ -58,6 +61,7 @@ class InventoryTest {
         assertEquals("Item \"Screws\" already exists in category \"Fasteners\".", exception.getMessage());
         assertEquals(100, inventory.getAvailableQuantity("Screws", "Fasteners"));
     }
+    //@@author
 
     @Test
     void addItem_sameNameDifferentCategory_success() throws DuplicateItemException {
@@ -123,6 +127,7 @@ class InventoryTest {
         assertThrows(InsufficientStockException.class, () -> inventory.removeItem("Tools", 1, 6));
     }
 
+    //@@author DaynaG3
     @Test
     void removeItem_insufficientStock_preservesStockAndReportsQuantities() throws DuplicateItemException {
         Inventory inventory = new Inventory();
@@ -134,4 +139,5 @@ class InventoryTest {
         assertEquals("Cannot remove 6 Wrench. Only 5 are available.", exception.getMessage());
         assertEquals(5, inventory.getAvailableQuantity("Wrench", "Tools"));
     }
+    //@@author
 }

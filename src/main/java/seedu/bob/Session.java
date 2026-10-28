@@ -19,12 +19,14 @@ import seedu.bob.exception.InvalidSessionTimeException;
  */
 public class Session implements Comparable<Session> {
 
+    //@@author DaynaG3
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
             .ofPattern("d MMMM uuuu", Locale.ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
             .ofPattern("HHmm")
             .withResolverStyle(ResolverStyle.STRICT);
+    //@@author
 
     private String name;
     private LocalDate date;
@@ -36,6 +38,7 @@ public class Session implements Comparable<Session> {
     /** Belongs to the session itself so schedule renumbering cannot change its preparation. */
     private final Preparation preparation = new Preparation();
 
+    //@@author DaynaG3
     /**
      * Creates a validated lab session.
      *
@@ -58,6 +61,7 @@ public class Session implements Comparable<Session> {
         if (headcount <= 0) {
             throw new InvalidHeadcountException();
         }
+        //@@author
 
         this.name = name;
         this.location = location;
@@ -65,30 +69,40 @@ public class Session implements Comparable<Session> {
 
         try {
             this.date = LocalDate.parse(dateText, DATE_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionDateException(
+                    //@@author
                     "Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
                             + "Ensure the month is capitalized.");
+            //@@author DaynaG3
         }
         if (date.isBefore(LocalDate.now())) {
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
+        //@@author
 
         try {
             this.startTime = LocalTime.parse(startTimeText, TIME_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(
+                    //@@author
                     "Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).");
         }
         try {
             this.endTime = LocalTime.parse(endTimeText, TIME_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(
+                    //@@author
                     "End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).");
+            //@@author DaynaG3
         }
         if (!startTime.isBefore(endTime)) {
             throw new InvalidSessionTimeException("Start time must be earlier than end time.");
         }
+        //@@author
     }
 
     /**
@@ -105,36 +119,44 @@ public class Session implements Comparable<Session> {
      *
      * @return The session date as a LocalDate object.
      */
+    //@@author DaynaG3
     public LocalDate getDate() {
         return date;
     }
+    //@@author
 
     /**
      * Returns the venue or location of the session.
      *
      * @return The session location.
      */
+    //@@author DaynaG3
     public String getLocation() {
         return location;
     }
+    //@@author
 
     /**
      * Returns the starting time of the session.
      *
      * @return The start time as a LocalTime object.
      */
+    //@@author DaynaG3
     public LocalTime getStartTime() {
         return startTime;
     }
+    //@@author
 
     /**
      * Returns the ending time of the session.
      *
      * @return The end time as a LocalTime object.
      */
+    //@@author DaynaG3
     public LocalTime getEndTime() {
         return endTime;
     }
+    //@@author
 
     /**
      * Returns the expected number of attendees for the session.
@@ -212,8 +234,10 @@ public class Session implements Comparable<Session> {
      */
     @Override
     public String toString() {
+        //@@author DaynaG3
         return String.format("%s on %s at %s from %s to %s for %d attendees",
                 name, date.format(DATE_FORMATTER), location,
                 startTime.format(TIME_FORMATTER), endTime.format(TIME_FORMATTER), headcount);
+        //@@author
     }
 }

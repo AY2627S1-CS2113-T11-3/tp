@@ -18,6 +18,7 @@ public class InventoryItem {
      * @throws IllegalArgumentException If the name or category is null or blank, or quantity is not positive.
      */
     public InventoryItem(String name, String category, int quantity) {
+        //@@author DaynaG3
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Item name cannot be blank");
         }
@@ -27,6 +28,7 @@ public class InventoryItem {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity must be positive");
         }
+        //@@author
         this.name = name;
         this.category = category;
         this.quantity = quantity;
@@ -59,6 +61,7 @@ public class InventoryItem {
         return quantity;
     }
 
+    //@@author DaynaG3
     /**
      * Restores positive units without overflowing the inventory quantity.
      *
@@ -85,4 +88,5 @@ public class InventoryItem {
         }
         quantity -= quantityToRemove;
     }
+    //@@author
 }
