@@ -26,5 +26,9 @@ list-l
 list-l overdue
 return 1
 list-l overdue
+find-i wire
+find-i COMP
+find-i battery
+find-i
 help
 Bye

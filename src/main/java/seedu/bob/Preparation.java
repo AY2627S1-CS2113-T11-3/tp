@@ -9,6 +9,7 @@ import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.PreparationException;
 
+//@@author J-unn-y
 /**
  * Stores the total quantities required by one session without reserving inventory.
  */
@@ -17,12 +18,14 @@ public class Preparation {
     /** Keeps insertion order so displayed item positions also identify items for deletion. */
     private final ArrayList<PreparationItem> items = new ArrayList<>();
 
+    //@@author
     /**
      * Creates an empty preparation list for a session without reserving inventory.
      */
     public Preparation() {
     }
 
+    //@@author J-unn-y
     /**
      * Adds a per-attendee requirement, accumulating repeated name/category pairs without regard to case.
      *
@@ -63,7 +66,9 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after addition";
+        //@@author J-unn-y
         return updated;
     }
 
@@ -84,6 +89,7 @@ public class Preparation {
         return -1;
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether all stored requirements satisfy preparation invariants.
      */
@@ -110,7 +116,9 @@ public class Preparation {
         }
         return true;
     }
+    //@@author
 
+    //@@author J-unn-y
     /**
      * Removes a total quantity, deleting the item when no units remain required.
      *
@@ -142,7 +150,9 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after removal";
+        //@@author J-unn-y
         return item;
     }
 

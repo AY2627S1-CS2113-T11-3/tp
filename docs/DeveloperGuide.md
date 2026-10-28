@@ -19,6 +19,8 @@
   - [Session preparation](#session-preparation)
   - [Contact management](#contact-management)
   - [Loan tracking](#loan-tracking)
+  - [Student request tracking](#student-request-tracking)
+  - [Broken-item tracking](#broken-item-tracking)
   - [Validation and error handling](#validation-and-error-handling)
 - [Documentation, logging, testing, and DevOps](#documentation-logging-testing-and-devops)
 - [Appendix: Requirements](#appendix-requirements)
@@ -351,13 +353,196 @@ level, and conflicts or invalid indices at `WARNING` level.
 
 ### Session preparation
 
-Each `Session` owns a `Preparation`. `add-p` converts a per-attendee quantity into a total using the session headcount.
-Repeated name/category pairs are accumulated case-insensitively. `delete-p` removes a total quantity from the displayed
-preparation row.
+Session preparation helps a lab technician work out what a session needs and whether current stock is enough. It
+supports adding a per-attendee requirement (`add-p`), removing part or all of a requirement (`delete-p`), and listing
+requirements against live stock (`list-p`). Every successful preparation command ends by displaying the updated list, so
+shortages are visible immediately.
 
-Preparation does not reserve or deduct inventory. At display time, it queries the live inventory and marks each row as
-insufficient when available stock is below the required total. This means a loan or inventory deletion immediately affects
-preparation availability.
+#### Detailed preparation design
+
+Preparation divides responsibilities as follows:
+
+- **Parser** validates prefixes, resolves the session, supplies its headcount, and renders the preparation list.
+- **Session** owns exactly one `Preparation`, created with the session.
+- **Preparation** stores required totals in insertion order, merges repeated items, and validates every change.
+- **PreparationItem** is an immutable value holding an item name, category, and total required quantity.
+- **Inventory** answers availability queries through `getAvailableQuantity()` without reserving or changing stock.
+
+![Session preparation class diagram](images/preparation-class.png)
+
+*Figure 4: Selected preparation classes. The filled diamond shows that a session owns its preparation. The dashed arrow
+shows that items are matched against inventory only when the list is displayed; no reference to stock is stored.
+Parser, UI, constructors, and private helpers are omitted.*
+
+Because the `Preparation` lives inside its `Session`, the requirements move with the session when the schedule is
+re-sorted or another session is deleted. A preparation keyed by session index would instead attach requirements to the
+wrong session after renumbering.
+
+`PreparationItem` is immutable. Each change replaces the stored item with a new one, and `getItems()` returns a
+`List.copyOf()` snapshot. Code that reads the list therefore cannot change the stored requirements by accident.
+
+#### Key operations
+
+- `Preparation#addItem(String name, String category, int quantityPerPerson, int headcount)` validates the input,
+  multiplies the per-attendee quantity by the headcount, and adds the result to any existing requirement with the same
+  name and category (ignoring case). It returns the updated item.
+- `Preparation#removeItem(int userIndex, int quantity)` subtracts a **total** quantity from the item at a one-based
+  position. The item is removed when its required total reaches zero. It returns the item as it was before the removal.
+- `Preparation#getItems()` returns an immutable snapshot in displayed order.
+- `Inventory#getAvailableQuantity(String name, String category)` returns matching stock, or zero when the item or
+  category does not exist.
+
+#### Example walkthrough
+
+Start with this inventory and a session of 10 attendees, shown as session 1 by `list-s`:
+
+```text
+add-i n/Wire c/Components q/15
+add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
+```
+
+**Step 1: Add a requirement**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+`Parser` reads the headcount (10) from session 1 and calls `addItem("Wire", "Components", 2, 10)`. No matching item
+exists, so `Preparation` appends a `PreparationItem` with a total of 20. The list shows 15 available and a shortfall of
+5. Inventory still holds 15 Wire, because preparation only reads stock.
+
+**Step 2: Add the same item again with different capitalisation**
+
+```text
+add-p s/1 i/wire c/components
+```
+
+The quantity defaults to 1 per attendee. `findItemIndex()` matches the existing row ignoring case, so the total becomes
+30 and the spelling from the first addition (`Wire [Components]`) is kept. No duplicate row is created.
+
+**Step 3: Remove part of a requirement**
+
+```text
+delete-p s/1 i/1 q/12
+```
+
+Unlike `add-p`, `q/` here is a total, not a per-attendee quantity. The requirement drops from 30 to 18. Asking to
+remove more than 18 is rejected without changing the preparation.
+
+**Step 4: Stock changes elsewhere**
+
+```text
+add-i n/Wire c/Components q/5
+list-p s/1
+```
+
+Inventory now holds 20 Wire. `list-p` queries inventory again, so the shortage warning disappears without any change to
+the preparation itself. A loan of Wire would have the opposite effect.
+
+| After operation | Required Wire | Available Wire | Displayed warning |
+| --- | --- | --- | --- |
+| Step 1: `add-p ... q/2` | 20 | 15 | Shortfall: 5 |
+| Step 2: `add-p ...` (default 1) | 30 | 15 | Shortfall: 15 |
+| Step 3: `delete-p ... q/12` | 18 | 15 | Shortfall: 3 |
+| Step 4: `add-i ... q/5` | 18 | 20 | None |
+
+#### Interactions during preparation addition
+
+The sequence below shows a successful `add-p` command after `Bob` passes the input to `Parser`. The reference frame
+summarises prefix validation and number parsing. Print statements, assertions, and logging are omitted.
+
+![Successful preparation addition sequence diagram](images/preparation-add-sequence.png)
+
+*Figure 5: The headcount is read from the session before `addItem()` is called. After the change, `listPreparation()`
+queries inventory once per required item.*
+
+If the session index is invalid, `getSession()` throws before the preparation is touched. If the quantity is invalid
+or the new total would exceed `Integer.MAX_VALUE`, `addItem()` throws before changing its list. The overflow check uses
+`Math.multiplyExact()` and `Math.addExact()`, so an oversized request cannot silently wrap around to a negative total.
+
+#### Calculating availability and shortfalls
+
+For each required item, `listPreparation()` looks up the live stock. When the available quantity is below the required
+total, it prints the row with a shortfall of `required - available`. Listing changes neither the preparation nor the
+inventory.
+
+An item is matched by name **and** category. Wire stored under `Tools` does not count towards Wire required under
+`Components`. A missing item counts as zero available, so a requirement can be recorded before the stock is bought.
+
+#### Design considerations and alternatives
+
+**Aspect 1: Where to store preparation**
+
+**Current approach:** Each `Session` owns a `Preparation` object.
+
+Requirements stay with the correct session when indices change, and deleting a session deletes its requirements. No
+extra lookup structure is needed.
+
+**Alternative:** Keep a separate map from session index (or session name) to requirements. Indices change after sorting
+and deletion, and session names are not unique, so the map would need its own key and cleanup logic.
+
+**Aspect 2: Reserving stock**
+
+**Current approach:** Preparation does not reserve stock. It reads availability each time it is displayed.
+
+This is simple, never leaves inventory and preparation out of sync, and reflects loans and stock changes immediately.
+The cost is that two sessions needing the same item can both appear sufficient even when stock covers only one of them.
+
+**Alternative:** Deduct or reserve stock when a requirement is added. This would prevent double counting between
+sessions, but every preparation, session deletion, and loan would then need matching release and rollback rules.
+
+**Aspect 3: Storing the total or the per-attendee quantity**
+
+**Current approach:** Store the total (`quantityPerPerson × headcount`) when the item is added.
+
+Repeated additions with different per-attendee quantities merge naturally into one total, and `delete-p` can remove an
+exact number of units (for example, spares that are no longer needed).
+
+**Alternative:** Store the per-attendee quantity and multiply at display time. Totals would then follow headcount
+changes automatically, but repeated additions with different per-attendee quantities could not be merged into one
+value. The current approach is sufficient because sessions do not yet support editing the headcount.
+
+**Aspect 4: Identifying an item**
+
+**Current approach:** Match by name and category together, ignoring case, and keep the first spelling.
+
+This matches how `Inventory` identifies stock, so the comparison in `list-p` is consistent with what inventory holds.
+
+**Alternative:** Use inventory item IDs. This would survive renaming, but inventory does not have permanent IDs, and
+requirements must be allowed for items that are not yet in stock.
+
+#### Preparation validation, assertions, and testing
+
+| Component | Responsibility |
+| --- | --- |
+| `Parser` | Exact prefix order, optional `q/` for `add-p`, and positive integer conversion of indices and quantities. |
+| `SessionManager` | Valid one-based session index. |
+| `Preparation` | Nonblank name and category, positive quantity and headcount, valid item index, removal not exceeding the requirement, and overflow-safe totals. |
+| `Inventory` | Case-insensitive stock lookup that never changes stock. |
+
+After every successful change, `Preparation` asserts that no stored item is blank or non-positive and that no two items
+share the same name and category. User-input errors are reported with exceptions, so they still work when assertions
+are disabled.
+
+`PreparationTest` covers headcount multiplication, case-insensitive merging, partial and full removal, invalid input,
+and overflow. `ParserPreparationTest` covers category-specific shortages, recalculation after stock changes, and malformed or invalid
+commands leaving state unchanged. Console
+scenarios are recorded as `UI-PREP-*` in the [UI test plan](../test/ui-test-plan.md).
+
+#### Preparation limitations
+
+- Stock is not reserved, so several sessions can rely on the same units.
+- Totals are fixed when added and do not follow later headcount changes.
+- Item indices are list positions, so they shift after an item is fully removed.
+- `listPreparation()` prints directly from `Parser`, rather than through `Ui` as loan tracking does. Moving it into
+  `Ui` would make the output easier to test and keep display code in one place.
+- Preparation, like all application data, exists only in memory and is discarded on exit.
+
+#### Preparation diagram sources
+
+Editable PlantUML sources: [class diagram](diagrams/preparation-class.puml) and
+[addition sequence](diagrams/preparation-add-sequence.puml). They reuse [loan-style.puml](diagrams/loan-style.puml)
+so all implementation diagrams share one style.
 
 ### Contact management
 
@@ -401,7 +586,7 @@ item and borrower match another loan. The displayed index is a one-based positio
 
 ![Loan tracking class diagram](images/loan-tracking-class.png)
 
-*Figure 4: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
+*Figure 6: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
 snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
 result classes, constructors, routine getters, and inventory internals are omitted.*
 
@@ -476,7 +661,7 @@ delete-l 1
 ```
 
 This uses the same restoration path as a return but displays a correction confirmation. All five units are available
-again, and the active loan list is empty. Neither removal command changes supplier contacts or session requirements.
+again, and the active loan list is empty. Neither removal command changes supplier contacts nor session requirements.
 
 | After operation | Available Multimeters | Active loans, in displayed order |
 | --- | --- | --- |
@@ -498,7 +683,7 @@ omitted. `Ui` is shown by its class name because its display methods are static.
 
 ![Successful loan addition sequence diagram](images/loan-add-sequence.png)
 
-*Figure 5: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
+*Figure 7: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
 
 If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
 stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
@@ -511,7 +696,7 @@ and successful restoration. A correction follows the same model interaction, fol
 
 ![Successful full loan return sequence diagram](images/loan-return-sequence.png)
 
-*Figure 6: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+*Figure 8: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
 
 Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
 inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
@@ -531,7 +716,7 @@ rewriting an earlier snapshot. `Ui` renders supplied flags rather than consultin
 
 ![Loan listing and overdue filtering activity diagram](images/loan-overdue-activity.png)
 
-*Figure 7: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
+*Figure 9: Listing evaluates every loan against one date. Filtering retains full-list positions and changes no stock or
 active records.*
 
 For example, when only loans 2 and 4 are overdue, `list-l overdue` displays indices **2** and **4**, rather than 1 and 2.
@@ -704,6 +889,95 @@ status shown by the next `list-r`. None of these commands changes inventory stoc
 `Request` uses assertions for its validated fields. Invalid statuses raise `InvalidRequestStatusException`, and
 creation, rejection, and status changes emit FINE diagnostics. The user guide documents the command syntax and exact
 output; `help` lists the commands under **Student requests**.
+
+### Broken-item tracking
+
+`add-b`, `list-b`, and `delete-b` track damaged units separately from usable inventory. Recording damage deducts
+usable stock; deleting a fully repaired or incorrectly recorded report restores its entire quantity. This is a
+stock-changing operation, not a general-purpose record deletion. See the [User Guide](UserGuide.md#broken-item-tracking)
+for command syntax and user-facing messages.
+
+#### Responsibilities and relationships
+
+`Bob` creates one `BrokenItemManager` with the same `Inventory` and `ContactManager` used by other features, and
+passes it to `Parser`. `BrokenItem` validates and stores report details; `BrokenItemManager` coordinates reports
+and stock; `Inventory` validates and performs quantity changes; `Ui` displays the returned results.
+
+![Broken-item classes and shared dependencies](images/broken-item-class.png)
+
+*Figure 10: Selected broken-item relationships. The manager stores reports in insertion order and shares inventory
+and contacts with the application. A report may retain a reference to a contact that has since been deleted.*
+
+| Operation | Implementation and state change |
+| --- | --- |
+| Add | `Parser` resolves the optional contact and constructs a validated `BrokenItem`. `BrokenItemManager#addBrokenItem` checks contact membership, calls `Inventory#removeBrokenStock`, then appends the report. |
+| List | `getBrokenItems()` returns an unmodifiable snapshot. `Ui#showBrokenItems` displays one-based positions and resolves each contact through `getAvailableContact()`. No stock changes. |
+| Delete | `deleteBrokenItem(index)` validates the position, calls `Inventory#restoreBrokenStock`, then removes the report. Remaining positions shift. |
+
+#### Example and stock consistency
+
+Assume five Multimeters in Equipment and no existing reports. Reporting two broken units leaves three usable
+units and one report for two units. `list-b` changes neither quantity. After both units are repaired,
+`delete-b 1` restores usable stock to five and removes the report. Reports for the same item remain separate,
+so deleting one restores only that report's quantity.
+
+![Successful broken-item addition](images/broken-item-add-sequence.png)
+
+*Figure 11: Successful `add-b` after argument parsing and optional contact resolution. Report construction validates
+details before stock changes; the manager appends the report only after stock deduction succeeds. Routine getters,
+assertions, and logging are omitted.*
+
+For deletion, the order is deliberately reversed: restore stock first, then remove the report. If restoration
+would exceed `Integer.MAX_VALUE`, an exception leaves both stock and the report unchanged. Missing stock entries
+or categories are recreated on successful restoration. These guarantees cover expected validation failures in
+the single-threaded application; they are not database transactions or recovery from process failure.
+
+Preparation and request availability read the shared inventory, so they reflect deductions and restorations
+without updating a second stock total. Loans also use this inventory. Damaged units returned from a loan must
+first be returned through the loan workflow, then reported with `add-b`; the two commands are not atomic.
+`find-i` currently combines usable inventory and active loans only. It does not include broken quantities, and
+an item with all units broken and none on loan may be absent from its results.
+
+#### Validation and contact handling
+
+- `Parser` requires prefixes in order (`n/ c/ q/ f/ d/`, optionally `m/`), nonempty values, and valid integers.
+  `list-b` rejects arguments; `delete-b` requires one positive index within the current report list.
+- `BrokenItem` strips surrounding whitespace, rejects blank fields and nonpositive quantities, and parses
+  English dates strictly using `d MMMM uuuu`. Report dates may be today or earlier. An injected `Clock`
+  supports deterministic date tests.
+- The manager checks an assigned contact is still registered before deduction. Inventory matches item name
+  and category ignoring case and rejects missing or insufficient stock before changing quantities.
+- A report stores the selected `Contact` object. Membership uses identity, so renumbering contacts cannot
+  redirect a report, and adding identical contact details does not revive a deleted link. Listing distinguishes
+  `Not assigned` from `Unavailable (contact deleted)`; a deleted contact does not prevent stock restoration.
+- Expected failures use the `CommandException` hierarchy, including `BrokenItemException` and
+  `InvalidBrokenItemIndexException`. `Parser` prints their messages. Assertions check internal report validity
+  and exact stock changes; FINE logging records diagnostics without adding normal console output.
+
+#### Design choices and limitations
+
+**Separate reports rather than a broken flag on inventory items.** A report preserves its quantity, fault,
+reported date, and optional contact even if deduction removes the last usable inventory entry. A single flag
+would not represent multiple faults or batches with different contacts.
+
+**Store a contact reference rather than its displayed index.** This prevents accidental reassignment after
+deletion or renumbering. Persistent contact IDs would be preferable if storage is introduced; object identity
+is sufficient for the current in-memory application.
+
+Reports cannot be edited, partially repaired, disposed of, or reassigned to another contact. Deletion restores
+all units and keeps no repair history. Data is lost when the application exits. Future persistence or concurrent
+commands would require coordinated storage of reports and inventory changes.
+
+#### Verification and diagram sources
+
+`BrokenItemTest` covers field validation and fixed-clock date boundaries. `BrokenItemManagerTest` covers exact
+stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, and interaction
+with loans. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, and stock visibility across
+features. `ParserHelpTest` and the console regression fixture check the advertised commands.
+
+Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
+[addition sequence](diagrams/broken-item-add-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs
+in `docs/images/` after changing their sources.
 
 ### Validation and error handling
 

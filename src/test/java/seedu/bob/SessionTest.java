@@ -268,6 +268,7 @@ class SessionTest {
     /**
      * Verifies that one session may begin exactly when another ends.
      */
+    //@@author DaynaG3
     @Test
     void conflictsWith_adjacentTimes_returnsFalse() throws CommandException {
         Session first = new Session(
@@ -276,6 +277,7 @@ class SessionTest {
                 "Second Lab", futureDateText, "Room-A", "1000", "1100", 50);
 
         assertFalse(first.conflictsWith(second));
+        //@@author gavinlimsh
         assertFalse(second.conflictsWith(first));
     }
 

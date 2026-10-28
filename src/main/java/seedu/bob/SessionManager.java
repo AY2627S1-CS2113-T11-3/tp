@@ -33,20 +33,28 @@ public class SessionManager {
      * @throws SessionConflictException If the session overlaps another at the same date and location.
      */
     public void addSession(Session session) throws SessionConflictException {
+        //@@author DaynaG3
         Objects.requireNonNull(session, "Session to add must not be null");
+        //@@author
         LOGGER.info("Attempting to add new session: " + session.getName());
 
+        //@@author DaynaG3
         for (Session existingSession : sessions) {
             if (session.conflictsWith(existingSession)) {
+                //@@author
                 LOGGER.warning("Session conflict detected with: " + existingSession.getName());
+                //@@author DaynaG3
                 throw new SessionConflictException(existingSession.toConflictMessage());
             }
         }
+        //@@author
 
         sessions.add(session);
         Collections.sort(sessions);
 
+        //@@author DaynaG3
         assert hasValidState() : "Schedule must remain conflict-free after addition";
+        //@@author
         LOGGER.info("Session successfully added to schedule and sorted chronologically.");
         System.out.println("Successfully added: " + session.toString());
     }
@@ -66,7 +74,9 @@ public class SessionManager {
         int index = userIndex - INDEX_OFFSET;
         sessions.remove(index);
 
+        //@@author DaynaG3
         assert hasValidState() : "Schedule must remain valid after deletion";
+        //@@author
         LOGGER.info("Successfully removed session: " + removedSession.getName());
         System.out.println("Successfully removed session: " + removedSession.getName());
     }
@@ -101,10 +111,14 @@ public class SessionManager {
      * @throws InvalidSessionIndexException If the index is outside the schedule.
      */
     public Session getSession(int userIndex) throws InvalidSessionIndexException {
+        //@@author DaynaG3
         if (userIndex <= 0 || userIndex > sessions.size()) {
+            //@@author
             LOGGER.warning("Invalid session index requested: " + userIndex);
+            //@@author DaynaG3
             throw new InvalidSessionIndexException(userIndex, sessions.size());
         }
+        //@@author
         assert userIndex - INDEX_OFFSET >= 0 : "Calculated array index must always be non-negative";
         return sessions.get(userIndex - INDEX_OFFSET);
     }
