@@ -169,7 +169,10 @@ Adds a new item to a category. A category is created automatically when it does 
 **Format:** `add-i n/NAME c/CATEGORY [q/QUANTITY]`
 
 - Name and category cannot be blank.
-- Quantity defaults to 1 when `q/` is omitted.
+- Supply `n/`, `c/`, and optional `q/` in that order. Names and categories can contain spaces;
+  surrounding whitespace is ignored. For example, `n/Red LED c/Lab Components` needs no quotation marks.
+- Quantity defaults to 1 when `q/` is omitted. If supplied, it must be a whole number from 1 to 2,147,483,647,
+  entered without commas. An empty `q/` does not use the default.
 - An item with the same name cannot be added twice within the same category, even with different capitalization.
   This command does not increase the stock of an existing item.
 - The same item name may exist in different categories. Such entries are separate inventory items.
@@ -198,6 +201,33 @@ Expected output:
 Successfully added: 1x Oscilloscope to the inventory
 ```
 
+**Adding an existing item does not top up its stock.** After adding the Wire above, this command is rejected:
+
+```text
+add-i n/Wire c/COMPONENTS q/5
+```
+
+Expected output:
+
+```text
+Item "Wire" already exists in category "Components".
+```
+
+There are still 15 Wire in Components. Changing the capitalization does not create another category.
+Use `add-i` for a new item/category combination; there is no command to top up an existing entry.
+If five Wire belong in a separate category, `add-i n/Wire c/Spares q/5` creates that separate entry.
+
+Common rejected additions:
+
+| Input | Message | Correction |
+| --- | --- | --- |
+| `add-i n/ c/Components q/5` | `Item name cannot be blank.` | Supply the item's name after `n/`. |
+| `add-i n/Wire c/ q/5` | `Category cannot be blank.` | Supply a category after `c/`. |
+| `add-i n/Wire c/Components q/0` | `Quantity must be a positive integer.` | Use at least 1, or omit `q/` to add one unit. |
+| `add-i n/Wire c/Components q/1.5` | `Quantity must be a positive integer.` | Enter a whole number. |
+
+Rejected additions leave the inventory unchanged. See [Command format](#command-format) for prefix rules.
+
 ### List inventory: `list-i`
 
 Displays every category and its items, including available quantities. Categories and items are shown in insertion
@@ -225,6 +255,10 @@ Equipment
 ```
 
 An empty inventory displays `No items in inventory.` between the inventory heading and the closing divider.
+
+**Item indices restart at 1 in every category.** In the example above, both Wire and Oscilloscope have index 1.
+For deletion, supply both the category and that category's item index. Use `list-i` again after removing an item
+or recording a loan or broken-item report, because those operations can remove entries and change the indices.
 
 ### Find an item: `find-i`
 
@@ -267,7 +301,8 @@ Removes a quantity from an item identified by its category and its position with
 
 **Format:** `delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY`
 
-- All three arguments are required. Use `list-i` to find the category and item index.
+- All three arguments are required in the order `c/`, `i/`, `q/`. Use `list-i` to find the category and item index.
+- Category matching ignores capitalization. The item index and quantity must be positive whole numbers.
 - Removing less than the available quantity reduces the stock.
 - Removing the entire quantity deletes the item. If the category becomes empty, it is deleted too.
 - Removing more than the available quantity is rejected without changing inventory.
@@ -286,6 +321,19 @@ Successfully removed: 5x Wire from the inventory
 ```
 
 The stock is now 10 Wire. Run `list-i` to see the updated inventory; `delete-i` prints only a confirmation.
+
+Attempting `delete-i c/Components i/1 q/11` at this point prints:
+
+```text
+Cannot remove 11 Wire. Only 10 are available.
+```
+
+The stock stays at 10. To remove all remaining Wire, use `delete-i c/Components i/1 q/10` instead.
+The Wire entry disappears, and Components disappears too if it has no other items. A later `add-i` can recreate
+that item/category combination. Always run `list-i` before deleting another entry.
+
+Use `delete-i` for consumption or other stock removal. Use [`add-l`](#add-a-loan-add-l) when lending units and
+[`add-b`](#report-broken-items-add-b) when recording damage; these commands already deduct stock.
 
 ## Lab session scheduling
 
