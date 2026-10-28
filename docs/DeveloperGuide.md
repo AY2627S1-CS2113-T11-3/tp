@@ -85,6 +85,7 @@ Bob / Ui  <-->  Parser  <-->  Model managers
                               |-- Inventory
                               |-- SessionManager
                               |-- ContactManager
+                              |-- RequestManager
                               `-- LoanManager
                                       |
                                       `-- Inventory
@@ -99,7 +100,7 @@ The application uses a lightweight layered architecture:
 
 - **UI** — reads command-line input and displays output.
 - **Logic** — parses commands, validates their formats, and dispatches operations.
-- **Model** — stores inventory, sessions, preparations, contacts, and loans.
+- **Model** — stores inventory, sessions, preparations, contacts, requests, and loans.
 - **Storage** — not implemented; all data is intentionally in memory for the current version.
 - **Common classes** — shared domain objects, exceptions, and display constants.
 
@@ -145,6 +146,8 @@ The model is composed of domain objects and managers:
 - [`Session`](../src/main/java/seedu/bob/Session.java) validates dates, times, and scheduling conflicts.
 - [`Preparation`](../src/main/java/seedu/bob/Preparation.java) stores per-session requirements through `PreparationItem`.
 - [`ContactManager`](../src/main/java/seedu/bob/ContactManager.java) stores contacts.
+- [`RequestManager`](../src/main/java/seedu/bob/RequestManager.java) stores deadline-sorted student requests.
+- [`Request`](../src/main/java/seedu/bob/Request.java) validates request details and holds the fulfillment status.
 - [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
 - [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
@@ -155,8 +158,8 @@ nonblank names, and conflict-free sessions.
 
 ### Storage component
 
-There is no storage component in the current version. Inventory, sessions, preparations, contacts, and loans are created
-when Bob starts and are discarded when the process exits. Persistence and data migration are future work.
+There is no storage component in the current version. Inventory, sessions, preparations, contacts, requests, and
+loans are created when Bob starts and are discarded when the process exits. Persistence and data migration are future work.
 
 ### Common classes
 
@@ -179,6 +182,108 @@ indices within each category.
 ![Inventory categories](images/item-management.png)
 
 *Figure 1: Inventory categories and their stored items.*
+
+#### Detailed inventory addition design
+
+Inventory addition registers usable stock through `add-i n/NAME c/CATEGORY [q/QUANTITY]`.
+The quantity defaults to one when `q/` is omitted. See the [User Guide](UserGuide.md#add-an-item-add-i)
+for command syntax and user-facing examples.
+
+#### Responsibilities and storage
+
+| Component | Responsibility in addition |
+| --- | --- |
+| `Parser` | Checks prefix order, extracts and trims values, validates the quantity, constructs the item, and invokes inventory addition. It prints expected command errors. |
+| `InventoryItem` | Holds a name, category, and positive quantity. Its constructor independently rejects null or blank names/categories and nonpositive quantities. |
+| `Inventory` | Resolves the category, rejects duplicate names, stores the item, and prints the success confirmation. |
+
+`Inventory` stores a `LinkedHashMap<String, ArrayList<InventoryItem>>`. Each key is a category's stored display name;
+its list contains that category's items. The map and lists preserve insertion order, making subsequent listings
+predictable. `findCategory` scans category names using `equalsIgnoreCase`, so `Tools` and `TOOLS` share a category
+while retaining the first stored category spelling. Item names are also compared ignoring case within that category.
+
+![Classes involved in inventory addition](images/inventory-add-class.png)
+
+*Figure 1a: Selected inventory-addition relationships. Parser dependencies represent temporary use, while Inventory
+retains item references grouped by category. Collection implementation classes and unrelated operations are omitted.*
+
+The association uses no composition diamond: `addItem` stores the supplied object, rather than creating an exclusively
+owned copy. An item's name and category are final; its quantity can change through package-level stock operations.
+Other features query the same inventory, so newly added stock is available to preparation checks, requests, and loans.
+
+#### Example walkthrough
+
+Starting with an empty inventory, consider:
+
+```text
+add-i n/Screws c/Fasteners q/100
+```
+
+1. `Parser#addItem` accepts the prefix sequence `n/`, `c/`, `q/` and extracts the three values.
+2. `parseQuantity` converts `100` into a positive integer. The parser constructs an `InventoryItem`.
+3. `Inventory#addItem` calls `findCategory`. Since Fasteners does not exist, it creates an empty category list.
+4. The duplicate scan finds no matching item, so the new item is appended.
+5. Inventory checks its state with an assertion, logs the addition at `FINE`, and prints:
+
+```text
+Successfully added: 100x Screws to the inventory
+```
+
+Repeating the command with `n/screws c/FASTENERS q/20` raises `DuplicateItemException`. The original quantity stays
+at 100; `add-i` does not replenish an existing entry. Adding `n/Screws c/Spares q/20` creates a separate entry instead.
+
+![Successful inventory addition](images/inventory-add-sequence.png)
+
+*Figure 1b: Successful addition after command dispatch. Internal actions use descriptive labels; routine getters,
+logging, assertions, and console output are omitted. The duplicate check precedes insertion into the category list.*
+
+#### Validation and failure behaviour
+
+| Boundary | Rule and result |
+| --- | --- |
+| Prefix parsing | Only `n/ c/` or `n/ c/ q/`, in that order, is accepted. Missing, repeated, reordered, or unexpected prefixes cause `CommandFormatException`. |
+| Text values | The parser trims surrounding whitespace and rejects blank names/categories. Direct constructor calls validate these fields but do not trim them. |
+| Quantity parsing | An explicit quantity must parse as a positive Java `int`, up to `Integer.MAX_VALUE`. Blank, non-integer, out-of-range, zero, and negative values cause `InvalidQuantityException`. |
+| Domain construction | `InventoryItem` rejects invalid fields with `IllegalArgumentException`, protecting callers outside the parser too. |
+| Inventory insertion | A null item causes `NullPointerException`; an existing name in the resolved category causes `DuplicateItemException`. |
+
+Expected command failures are printed by the parser. Malformed input fails before inventory insertion, and duplicate
+rejection leaves existing stock unchanged. Creating a new category happens before its duplicate scan; that new list
+is empty, so a duplicate cannot occur on that path. These guarantees concern normal validation failures in the
+single-threaded application, not recovery from process termination.
+
+After successful insertion, `hasValidState` asserts that categories are nonblank and nonempty, items have positive
+quantities and matching categories, and no category contains duplicate item names. Assertions detect programming
+errors; input validation still operates when assertions are disabled. Addition and duplicate rejection produce
+`FINE` diagnostic records without changing normal console output.
+
+#### Design considerations and alternatives
+
+| Decision | Rationale and trade-off |
+| --- | --- |
+| Group items by category | A map of lists directly supports category-based listing and indices. A flat list would require regrouping for display. |
+| Preserve insertion order | `LinkedHashMap` keeps category order predictable; `HashMap` would not guarantee it. Items remain in list insertion order. |
+| Match names ignoring case | Capitalization differences do not accidentally create duplicate stock. Linear scans keep the implementation simple; normalized lookup keys could improve lookup for a larger inventory. |
+| Reject duplicates rather than merge quantities | Accidental repeated commands cannot silently increase existing stock. A dedicated restocking command could make intentional increases explicit. |
+| Create categories automatically | Adding the first item requires no separate category-management command. A category typo can consequently create a new category. |
+| Validate at parser and domain boundaries | The parser gives command-specific feedback; constructor checks also protect direct callers such as tests. |
+
+#### Verification and limitations
+
+`InventoryTest` covers successful addition, null input, case-insensitive duplicates, unchanged stock after duplicate
+rejection, and identical names in different categories. `InventoryItemTest` covers constructor validation, while
+`InventoryLoggingTest` checks diagnostic records. The [UI test plan](../test/ui-test-plan.md) records malformed-prefix,
+blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
+the implementation rather than assuming the documentation proves correctness.
+
+Inventory exists only in memory and is lost when Bob exits. Addition does not rename entries or restock existing
+ones. Categories and names are free text; case-insensitive matching does not correct spelling differences.
+Matching scans categories and then the selected list. With assertions enabled, the additional invariant check also
+compares pairs of items within each category, which is suitable for the expected small data set.
+
+Editable diagram sources: [class diagram](diagrams/inventory-add-class.puml) and
+[addition sequence](diagrams/inventory-add-sequence.puml). Both reuse `loan-style.puml`; regenerate their PNGs in
+`docs/images/` when changing the sources.
 
 ### Session scheduling
 
@@ -886,9 +991,116 @@ status shown by the next `list-r`. None of these commands changes inventory stoc
 | Status changes | `mark-r` sets `prepared` or `fulfilled`; either can replace the other | A simple status field is enough for tracking, and allows corrections without extra commands. |
 | Inventory effect | None; availability is read-only | A request is a tracking record, not a stock reservation. `delete-r` and `mark-r` never change inventory. |
 
-`Request` uses assertions for its validated fields. Invalid statuses raise `InvalidRequestStatusException`, and
-creation, rejection, and status changes emit FINE diagnostics. The user guide documents the command syntax and exact
-output; `help` lists the commands under **Student requests**.
+#### Detailed request addition design
+
+Request addition records a student's requirement through
+`add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE`. All four arguments are mandatory and must appear in that order.
+See the [User Guide](UserGuide.md#add-a-request-add-r) for user-facing examples.
+
+#### Responsibilities and storage
+
+| Component | Responsibility in addition |
+| --- | --- |
+| `Parser` | Checks the exact prefix sequence, extracts trimmed values, parses a positive quantity, constructs a request, and passes it to the manager. Expected command exceptions are printed as user-facing errors. |
+| `Request` | Validates nonblank student/item names, a positive quantity, and a real deadline on or after today. Holds immutable request details and an initially `pending` status. Implements `Comparable<Request>` for ordering. |
+| `RequestManager` | Stores request references in an `ArrayList<Request>`, sorts after every addition, checks its invariant, and prints the confirmation and list-refresh reminder. |
+| `Inventory` | Provides a read-only availability total when requests are listed. It is not consulted or changed during addition. |
+
+`Bob` creates one request manager for the running process. The manager stores the supplied request reference rather
+than copying it. It exposes individual requests through `getRequest`, but does not expose its internal list.
+Student name, item name, quantity, and deadline cannot change after construction; changing status does not affect
+the comparison keys, so it does not require re-sorting.
+
+`Request#compareTo` orders by deadline, then student name, then item name. Both name comparisons ignore case.
+Quantity and status are not tie-breakers. `Collections.sort` is stable, so requests with equal comparison keys
+retain their relative insertion order. Duplicates remain separate records rather than being merged.
+
+#### Addition walkthrough
+
+Assume the list already contains a request from student Bob for two Batteries by 9 October 2099, and the
+computer's date is no later than 8 October 2099. Enter:
+
+```text
+add-r n/Alice i/Wire q/20 d/8 October 2099
+```
+
+1. `Parser#addRequest` checks that `findPrefixes` returns exactly `n`, `i`, `q`, `d`, then extracts the values.
+2. `parseQuantity` converts `20` to a positive Java `int`.
+3. The `Request` constructor trims and validates names and parses the deadline with a strict English
+   `d MMMM uuuu` formatter. It rejects impossible dates and dates before `LocalDate.now(clock)`.
+4. After successful construction, `RequestManager#addRequest` rejects null input, appends the request, and calls
+   `sortRequests`. Alice becomes request 1 because her deadline is earlier; Bob becomes request 2.
+5. The manager asserts that its list contains only nonnull requests in comparison order, logs the addition at
+   `FINE`, and prints:
+
+```text
+Successfully added request: Alice - 20x Wire by 8 October 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+The following sequence summarizes a successful addition after command dispatch. Prefix extraction, assertions,
+logging, and console rendering are condensed into descriptive steps.
+
+```mermaid
+sequenceDiagram
+    participant P as parser:Parser
+    participant R as request:Request
+    participant M as requestManager:RequestManager
+    P->>P: Validate prefixes, extract values, parse quantity
+    P->>R: Construct with student, item, quantity, deadline
+    activate R
+    R->>R: Validate fields and deadline against clock
+    R-->>P: Validated request, status pending
+    deactivate R
+    P->>M: addRequest(request)
+    activate M
+    M->>M: Append and sort requests
+    M-->>P: Print confirmation and refresh reminder
+    deactivate M
+```
+
+Addition succeeds even if no Wire exists. A subsequent `list-r` with 15 Wire available shows a shortfall of 5.
+`getTotalAvailableQuantity` matches the complete item name ignoring case across all categories, accumulates using
+a `long`, and caps the displayed total at `Integer.MAX_VALUE`. Each request is checked independently; two requests
+may both show sufficient stock for the same units. No request operation reserves or deducts stock.
+
+#### Validation and failure behavior
+
+| Boundary | Rule and result |
+| --- | --- |
+| Prefix parsing | Missing, repeated, reordered, or extra prefixes cause `CommandFormatException`. Prefix-like standalone tokens inside names are also interpreted as prefixes. |
+| Quantity parsing | Blank, non-integer, zero, negative, and values above `Integer.MAX_VALUE` cause `InvalidQuantityException`. There is no default quantity for requests. |
+| Request construction | Null or blank names cause `CommandFormatException`; nonpositive quantities cause `InvalidQuantityException`. Null, blank, malformed, or past deadlines cause `InvalidRequestDeadlineException`. |
+| Date boundary | Impossible calendar dates are rejected by strict parsing. Today is accepted. The public constructor uses the system's default time zone; a package-private constructor accepts a `Clock` for repeatable tests. |
+| Manager insertion | A null request causes `NullPointerException` before the list is modified. Duplicate requests are accepted. |
+
+The parser finishes construction before calling the manager. Invalid command values therefore leave the request
+list and inventory unchanged. These guarantees cover expected validation failures, rather than recovery from
+unexpected runtime failures or process termination. Assertions detect programming errors and do not replace input
+validation. Creation, rejection, and status changes emit `FINE` diagnostics without changing normal console output.
+
+#### Design considerations and alternatives
+
+| Decision | Rationale and trade-off |
+| --- | --- |
+| Sort an `ArrayList` on addition | Keeps displayed and stored indices aligned for listing, deletion, and marking. Sorting on display would require translating displayed positions; a priority queue would not directly support indexed commands. |
+| Allow duplicate requests | Preserves separately recorded requirements. Merging by student and item could combine requests with different quantities or deadlines unintentionally. |
+| Read availability on listing | Reflects inventory changes without maintaining a cached stock count. Reserving stock would require release rules for cancellation, fulfillment, and corrections. |
+| Inject a clock for model tests | Tests can verify deadlines due today and in the past without depending on the wall clock. The normal command path still uses the local calendar date. |
+
+#### Verification and limitations
+
+`RequestTest` covers trimmed fields, invalid quantities and dates, clock-based deadline boundaries, initial status,
+comparison ordering, and status changes. `RequestManagerTest` covers sorting, tie-breakers, null input,
+indices, and availability display. `ParserRequestTest` covers command formats, rejected inputs,
+confirmations, ordering, and live stock checks. `RequestLoggingTest` verifies request diagnostics; the
+[UI test plan](../test/ui-test-plan.md) records console cases.
+
+Requests exist only in memory. They have no persistent identifiers: adding or deleting a request can change the
+indices used by `delete-r` and `mark-r`, so users must refresh `list-r`. Requests cannot be edited in place and are
+not removed automatically after their deadline. Marking prepared or fulfilled records status only, accepts either
+status regardless of stock, and never creates a loan. Stock movements must be recorded through the relevant
+inventory, loan, or broken-item command.
 
 ### Broken-item tracking
 
