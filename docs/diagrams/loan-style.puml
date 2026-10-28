@@ -1,0 +1,32 @@
+' Shared styling for the loan tracking UML diagrams.
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+skinparam ArrowColor #303B46
+skinparam LineThickness 1
+skinparam dpi 150
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F1F4F7
+skinparam classBorderColor #303B46
+skinparam noteBackgroundColor #FFF8E1
+skinparam noteBorderColor #9B8854
+skinparam sequence {
+    ParticipantBackgroundColor #F1F4F7
+    ParticipantBorderColor #303B46
+    LifeLineBorderColor #66717C
+    LifeLineBackgroundColor white
+    ReferenceBackgroundColor #F1F4F7
+    ReferenceBorderColor #66717C
+    ActivationBackgroundColor #E1EAF2
+    ActivationBorderColor #303B46
+    MessageAlign left
+}
+skinparam activity {
+    BackgroundColor #F1F4F7
+    BorderColor #303B46
+    DiamondBackgroundColor #FFF8E1
+    DiamondBorderColor #9B8854
+    StartColor #303B46
+    EndColor #303B46
+}

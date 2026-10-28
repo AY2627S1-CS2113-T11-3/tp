@@ -1,3 +1,4 @@
+# @@author DaynaG3
 param(
     [string]$PlanPath = "test/ui-test-plan.md",
     [string]$JarPath = "build/libs/duke.jar",

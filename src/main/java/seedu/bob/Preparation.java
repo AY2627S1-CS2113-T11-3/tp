@@ -9,6 +9,7 @@ import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.PreparationException;
 
+//@@author J-unn-y
 /**
  * Stores the total quantities required by one session without reserving inventory.
  */
@@ -17,6 +18,14 @@ public class Preparation {
     /** Keeps insertion order so displayed item positions also identify items for deletion. */
     private final ArrayList<PreparationItem> items = new ArrayList<>();
 
+    //@@author
+    /**
+     * Creates an empty preparation list for a session without reserving inventory.
+     */
+    public Preparation() {
+    }
+
+    //@@author J-unn-y
     /**
      * Adds a per-attendee requirement, accumulating repeated name/category pairs without regard to case.
      *
@@ -36,7 +45,7 @@ public class Preparation {
             throw new CommandFormatException("Category cannot be blank.");
         }
         if (quantityPerPerson <= 0) {
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
         if (headcount <= 0) {
             throw new InvalidHeadcountException();
@@ -57,12 +66,18 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after addition";
+        //@@author J-unn-y
         return updated;
     }
 
     /**
      * Finds an existing name/category pair, or returns -1 when the requirement is new.
+     *
+     * @param name Item name to match without regard to case.
+     * @param category Category to match without regard to case.
+     * @return Zero-based position of the matching requirement, or -1 if none exists.
      */
     private int findItemIndex(String name, String category) {
         for (int i = 0; i < items.size(); i++) {
@@ -74,6 +89,7 @@ public class Preparation {
         return -1;
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether all stored requirements satisfy preparation invariants.
      */
@@ -100,7 +116,9 @@ public class Preparation {
         }
         return true;
     }
+    //@@author
 
+    //@@author J-unn-y
     /**
      * Removes a total quantity, deleting the item when no units remain required.
      *
@@ -116,7 +134,7 @@ public class Preparation {
                     userIndex, items.size()));
         }
         if (quantity <= 0) {
-            throw new InvalidQuantityException();
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
 
         int index = userIndex - 1;
@@ -132,7 +150,9 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after removal";
+        //@@author J-unn-y
         return item;
     }
 

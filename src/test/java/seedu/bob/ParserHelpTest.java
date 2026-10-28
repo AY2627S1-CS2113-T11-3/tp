@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  */
 class ParserHelpTest {
 
-    /** Typed out in full, as written in the user guide, so that a typo in the application is caught. */
+    /** Defines the expected output independently so changes to the application text are detected. */
     private static final String EXPECTED_HELP =
             "--------------------------------------------------------------------\n"
             + "Available commands\n"
@@ -24,6 +24,7 @@ class ParserHelpTest {
             + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
             + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
             + "  list-i\n"
+            + "  find-i KEYWORD\n"
             + "Lab sessions\n"
             + "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT\n"
             + "  delete-s INDEX\n"
@@ -32,10 +33,27 @@ class ParserHelpTest {
             + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
             + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
             + "  list-p s/SESSION_INDEX\n"
+            + "Student requests\n"
+            + "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE\n"
+            + "  delete-r INDEX\n"
+            + "  list-r\n"
+            + "  mark-r INDEX STATUS (prepared or fulfilled)\n"
             + "Contacts\n"
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"
             + "  list-c\n"
+            //@@author DaynaG3
+            + "Loans\n"
+            + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
+            + "  list-l [overdue]\n"
+            + "  delete-l INDEX\n"
+            + "  return INDEX\n"
+            //@@author
+            + "Broken items\n"
+            + "  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]\n"
+            + "  list-b\n"
+            + "  delete-b INDEX\n"
+            + "    Deletion restores all units: use only for full repairs or incorrect reports.\n"
             + "Other\n"
             + "  help\n"
             + "  Bye\n"
@@ -45,9 +63,15 @@ class ParserHelpTest {
     private final Parser parser = new Parser();
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
+    private final ContactManager contacts = new ContactManager();
+    private final RequestManager requests = new RequestManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
+    /**
+     * Redirects standard output so each test can inspect command responses.
+     */
     @BeforeEach
     void setUp() {
         originalOutput = System.out;
@@ -55,6 +79,9 @@ class ParserHelpTest {
         System.setOut(capturedOutput);
     }
 
+    /**
+     * Restores standard output and closes the stream created for the test.
+     */
     @AfterEach
     void tearDown() {
         System.setOut(originalOutput);
@@ -99,10 +126,13 @@ class ParserHelpTest {
 
     /**
      * Executes one command and returns only that command's normalized console output.
+     *
+     * @param command Command to execute.
+     * @return Command output with Windows line endings converted to newline characters.
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

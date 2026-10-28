@@ -1,0 +1,55 @@
+@startuml
+!include loan-style.puml
+hide footbox
+skinparam maxMessageSize 240
+
+participant ":Parser" as Parser
+participant ":SessionManager" as Manager
+participant "session:Session" as Session
+participant ":Preparation" as Preparation
+participant ":Inventory" as Inventory
+
+[-> Parser : handleCommand("add-p s/1 i/Wire c/Components q/2", ...)
+activate Parser
+ref over Parser
+    Validate prefixes and parse the
+    session index and quantity per person
+end ref
+Parser -> Manager : getSession(1)
+activate Manager
+Manager --> Parser : session
+deactivate Manager
+Parser -> Session : getHeadcount()
+activate Session
+Session --> Parser : 10
+deactivate Session
+Parser -> Session : getPreparation()
+activate Session
+Session --> Parser : preparation
+deactivate Session
+Parser -> Preparation : addItem("Wire", "Components", 2, 10)
+activate Preparation
+Preparation -> Preparation : findItemIndex("Wire", "Components")
+activate Preparation
+Preparation --> Preparation : index
+deactivate Preparation
+note right of Preparation
+    total = existing + 2 * 10, using
+    overflow-checked arithmetic.
+    Append a new PreparationItem, or
+    replace the matching one.
+end note
+Preparation --> Parser : item: PreparationItem
+deactivate Preparation
+Parser -> Parser : listPreparation(session, inventory)
+activate Parser
+loop each PreparationItem in preparation.getItems()
+    Parser -> Inventory : getAvailableQuantity(name, category)
+    activate Inventory
+    Inventory --> Parser : available
+    deactivate Inventory
+end
+deactivate Parser
+[<-- Parser
+deactivate Parser
+@enduml

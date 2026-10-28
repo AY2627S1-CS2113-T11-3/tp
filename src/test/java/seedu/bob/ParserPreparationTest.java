@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CommandException;
 
+//@@author J-unn-y
 /**
  * Exercises preparation commands through the same parser used by the console application.
  */
@@ -26,6 +27,8 @@ class ParserPreparationTest {
     private final Inventory inventory = new Inventory();
     private final SessionManager sessions = new SessionManager();
     private final ContactManager contacts = new ContactManager();
+    private final RequestManager requests = new RequestManager();
+    private final LoanManager loans = new LoanManager(inventory);
     private PrintStream originalOutput;
     private PrintStream capturedOutput;
 
@@ -103,7 +106,7 @@ class ParserPreparationTest {
         execute("add-p s/1 i/Wire c/Components q/2");
 
         assertEquals("Item index must be a positive integer.\n", execute("delete-p s/1 i/abc q/1"));
-        assertEquals("Quantity must be a positive integer.\n", execute("delete-p s/1 i/1 q/0"));
+        assertEquals("Quantity must be greater than zero.\n", execute("delete-p s/1 i/1 q/0"));
         assertEquals("Quantity must be a positive integer.\n",
                 execute("delete-p s/1 i/1 q/1 extra"));
         assertEquals(20, sessions.getSession(1).getPreparation().getItems().get(0).getQuantity());
@@ -125,7 +128,7 @@ class ParserPreparationTest {
      */
     private String execute(String command) {
         output.reset();
-        parser.handleCommand(command, inventory, sessions, contacts);
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return output.toString(StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
 }

@@ -20,6 +20,12 @@ public class ContactManager {
     private final ArrayList<Contact> contacts = new ArrayList<>();
 
     /**
+     * Creates an empty supplier and maintenance contact list.
+     */
+    public ContactManager() {
+    }
+
+    /**
      * Adds a contact to the list and prints a confirmation.
      *
      * @param contact Contact to add.
@@ -61,6 +67,27 @@ public class ContactManager {
         }
         return contacts.get(userIndex - INDEX_OFFSET);
     }
+
+    //@@author gavinlimsh
+    /**
+     * Checks whether the exact selected contact is still registered, regardless of its list position.
+     * A newly added contact with identical details does not replace a deleted contact's links.
+     *
+     * @param selectedContact Contact to look for, or {@code null} when unassigned.
+     * @return Whether the same contact object remains registered.
+     */
+    public boolean containsContact(Contact selectedContact) {
+        if (selectedContact == null) {
+            return false;
+        }
+        for (Contact contact : contacts) {
+            if (contact == selectedContact) {
+                return true;
+            }
+        }
+        return false;
+    }
+    //@@author
 
     /**
      * Returns whether the contact list contains only nonnull contacts.
