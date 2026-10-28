@@ -1,0 +1,37 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant "parser:Parser" as parser
+participant "inventory:Inventory" as inventory
+
+[-> parser : addItem(arguments, inventory)
+activate parser
+parser -> parser : validate prefixes and values\nresolve positive quantity
+activate parser
+parser --> parser
+deactivate parser
+create participant "item:InventoryItem" as item
+parser -> item : InventoryItem(name, category, quantity)
+activate item
+item --> parser
+deactivate item
+parser -> inventory : addItem(item)
+activate inventory
+inventory -> inventory : findCategory(category)
+activate inventory
+inventory --> inventory : stored category or null
+deactivate inventory
+opt category does not exist
+    inventory -> inventory : create category list
+end
+inventory -> inventory : check list for duplicate name
+note right of inventory
+  Successful path: no duplicate exists.
+  A duplicate throws before insertion.
+end note
+inventory -> inventory : append item to category list
+inventory --> parser
+deactivate inventory
+[<-- parser
+deactivate parser
+@enduml
