@@ -169,7 +169,10 @@ Adds a new item to a category. A category is created automatically when it does 
 **Format:** `add-i n/NAME c/CATEGORY [q/QUANTITY]`
 
 - Name and category cannot be blank.
-- Quantity defaults to 1 when `q/` is omitted.
+- Supply `n/`, `c/`, and optional `q/` in that order. Names and categories can contain spaces;
+  surrounding whitespace is ignored. For example, `n/Red LED c/Lab Components` needs no quotation marks.
+- Quantity defaults to 1 when `q/` is omitted. If supplied, it must be a whole number from 1 to 2,147,483,647,
+  entered without commas. An empty `q/` does not use the default.
 - An item with the same name cannot be added twice within the same category, even with different capitalization.
   This command does not increase the stock of an existing item.
 - The same item name may exist in different categories. Such entries are separate inventory items.
@@ -198,6 +201,33 @@ Expected output:
 Successfully added: 1x Oscilloscope to the inventory
 ```
 
+**Adding an existing item does not top up its stock.** After adding the Wire above, this command is rejected:
+
+```text
+add-i n/Wire c/COMPONENTS q/5
+```
+
+Expected output:
+
+```text
+Item "Wire" already exists in category "Components".
+```
+
+There are still 15 Wire in Components. Changing the capitalization does not create another category.
+Use `add-i` for a new item/category combination; there is no command to top up an existing entry.
+If five Wire belong in a separate category, `add-i n/Wire c/Spares q/5` creates that separate entry.
+
+Common rejected additions:
+
+| Input | Message | Correction |
+| --- | --- | --- |
+| `add-i n/ c/Components q/5` | `Item name cannot be blank.` | Supply the item's name after `n/`. |
+| `add-i n/Wire c/ q/5` | `Category cannot be blank.` | Supply a category after `c/`. |
+| `add-i n/Wire c/Components q/0` | `Quantity must be a positive integer.` | Use at least 1, or omit `q/` to add one unit. |
+| `add-i n/Wire c/Components q/1.5` | `Quantity must be a positive integer.` | Enter a whole number. |
+
+Rejected additions leave the inventory unchanged. See [Command format](#command-format) for prefix rules.
+
 ### List inventory: `list-i`
 
 Displays every category and its items, including available quantities. Categories and items are shown in insertion
@@ -225,6 +255,10 @@ Equipment
 ```
 
 An empty inventory displays `No items in inventory.` between the inventory heading and the closing divider.
+
+**Item indices restart at 1 in every category.** In the example above, both Wire and Oscilloscope have index 1.
+For deletion, supply both the category and that category's item index. Use `list-i` again after removing an item
+or recording a loan or broken-item report, because those operations can remove entries and change the indices.
 
 ### Find an item: `find-i`
 
@@ -267,7 +301,8 @@ Removes a quantity from an item identified by its category and its position with
 
 **Format:** `delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY`
 
-- All three arguments are required. Use `list-i` to find the category and item index.
+- All three arguments are required in the order `c/`, `i/`, `q/`. Use `list-i` to find the category and item index.
+- Category matching ignores capitalization. The item index and quantity must be positive whole numbers.
 - Removing less than the available quantity reduces the stock.
 - Removing the entire quantity deletes the item. If the category becomes empty, it is deleted too.
 - Removing more than the available quantity is rejected without changing inventory.
@@ -286,6 +321,19 @@ Successfully removed: 5x Wire from the inventory
 ```
 
 The stock is now 10 Wire. Run `list-i` to see the updated inventory; `delete-i` prints only a confirmation.
+
+Attempting `delete-i c/Components i/1 q/11` at this point prints:
+
+```text
+Cannot remove 11 Wire. Only 10 are available.
+```
+
+The stock stays at 10. To remove all remaining Wire, use `delete-i c/Components i/1 q/10` instead.
+The Wire entry disappears, and Components disappears too if it has no other items. A later `add-i` can recreate
+that item/category combination. Always run `list-i` before deleting another entry.
+
+Use `delete-i` for consumption or other stock removal. Use [`add-l`](#add-a-loan-add-l) when lending units and
+[`add-b`](#report-broken-items-add-b) when recording damage; these commands already deduct stock.
 
 ## Lab session scheduling
 
@@ -552,13 +600,16 @@ Creates a request with the student's name, item, quantity, and deadline.
 
 - All four arguments are required, in the order shown.
 - `STUDENT_NAME` and `ITEM` must not be blank. Names can contain spaces.
-- `QUANTITY` is a positive whole number.
+- `QUANTITY` is a whole number from 1 to 2,147,483,647, entered without commas. Unlike `add-i`, `add-r` has no
+  default quantity: omitting `q/` or leaving its value blank is rejected.
 - `DEADLINE` uses the same `d MMMM yyyy` format as sessions, for example `8 October 2099`. Use a full English month
   name with an initial capital. The deadline must be today or later.
 - A new request starts with status `Pending`.
 - Duplicate requests are allowed.
 - The request does not name an inventory category. Availability combines stock with the same item name from all
-  categories.
+  categories, ignoring capitalization. It matches the full item name: `Wire` does not match `Jumper Wire`.
+- The item does not need to exist in inventory. A request can exceed available stock; `list-r` shows the shortage
+  so that you can arrange the missing units.
 
 Example in an empty request list, with 15 Wire in inventory:
 
@@ -574,6 +625,26 @@ Request list updated. Run list-r to see the latest order.
 ```
 
 The request is stored in deadline order, so the list may show it before or after requests added earlier.
+Run `list-r` after adding a request before using an index with `delete-r` or `mark-r`.
+For equal deadlines, requests are sorted by student name and then item name, ignoring capitalization.
+Requests tied on all three fields retain their insertion order, even if their quantities differ.
+
+**Rejected additions**
+
+These examples assume the computer's date is no later than 8 October 2099. Each rejected command leaves both
+requests and inventory unchanged.
+
+| Input | Message | Correction |
+| --- | --- | --- |
+| `add-r n/ i/Wire q/2 d/8 October 2099` | `Student name cannot be blank.` | Supply the student's name after `n/`. |
+| `add-r n/Alice i/ q/2 d/8 October 2099` | `Item name cannot be blank.` | Supply the requested item after `i/`. |
+| `add-r n/Alice i/Wire q/0 d/8 October 2099` | `Quantity must be a positive integer.` | Enter at least 1. |
+| `add-r n/Alice i/Wire q/ d/8 October 2099` | `Quantity must be a positive integer.` | Supply a quantity; requests have no default. |
+| `add-r n/Alice i/Wire q/2 d/31 February 2099` | `Deadline must be a valid date in d MMMM yyyy format.` | Use a real calendar date and a full, capitalized English month name. |
+
+A deadline before today prints `Request deadline cannot be before today.` A deadline of today is accepted;
+the check uses the local date on the computer running Bob. Requests already recorded stay in the list after their
+deadline passes.
 
 ### List requests: `list-r`
 
@@ -603,6 +674,9 @@ An empty request list displays `No requests recorded.` between the heading and t
 
 Availability is checked again each time `list-r` runs. Removing inventory after adding a request can increase the
 shortfall; adding inventory can remove it. Requests never reserve or consume stock.
+
+The deletion and marking examples below each assume Alice's request is still present as request 1 and there are
+15 Wire available. Treat them as separate examples; deleting Alice's request removes it from the marking list too.
 
 ### Delete a request: `delete-r`
 
@@ -637,6 +711,9 @@ Changes the status shown for a request.
   work.
 - Marking replaces the current status. A fulfilled request can be marked as prepared again if it was marked by
   mistake.
+- You may mark a pending request directly as fulfilled, even when stock is insufficient. Bob records the status
+  you supply; it does not verify a handover or require a prepared step. `pending` is the initial status and cannot
+  be supplied to `mark-r`.
 - Marking a request does not change inventory stock or create a loan. If the handover is a loan,
   record it separately with `add-l`, which deducts stock. Use `delete-i` only for an issue or consumption
   that has not already reduced inventory. Never deduct the same units twice.
@@ -674,6 +751,21 @@ Expected output:
 ```text
 Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
 ```
+
+#### Example: availability after stock changes
+
+For Alice's request above, consider these stock changes after marking it fulfilled. This example starts with
+15 Wire in Components and no Wire in Spares, independently of the inventory tutorial.
+
+| Action after marking the request | Available Wire | Shortfall shown by `list-r` |
+| --- | --- | --- |
+| Start with 15 Wire in Components | 15 | 5 |
+| Add `add-i n/Wire c/Spares q/5` | 20 | No warning |
+| Remove `delete-i c/Components i/1 q/3` | 17 | 3 |
+
+This adds Wire to a new category rather than topping up Components. `list-r` combines both categories.
+Another request for Wire would compare its own quantity with the same 17 available units: the first request does
+not set any units aside. Even a fulfilled request continues to show current availability.
 
 ## Contact management
 
