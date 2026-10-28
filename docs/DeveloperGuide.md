@@ -180,6 +180,108 @@ indices within each category.
 
 *Figure 1: Inventory categories and their stored items.*
 
+#### Detailed inventory addition design
+
+Inventory addition registers usable stock through `add-i n/NAME c/CATEGORY [q/QUANTITY]`.
+The quantity defaults to one when `q/` is omitted. See the [User Guide](UserGuide.md#add-an-item-add-i)
+for command syntax and user-facing examples.
+
+#### Responsibilities and storage
+
+| Component | Responsibility in addition |
+| --- | --- |
+| `Parser` | Checks prefix order, extracts and trims values, validates the quantity, constructs the item, and invokes inventory addition. It prints expected command errors. |
+| `InventoryItem` | Holds a name, category, and positive quantity. Its constructor independently rejects null or blank names/categories and nonpositive quantities. |
+| `Inventory` | Resolves the category, rejects duplicate names, stores the item, and prints the success confirmation. |
+
+`Inventory` stores a `LinkedHashMap<String, ArrayList<InventoryItem>>`. Each key is a category's stored display name;
+its list contains that category's items. The map and lists preserve insertion order, making subsequent listings
+predictable. `findCategory` scans category names using `equalsIgnoreCase`, so `Tools` and `TOOLS` share a category
+while retaining the first stored category spelling. Item names are also compared ignoring case within that category.
+
+![Classes involved in inventory addition](images/inventory-add-class.png)
+
+*Figure 1a: Selected inventory-addition relationships. Parser dependencies represent temporary use, while Inventory
+retains item references grouped by category. Collection implementation classes and unrelated operations are omitted.*
+
+The association uses no composition diamond: `addItem` stores the supplied object, rather than creating an exclusively
+owned copy. An item's name and category are final; its quantity can change through package-level stock operations.
+Other features query the same inventory, so newly added stock is available to preparation checks, requests, and loans.
+
+#### Example walkthrough
+
+Starting with an empty inventory, consider:
+
+```text
+add-i n/Screws c/Fasteners q/100
+```
+
+1. `Parser#addItem` accepts the prefix sequence `n/`, `c/`, `q/` and extracts the three values.
+2. `parseQuantity` converts `100` into a positive integer. The parser constructs an `InventoryItem`.
+3. `Inventory#addItem` calls `findCategory`. Since Fasteners does not exist, it creates an empty category list.
+4. The duplicate scan finds no matching item, so the new item is appended.
+5. Inventory checks its state with an assertion, logs the addition at `FINE`, and prints:
+
+```text
+Successfully added: 100x Screws to the inventory
+```
+
+Repeating the command with `n/screws c/FASTENERS q/20` raises `DuplicateItemException`. The original quantity stays
+at 100; `add-i` does not replenish an existing entry. Adding `n/Screws c/Spares q/20` creates a separate entry instead.
+
+![Successful inventory addition](images/inventory-add-sequence.png)
+
+*Figure 1b: Successful addition after command dispatch. Internal actions use descriptive labels; routine getters,
+logging, assertions, and console output are omitted. The duplicate check precedes insertion into the category list.*
+
+#### Validation and failure behaviour
+
+| Boundary | Rule and result |
+| --- | --- |
+| Prefix parsing | Only `n/ c/` or `n/ c/ q/`, in that order, is accepted. Missing, repeated, reordered, or unexpected prefixes cause `CommandFormatException`. |
+| Text values | The parser trims surrounding whitespace and rejects blank names/categories. Direct constructor calls validate these fields but do not trim them. |
+| Quantity parsing | An explicit quantity must parse as a positive Java `int`, up to `Integer.MAX_VALUE`. Blank, non-integer, out-of-range, zero, and negative values cause `InvalidQuantityException`. |
+| Domain construction | `InventoryItem` rejects invalid fields with `IllegalArgumentException`, protecting callers outside the parser too. |
+| Inventory insertion | A null item causes `NullPointerException`; an existing name in the resolved category causes `DuplicateItemException`. |
+
+Expected command failures are printed by the parser. Malformed input fails before inventory insertion, and duplicate
+rejection leaves existing stock unchanged. Creating a new category happens before its duplicate scan; that new list
+is empty, so a duplicate cannot occur on that path. These guarantees concern normal validation failures in the
+single-threaded application, not recovery from process termination.
+
+After successful insertion, `hasValidState` asserts that categories are nonblank and nonempty, items have positive
+quantities and matching categories, and no category contains duplicate item names. Assertions detect programming
+errors; input validation still operates when assertions are disabled. Addition and duplicate rejection produce
+`FINE` diagnostic records without changing normal console output.
+
+#### Design considerations and alternatives
+
+| Decision | Rationale and trade-off |
+| --- | --- |
+| Group items by category | A map of lists directly supports category-based listing and indices. A flat list would require regrouping for display. |
+| Preserve insertion order | `LinkedHashMap` keeps category order predictable; `HashMap` would not guarantee it. Items remain in list insertion order. |
+| Match names ignoring case | Capitalization differences do not accidentally create duplicate stock. Linear scans keep the implementation simple; normalized lookup keys could improve lookup for a larger inventory. |
+| Reject duplicates rather than merge quantities | Accidental repeated commands cannot silently increase existing stock. A dedicated restocking command could make intentional increases explicit. |
+| Create categories automatically | Adding the first item requires no separate category-management command. A category typo can consequently create a new category. |
+| Validate at parser and domain boundaries | The parser gives command-specific feedback; constructor checks also protect direct callers such as tests. |
+
+#### Verification and limitations
+
+`InventoryTest` covers successful addition, null input, case-insensitive duplicates, unchanged stock after duplicate
+rejection, and identical names in different categories. `InventoryItemTest` covers constructor validation, while
+`InventoryLoggingTest` checks diagnostic records. The [UI test plan](../test/ui-test-plan.md) records malformed-prefix,
+blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
+the implementation rather than assuming the documentation proves correctness.
+
+Inventory exists only in memory and is lost when Bob exits. Addition does not rename entries or restock existing
+ones. Categories and names are free text; case-insensitive matching does not correct spelling differences.
+Matching scans categories and then the selected list. With assertions enabled, the additional invariant check also
+compares pairs of items within each category, which is suitable for the expected small data set.
+
+Editable diagram sources: [class diagram](diagrams/inventory-add-class.puml) and
+[addition sequence](diagrams/inventory-add-sequence.puml). Both reuse `loan-style.puml`; regenerate their PNGs in
+`docs/images/` when changing the sources.
+
 ### Session scheduling
 
 `Session` parses dates in `d MMMM yyyy` format and times in `HHmm` format. Dates cannot be in the past, times must be

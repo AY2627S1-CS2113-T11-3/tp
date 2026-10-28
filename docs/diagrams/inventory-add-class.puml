@@ -1,0 +1,30 @@
+@startuml
+!pragma layout smetana
+!include loan-style.puml
+hide circle
+hide empty members
+top to bottom direction
+
+class Parser {
+    -addItem(arguments: String, inventory: Inventory)
+}
+class Inventory {
+    +addItem(item: InventoryItem)
+    -findCategory(requestedCategory: String): String
+    -hasValidState(): boolean
+}
+class InventoryItem {
+    -name: String {readOnly}
+    -category: String {readOnly}
+    -quantity: int
+}
+
+Parser ..> Inventory : invokes
+Parser ..> InventoryItem : creates
+Inventory --> "0..*" InventoryItem : items grouped by category\n{ordered}
+note bottom of Inventory
+  LinkedHashMap of category names
+  to ArrayList<InventoryItem>.
+  Category and item matching ignores case.
+end note
+@enduml
