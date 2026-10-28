@@ -146,12 +146,34 @@ No overdue loans.
 --------------------------------------------------------------------
 
 --------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "COMP"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+2. Red LED [Components] (Available: 3, On loan: 0) - Available
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "battery"
+--------------------------------------------------------------------
+No items match "battery".
+--------------------------------------------------------------------
+
+Invalid format. Use: find-i KEYWORD
+
+--------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -174,6 +196,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye

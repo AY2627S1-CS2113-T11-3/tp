@@ -52,6 +52,7 @@ public class Bob {
         RequestManager requestManager = new RequestManager();
         //@@author DaynaG3
         LoanManager loanManager = new LoanManager(inventory);
+        BrokenItemManager brokenItemManager = new BrokenItemManager(inventory, contactManager);
         while (in.hasNextLine()) {
             //@@author
             String line = in.nextLine();
@@ -59,7 +60,8 @@ public class Bob {
                 LOGGER.info("User requested application termination");
                 break;
             }
-            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager, loanManager);
+            parser.handleCommand(line, inventory, sessionManager, contactManager, requestManager,
+                    loanManager, brokenItemManager);
             System.out.println();
         }
 
