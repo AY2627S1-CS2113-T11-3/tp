@@ -79,7 +79,7 @@ public class Parser {
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
-    //@@author
+    //@@author gavinlimsh
     private static final String ADD_BROKEN_USAGE =
             "Invalid format. Use: add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]";
     private static final String LIST_BROKEN_USAGE = "Invalid format. Use: list-b";
@@ -1033,5 +1033,5 @@ public class Parser {
             throw new InvalidBrokenItemIndexException(e);
         }
     }
-    //@@author gavinlimsh
+    //@@author
 }

@@ -7923,6 +7923,178 @@ Components
 ```
 
 <!--
+### UI-BROKEN-REGRESSION-001: Report, reject excessive damage, and restore stock
+
+**Aim:** Verify broken-item commands through the packaged application, including unchanged stock and reports after a rejected addition.
+
+**Preconditions:** Start a fresh Bob process, enter `Alex`, and begin with empty inventory, loans, and broken reports. The fixed report date is in the past. In the shared console fixture, the earlier steps already provide 10 Wire and no active loans or reports, so its setup command is omitted.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-b n/Wire c/Components q/3 f/Frayed insulation d/1 January 2000
+```
+
+**Expected output**
+
+```text
+Successfully recorded broken item: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. Available inventory reduced.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-b n/Wire c/Components q/8 f/Cracked casing d/1 January 2000
+```
+
+**Expected output**
+
+```text
+Cannot report 8 Wire as broken. Only 7 are available.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-b 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted broken-item report: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. All units restored to inventory.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+No broken items recorded.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
 ### UI-001: Short title
 
 **Aim:** Describe the behavior being verified.

@@ -2,10 +2,7 @@
 package seedu.bob;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -43,10 +40,10 @@ public class ItemFinder {
         if (keyword.isBlank()) {
             throw new IllegalArgumentException("Search keyword must not be blank");
         }
-        String searchText = keyword.strip().toLowerCase(Locale.ROOT);
+        String searchText = keyword.strip();
 
-        // Keyed by lowercase name and category so differently capitalized loans join their stock entry.
-        Map<String, Tally> tallies = new LinkedHashMap<>();
+        // Use the same case-insensitive identity as inventory, including Unicode case variants.
+        List<Tally> tallies = new ArrayList<>();
         for (InventoryItem item : inventory.getItemSnapshots()) {
             if (matches(item.getName(), item.getCategory(), searchText)) {
                 tallyFor(tallies, item.getName(), item.getCategory()).availableQuantity = item.getQuantity();
@@ -59,7 +56,7 @@ public class ItemFinder {
         }
 
         List<ItemLookupEntry> results = new ArrayList<>();
-        for (Tally tally : tallies.values()) {
+        for (Tally tally : tallies) {
             results.add(new ItemLookupEntry(tally.name, tally.category,
                     tally.availableQuantity, tally.loanedQuantity));
         }
@@ -68,20 +65,37 @@ public class ItemFinder {
     }
 
     /**
-     * Returns whether the lowercase search text occurs in the item's name or category.
+     * Returns whether the search text occurs in the item's name or category, ignoring case.
      */
     private static boolean matches(String name, String category, String searchText) {
-        return name.toLowerCase(Locale.ROOT).contains(searchText)
-                || category.toLowerCase(Locale.ROOT).contains(searchText);
+        return containsIgnoringCase(name, searchText) || containsIgnoringCase(category, searchText);
+    }
+
+    /**
+     * Matches substrings without locale-dependent conversion or multi-character case expansion.
+     */
+    private static boolean containsIgnoringCase(String text, String searchText) {
+        for (int start = 0; start <= text.length() - searchText.length(); start++) {
+            if (text.regionMatches(true, start, searchText, 0, searchText.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Returns the running totals for a name/category pair, creating them on first use.
      * The first spelling seen, normally the inventory's, is kept for display.
      */
-    private static Tally tallyFor(Map<String, Tally> tallies, String name, String category) {
-        String key = name.toLowerCase(Locale.ROOT) + "\n" + category.toLowerCase(Locale.ROOT);
-        return tallies.computeIfAbsent(key, unused -> new Tally(name, category));
+    private static Tally tallyFor(List<Tally> tallies, String name, String category) {
+        for (Tally tally : tallies) {
+            if (tally.name.equalsIgnoreCase(name) && tally.category.equalsIgnoreCase(category)) {
+                return tally;
+            }
+        }
+        Tally tally = new Tally(name, category);
+        tallies.add(tally);
+        return tally;
     }
 
     /**
