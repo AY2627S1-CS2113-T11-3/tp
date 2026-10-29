@@ -62,12 +62,14 @@ public class Parser {
             "Invalid format. Use: delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY";
     private static final String LIST_PREPARATION_USAGE = "Invalid format. Use: list-p s/SESSION_INDEX";
     //@@author
+    //@@author Lokwx
     private static final String ADD_REQUEST_USAGE =
             "Invalid format. Use: add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE";
     private static final String DELETE_REQUEST_USAGE = "Invalid format. Use: delete-r INDEX";
     private static final String LIST_REQUEST_USAGE = "Invalid format. Use: list-r";
     private static final String MARK_REQUEST_USAGE = "Invalid format. Use: mark-r INDEX STATUS";
 
+    //@@author
     private static final String ADD_CONTACT_USAGE =
             "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
     private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
@@ -79,7 +81,7 @@ public class Parser {
     private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
-    //@@author
+    //@@author gavinlimsh
     private static final String ADD_BROKEN_USAGE =
             "Invalid format. Use: add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]";
     private static final String LIST_BROKEN_USAGE = "Invalid format. Use: list-b";
@@ -280,6 +282,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            //@@author Lokwx
             case "add-r", "delete-r", "list-r", "mark-r" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
@@ -288,6 +291,7 @@ public class Parser {
                     System.out.println(e.getMessage());
                 }
             }
+            //@@author
             case "add-b", "list-b", "delete-b" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
@@ -684,6 +688,7 @@ public class Parser {
         contactManager.listContacts();
     }
 
+    //@@author Lokwx
     /**
      * Dispatches a student request command.
      *
@@ -936,6 +941,7 @@ public class Parser {
         }
     }
 
+    //@@author Lokwx
     /**
      * Parses a positive one-based request index.
      *
@@ -1033,5 +1039,5 @@ public class Parser {
             throw new InvalidBrokenItemIndexException(e);
         }
     }
-    //@@author gavinlimsh
+    //@@author
 }

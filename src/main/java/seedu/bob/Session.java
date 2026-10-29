@@ -1,11 +1,13 @@
 package seedu.bob;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Locale;
+import java.util.Objects;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
@@ -52,6 +54,19 @@ public class Session implements Comparable<Session> {
      */
     public Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount) throws CommandException {
+        this(name, dateText, location, startTimeText, endTimeText, headcount, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates a session using the supplied clock's local date for repeatable date validation.
+     * Null date and time strings are treated as invalid input, just like empty strings.
+     *
+     * @throws CommandException If any session value is invalid.
+     * @throws NullPointerException If the clock is null.
+     */
+    Session(String name, String dateText, String location,
+            String startTimeText, String endTimeText, int headcount, Clock clock) throws CommandException {
+        Objects.requireNonNull(clock, "Session clock must not be null");
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -68,7 +83,7 @@ public class Session implements Comparable<Session> {
         this.headcount = headcount;
 
         try {
-            this.date = LocalDate.parse(dateText, DATE_FORMATTER);
+            this.date = LocalDate.parse(Objects.requireNonNullElse(dateText, ""), DATE_FORMATTER);
         //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionDateException(
@@ -77,13 +92,13 @@ public class Session implements Comparable<Session> {
                             + "Ensure the month is capitalized.");
             //@@author DaynaG3
         }
-        if (date.isBefore(LocalDate.now())) {
+        if (date.isBefore(LocalDate.now(clock))) {
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
         //@@author
 
         try {
-            this.startTime = LocalTime.parse(startTimeText, TIME_FORMATTER);
+            this.startTime = LocalTime.parse(Objects.requireNonNullElse(startTimeText, ""), TIME_FORMATTER);
         //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(
@@ -91,7 +106,7 @@ public class Session implements Comparable<Session> {
                     "Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).");
         }
         try {
-            this.endTime = LocalTime.parse(endTimeText, TIME_FORMATTER);
+            this.endTime = LocalTime.parse(Objects.requireNonNullElse(endTimeText, ""), TIME_FORMATTER);
         //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(

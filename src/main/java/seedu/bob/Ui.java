@@ -8,9 +8,11 @@ import java.util.Objects;
  */
 public class Ui {
 
+    //@@author Lokwx
     /** Separates headings, command output, and list sections in the console. */
     public static final String DIVIDER = "--------------------------------------------------------------------";
 
+    //@@author
     /** Every command and its format, grouped by feature, as displayed by {@code help}. */
     public static final String HELP_MESSAGE = String.join("\n",
             DIVIDER,
@@ -29,11 +31,13 @@ public class Ui {
             "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]",
             "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY",
             "  list-p s/SESSION_INDEX",
+            //@@author Lokwx
             "Student requests",
             "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE",
             "  delete-r INDEX",
             "  list-r",
             "  mark-r INDEX STATUS (prepared or fulfilled)",
+            //@@author
             "Contacts",
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
             "  delete-c INDEX",
