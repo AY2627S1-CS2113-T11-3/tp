@@ -1,5 +1,6 @@
 package seedu.bob;
 
+//@@author Lokwx
 /**
  * Represents a named inventory item with a category and quantity.
  */
@@ -29,6 +30,7 @@ public class InventoryItem {
             throw new IllegalArgumentException("Quantity must be positive");
         }
         //@@author
+        //@@author Lokwx
         this.name = name;
         this.category = category;
         this.quantity = quantity;

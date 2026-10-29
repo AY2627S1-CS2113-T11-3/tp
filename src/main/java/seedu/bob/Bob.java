@@ -46,9 +46,12 @@ public class Bob {
         System.out.println(Ui.DIVIDER);
 
         Parser parser = new Parser();
+        //@@author Lokwx
         Inventory inventory = new Inventory();
+        //@@author
         SessionManager sessionManager = new SessionManager();
         ContactManager contactManager = new ContactManager();
+        //@@author Lokwx
         RequestManager requestManager = new RequestManager();
         //@@author DaynaG3
         LoanManager loanManager = new LoanManager(inventory);

@@ -38,6 +38,7 @@ class InventoryAvailabilityTest {
     }
 
     //@@author
+    //@@author Lokwx
     @Test
     void getTotalAvailableQuantity_caseVaries_sumsAllCategories() throws CommandException {
         Inventory inventory = new Inventory();
@@ -77,4 +78,5 @@ class InventoryAvailabilityTest {
 
         assertEquals(Integer.MAX_VALUE, inventory.getTotalAvailableQuantity("Wire"));
     }
+    //@@author
 }

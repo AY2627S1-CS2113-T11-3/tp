@@ -33,11 +33,13 @@ class ParserHelpTest {
             + "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]\n"
             + "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY\n"
             + "  list-p s/SESSION_INDEX\n"
+            //@@author Lokwx
             + "Student requests\n"
             + "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE\n"
             + "  delete-r INDEX\n"
             + "  list-r\n"
             + "  mark-r INDEX STATUS (prepared or fulfilled)\n"
+            //@@author
             + "Contacts\n"
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
             + "  delete-c INDEX\n"

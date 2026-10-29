@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,6 +29,7 @@ class InventoryItemTest {
     }
     //@@author
 
+    //@@author Lokwx
     @Test
     void constructor_validArguments_success() {
         InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
