@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +30,7 @@ class InventoryTest {
     }
     //@@author
 
+    //@@author Lokwx
     @Test
     void addItem_validItem_success() throws DuplicateItemException {
         Inventory inventory = new Inventory();
@@ -63,6 +65,7 @@ class InventoryTest {
     }
     //@@author
 
+    //@@author Lokwx
     @Test
     void addItem_sameNameDifferentCategory_success() throws DuplicateItemException {
         Inventory inventory = new Inventory();

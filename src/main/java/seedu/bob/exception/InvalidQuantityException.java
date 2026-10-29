@@ -7,6 +7,7 @@ package seedu.bob.exception;
 public class InvalidQuantityException extends CommandException {
     //@@author
 
+    //@@author Lokwx
     /** Message for a parsed quantity that is zero or negative. */
     public static final String NON_POSITIVE_MESSAGE = "Quantity must be greater than zero.";
 
@@ -21,6 +22,7 @@ public class InvalidQuantityException extends CommandException {
     }
     //@@author
 
+    //@@author Lokwx
     /**
      * Creates an invalid-quantity exception with a specific explanation.
      *

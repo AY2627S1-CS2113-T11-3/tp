@@ -16,6 +16,7 @@ import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.LoanException;
 
+//@@author Lokwx
 /**
  * Stores inventory items grouped by category and displays inventory changes.
  */
@@ -28,6 +29,7 @@ public class Inventory {
      */
     private static final Logger LOGGER = Logger.getLogger(Inventory.class.getName());
 
+    //@@author
     /** Preserves category and item insertion order for display and category-specific deletion indices. */
     private final LinkedHashMap<String, ArrayList<InventoryItem>> items = new LinkedHashMap<>();
 
@@ -37,6 +39,7 @@ public class Inventory {
     public Inventory() {
     }
 
+    //@@author Lokwx
     /**
      * Adds an item to its category and prints a confirmation.
      *
@@ -52,6 +55,7 @@ public class Inventory {
         if (category == null) {
             category = item.getCategory();
             //@@author
+            //@@author Lokwx
             items.put(category, new ArrayList<>());
         }
 
@@ -60,6 +64,7 @@ public class Inventory {
         for (InventoryItem existingItem : itemsInCategory) {
             if (existingItem.getName().equalsIgnoreCase(item.getName())) {
                 //@@author
+                //@@author Lokwx
                 LOGGER.fine(() -> "Rejected duplicate inventory item: " + item.getName()
                         + " in category " + item.getCategory());
                 //@@author DaynaG3
@@ -67,10 +72,12 @@ public class Inventory {
             }
         }
         //@@author
+        //@@author Lokwx
         itemsInCategory.add(item);
         //@@author DaynaG3
         assert hasValidState() : "Inventory state must remain valid after addition";
         //@@author
+        //@@author Lokwx
         LOGGER.fine(() -> "Added inventory item: " + item.getName() + " in category "
                 + item.getCategory() + ", quantity=" + item.getQuantity());
 
@@ -124,6 +131,7 @@ public class Inventory {
     }
     //@@author
 
+    //@@author Lokwx
     /**
      * Removes the requested quantity and prints a confirmation. Removes the item
      * and its empty category when no units remain.
@@ -154,11 +162,13 @@ public class Inventory {
         }
         //@@author
 
+        //@@author Lokwx
         int index = userIndex - INDEX_OFFSET;
         InventoryItem item = itemsInCategory.get(index);
         //@@author DaynaG3
         if (quantity > item.getQuantity()) {
             //@@author
+            //@@author Lokwx
             LOGGER.fine(() -> "Rejected stock removal: " + item.getName() + " in category "
                     + storedCategory + ", requested=" + quantity + ", available=" + item.getQuantity());
             //@@author DaynaG3
@@ -166,17 +176,21 @@ public class Inventory {
         }
         //@@author
 
+        //@@author Lokwx
         int remainingQuantity = item.getQuantity() - quantity;
+        //@@author
         deductQuantity(storedCategory, index, quantity);
 
         //@@author DaynaG3
         assert hasValidState() : "Inventory state must remain valid after removal";
         //@@author
+        //@@author Lokwx
         LOGGER.fine(() -> "Removed inventory stock: " + item.getName() + " in category "
                 + storedCategory + ", removed=" + quantity + ", remaining=" + remainingQuantity);
         System.out.printf("Successfully removed: %dx %s from the inventory\n", quantity, item.getName());
     }
 
+    //@@author
     /**
      * Deducts a validated quantity without displaying an inventory-deletion confirmation.
      * Manual deletion, lending, and broken-item reporting share this path
@@ -195,11 +209,13 @@ public class Inventory {
         assert itemsInCategory != null && index >= 0 && index < itemsInCategory.size()
                 : "Stock deduction requires an existing category and valid item position";
         //@@author
+        //@@author Lokwx
         InventoryItem item = itemsInCategory.get(index);
         //@@author DaynaG3
         assert quantity > 0 && quantity <= item.getQuantity()
                 : "Stock deduction requires a validated positive quantity within available stock";
         //@@author
+        //@@author Lokwx
         int remainingQuantity = item.getQuantity() - quantity;
         assert remainingQuantity >= 0 : "Validated stock removal must not leave negative stock";
         if (remainingQuantity == 0) {
@@ -434,6 +450,7 @@ public class Inventory {
     }
 
     //@@author
+    //@@author Lokwx
     /**
      * Returns current stock for an item name across all categories.
      * Matching is case-insensitive and does not reserve or remove stock.
@@ -477,6 +494,7 @@ public class Inventory {
     }
     //@@author
 
+    //@@author Lokwx
     /**
      * Prints inventory items by category with one-based positions and
      * quantities.
@@ -490,6 +508,7 @@ public class Inventory {
             System.out.println("No items in inventory.");
         }
         //@@author
+        //@@author Lokwx
         for (String category : items.keySet()) {
             ArrayList<InventoryItem> itemsInCategory = items.get(category);
 
