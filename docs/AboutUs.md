@@ -2,7 +2,7 @@
 
 Display |    Name    |             Github Profile              | Portfolio 
 --------|:----------:|:---------------------------------------:|:---------:
-![](https://via.placeholder.com/100.png?text=Photo) | Rachel Li  | [Github](https://github.com/rachelnwk)  | [Portfolio](team/johndoe.md)
+![](https://via.placeholder.com/100.png?text=Photo) | Rachel Li  | [Github](https://github.com/rachelnwk)  | [Portfolio](team/rachelnwk.md)
 ![](https://via.placeholder.com/100.png?text=Photo) | Dayna Gan  |  [Github](https://github.com/DaynaG3)   | [Portfolio](team/daynag3.md)
 ![](https://via.placeholder.com/100.png?text=Photo) | Tan Yu Jun |  [Github](https://github.com/J-unn-y)   | [Portfolio](team/j-unn-y.md)
 ![](https://via.placeholder.com/100.png?text=Photo) | Gavin Lim  | [Github](https://github.com/gavinlimsh) | [Portfolio](team/gavinlimsh.md)
