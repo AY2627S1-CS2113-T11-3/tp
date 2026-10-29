@@ -449,6 +449,10 @@ depend on them.
 `SessionManager` uses `java.util.logging.Logger` to record attempted and successful additions and deletions at `INFO`
 level, and conflicts or invalid indices at `WARNING` level.
 
+The public `Session` constructor uses the system's default time zone. A package-private overload accepts a `Clock`
+so tests can check today, yesterday, and time-zone boundaries deterministically. Null date and time strings receive
+the same validation exceptions and messages as malformed strings.
+
 ##### Scheduling limitations
 
 - Sessions cannot span midnight. Date checks occur during construction; sessions are not automatically removed afterward,
@@ -537,19 +541,21 @@ remove more than 18 is rejected without changing the preparation.
 **Step 4: Stock changes elsewhere**
 
 ```text
-add-i n/Wire c/Components q/5
+add-l n/Wire c/Components q/5 b/Alex Tan t/91234567 d/8 October 2099
 list-p s/1
 ```
 
-Inventory now holds 20 Wire. `list-p` queries inventory again, so the shortage warning disappears without any change to
-the preparation itself. A loan of Wire would have the opposite effect.
+Assuming there are no existing loans, this creates loan 1 and reduces usable stock from 15 to 10 Wire.
+`list-p` queries inventory again, so the shortfall increases from 3 to 8 without changing the preparation.
+Returning the loan with `return 1` restores stock to 15 and the shortfall to 3.
+Adding the same inventory entry with `add-i` would be rejected as a duplicate; it does not top up stock.
 
 | After operation | Required Wire | Available Wire | Displayed warning |
 | --- | --- | --- | --- |
 | Step 1: `add-p ... q/2` | 20 | 15 | Shortfall: 5 |
 | Step 2: `add-p ...` (default 1) | 30 | 15 | Shortfall: 15 |
 | Step 3: `delete-p ... q/12` | 18 | 15 | Shortfall: 3 |
-| Step 4: `add-i ... q/5` | 18 | 20 | None |
+| Step 4: `add-l ... q/5` | 18 | 10 | Shortfall: 8 |
 
 #### Interactions during preparation addition
 

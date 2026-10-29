@@ -223,7 +223,7 @@ Common rejected additions:
 | --- | --- | --- |
 | `add-i n/ c/Components q/5` | `Item name cannot be blank.` | Supply the item's name after `n/`. |
 | `add-i n/Wire c/ q/5` | `Category cannot be blank.` | Supply a category after `c/`. |
-| `add-i n/Wire c/Components q/0` | `Quantity must be a positive integer.` | Use at least 1, or omit `q/` to add one unit. |
+| `add-i n/Wire c/Components q/0` | `Quantity must be greater than zero.` | Use at least 1, or omit `q/` to add one unit. |
 | `add-i n/Wire c/Components q/1.5` | `Quantity must be a positive integer.` | Enter a whole number. |
 
 Rejected additions leave the inventory unchanged. See [Command format](#command-format) for prefix rules.

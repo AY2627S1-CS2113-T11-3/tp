@@ -166,6 +166,50 @@ No items match "battery".
 
 Invalid format. Use: find-i KEYWORD
 
+Successfully recorded broken item: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. Available inventory reduced.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Cannot report 8 Wire as broken. Only 7 are available.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Successfully deleted broken-item report: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. All units restored to inventory.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+No broken items recorded.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
 --------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------

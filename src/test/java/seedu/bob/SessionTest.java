@@ -6,8 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -31,6 +34,61 @@ class SessionTest {
     /** Keeps valid test dates safely in the future without relying on a fixed calendar year. */
     private final LocalDate futureDate = LocalDate.now().plusDays(7);
     private final String futureDateText = futureDate.format(DATE_FORMATTER);
+
+    /**
+     * Verifies that absent dates receive the same actionable message as malformed dates.
+     */
+    @Test
+    void constructor_nullDate_throwsInvalidSessionDateException() {
+        InvalidSessionDateException exception = assertThrows(InvalidSessionDateException.class,
+                () -> new Session("Lab", null, "Room", "0900", "1000", 1));
+
+        assertEquals("Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
+                + "Ensure the month is capitalized.", exception.getMessage());
+    }
+
+    @Test
+    void constructor_nullStartTime_throwsInvalidSessionTimeException() {
+        InvalidSessionTimeException exception = assertThrows(InvalidSessionTimeException.class,
+                () -> new Session("Lab", futureDateText, "Room", null, "1000", 1));
+
+        assertEquals("Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).", exception.getMessage());
+    }
+
+    @Test
+    void constructor_nullEndTime_throwsInvalidSessionTimeException() {
+        InvalidSessionTimeException exception = assertThrows(InvalidSessionTimeException.class,
+                () -> new Session("Lab", futureDateText, "Room", "0900", null, 1));
+
+        assertEquals("End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).", exception.getMessage());
+    }
+
+    /**
+     * Checks the same instant on both sides of a local-date boundary without using the system clock.
+     */
+    @Test
+    void constructor_dateBoundary_usesClockTimeZone() throws CommandException {
+        Clock utcClock = Clock.fixed(Instant.parse("2026-10-29T23:30:00Z"), ZoneOffset.UTC);
+        Clock singaporeClock = utcClock.withZone(ZoneOffset.ofHours(8));
+
+        Session todayInUtc = new Session("Lab", "29 October 2026", "Room", "0900", "1000", 1, utcClock);
+        Session todayInSingapore = new Session("Lab", "30 October 2026", "Room",
+                "0900", "1000", 1, singaporeClock);
+        InvalidSessionDateException exception = assertThrows(InvalidSessionDateException.class,
+                () -> new Session("Lab", "29 October 2026", "Room", "0900", "1000", 1, singaporeClock));
+
+        assertEquals(LocalDate.of(2026, 10, 29), todayInUtc.getDate());
+        assertEquals(LocalDate.of(2026, 10, 30), todayInSingapore.getDate());
+        assertEquals("Session date cannot be before today.", exception.getMessage());
+    }
+
+    @Test
+    void constructor_nullClock_rejected() {
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> new Session("Lab", futureDateText, "Room", "0900", "1000", 1, null));
+
+        assertEquals("Session clock must not be null", exception.getMessage());
+    }
 
     /**
      * Verifies that all supplied session details are stored correctly.

@@ -19,6 +19,56 @@ class ItemFinderTest {
     private final Inventory inventory = new Inventory();
     private final LoanManager loans = new LoanManager(inventory);
 
+    /**
+     * Inventory treats dotless i as a case variant of I, so search must combine the same stock and loans.
+     */
+    @Test
+    void findItems_unicodeNameVariants_combinesStockAndLoans() throws CommandException {
+        inventory.addItem(new InventoryItem("MINI", "Tools", 3));
+        loans.addLoan(createLoan("m\u0131n\u0131", "tools", 1));
+
+        for (String keyword : List.of("Tools", "ini", "\u0131n\u0131")) {
+            List<ItemLookupEntry> results = ItemFinder.findItems(keyword, inventory, loans);
+
+            assertEquals(1, results.size());
+            assertEquals("MINI", results.getFirst().getName());
+            assertEquals(2, results.getFirst().getAvailableQuantity());
+            assertEquals(1, results.getFirst().getLoanedQuantity());
+        }
+        assertEquals(2, inventory.getAvailableQuantity("MINI", "Tools"));
+        assertEquals(1, loans.getLoans().size());
+    }
+
+    /**
+     * Greek sigma variants must group identically even when stock has been fully loaned out.
+     */
+    @Test
+    void findItems_unicodeCategoryVariants_combinesFullyLoanedEntries() throws CommandException {
+        inventory.addItem(new InventoryItem("Probe", "\u03a3", 3));
+        loans.addLoan(createLoan("Probe", "\u03c3", 1));
+        loans.addLoan(createLoan("probe", "\u03c2", 2));
+
+        List<ItemLookupEntry> results = ItemFinder.findItems("\u03a3", inventory, loans);
+
+        assertEquals(1, results.size());
+        assertEquals(0, results.getFirst().getAvailableQuantity());
+        assertEquals(3, results.getFirst().getLoanedQuantity());
+        assertEquals("All on loan", results.getFirst().getStatus());
+    }
+
+    @Test
+    void findItems_multiCharacterCaseExpansion_keepsDistinctInventoryItemsSeparate() throws CommandException {
+        inventory.addItem(new InventoryItem("Stra\u00dfe", "Tools", 2));
+        inventory.addItem(new InventoryItem("Strasse", "Tools", 3));
+
+        List<ItemLookupEntry> results = ItemFinder.findItems("Tools", inventory, loans);
+
+        assertEquals(2, results.size());
+        assertEquals("Stra\u00dfe", results.getFirst().getName());
+        assertEquals("Strasse", ItemFinder.findItems("STRASSE", inventory, loans).getFirst().getName());
+        assertEquals(1, ItemFinder.findItems("STRASSE", inventory, loans).size());
+    }
+
     @Test
     void findItems_partialNameDifferentCase_matchesItem() throws CommandException {
         inventory.addItem(new InventoryItem("Multimeter", "Equipment", 5));
