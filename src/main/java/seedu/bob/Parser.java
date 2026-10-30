@@ -701,7 +701,7 @@ public class Parser {
             case "add-r" -> addRequest(arguments, requestManager);
             case "delete-r" -> deleteRequest(arguments, requestManager);
             case "list-r" -> listRequests(arguments, requestManager, inventory);
-            case "mark-r" -> markRequest(arguments, requestManager);
+            case "mark-r" -> markRequest(arguments, requestManager, inventory);
             default -> throw new CommandFormatException("Invalid request command.");
         }
     }
@@ -762,14 +762,16 @@ public class Parser {
      *
      * @param arguments Text following the {@code mark-r} command word.
      * @param requestManager Request list to update.
-     * @throws CommandException If the index or status is invalid.
+     * @param inventory Inventory used to deduct stock when the request is fulfilled.
+     * @throws CommandException If the index or status is invalid, or stock is insufficient.
      */
-    private void markRequest(String arguments, RequestManager requestManager) throws CommandException {
+    private void markRequest(String arguments, RequestManager requestManager, Inventory inventory)
+            throws CommandException {
         String[] parts = arguments.trim().split("\\s+");
         if (parts.length != 2) {
             throw new CommandFormatException(MARK_REQUEST_USAGE);
         }
-        requestManager.markRequest(parseRequestIndex(parts[0]), Request.normalizeStatus(parts[1]));
+        requestManager.markRequest(parseRequestIndex(parts[0]), Request.normalizeStatus(parts[1]), inventory);
     }
 
     //@@author DaynaG3

@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.InvalidRequestIndexException;
+import seedu.bob.exception.RequestException;
 
 /**
  * Stores student requests in deadline order and displays request changes.
@@ -64,14 +65,27 @@ public class RequestManager {
 
     /**
      * Marks a request as prepared or fulfilled and prints a confirmation.
+     * Fulfilling deducts the requested quantity from available stock; prepared does not.
+     * Fulfillment is one-way, so an already fulfilled request cannot be changed again.
      *
      * @param userIndex One-based request position in the deadline-sorted list.
      * @param status New status, which must be {@code prepared} or {@code fulfilled}.
-     * @throws CommandException If the index is invalid or the status is not accepted.
+     * @param inventory Inventory used to deduct stock when the request is fulfilled.
+     * @throws CommandException If the index or status is invalid, the request is already fulfilled,
+     *     or stock is insufficient.
      */
-    public void markRequest(int userIndex, String status) throws CommandException {
+    public void markRequest(int userIndex, String status, Inventory inventory) throws CommandException {
+        Objects.requireNonNull(inventory, "Inventory must not be null");
         Request request = getRequest(userIndex);
-        request.markAs(status);
+        String normalizedStatus = Request.normalizeStatus(status);
+        if (request.isFulfilled()) {
+            throw new RequestException(String.format(
+                    "Request %d is already fulfilled and cannot be changed: %s", userIndex, request));
+        }
+        if (Request.isFulfilledStatus(normalizedStatus)) {
+            inventory.deductTotalAvailableQuantity(request.getItemName(), request.getQuantity());
+        }
+        request.markAs(normalizedStatus);
 
         assert hasValidState() : "Request list must remain valid after a status change";
         LOGGER.fine(() -> "Marked request for " + request.getStudentName()

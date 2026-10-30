@@ -2,6 +2,7 @@
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -142,6 +143,20 @@ class RequestTest {
 
         request.markAs("FULFILLED");
         assertEquals("fulfilled", request.getStatus());
+    }
+
+    @Test
+    void markAs_fulfilled_isFulfilledStatus() throws CommandException {
+        Request request = new Request("Alice", "Wire", 1, date(2));
+
+        assertFalse(request.isFulfilled());
+        assertFalse(Request.isFulfilledStatus("prepared"));
+        assertFalse(Request.isFulfilledStatus("pending"));
+        assertTrue(Request.isFulfilledStatus("fulfilled"));
+
+        request.markAs("fulfilled");
+
+        assertTrue(request.isFulfilled());
     }
 
     @Test
