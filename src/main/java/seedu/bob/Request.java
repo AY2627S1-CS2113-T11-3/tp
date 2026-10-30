@@ -137,6 +137,25 @@ public class Request implements Comparable<Request> {
     }
 
     /**
+     * Returns whether this request has already been fulfilled.
+     *
+     * @return {@code true} if the stored status is fulfilled.
+     */
+    public boolean isFulfilled() {
+        return STATUS_FULFILLED.equals(status);
+    }
+
+    /**
+     * Returns whether a normalized status means the request has been fulfilled.
+     *
+     * @param status Normalized status to inspect.
+     * @return {@code true} if the status is fulfilled.
+     */
+    public static boolean isFulfilledStatus(String status) {
+        return STATUS_FULFILLED.equals(status);
+    }
+
+    /**
      * Normalizes and validates a status entered by the user.
      *
      * @param newStatus Status text, ignoring case.

@@ -968,14 +968,18 @@ the commands. `Request` is the counterpart of `Contact`, while `RequestManager` 
 
 A request records the student's name, item name, quantity, deadline, and status. Unlike a preparation item, a request
 does not name a category. Availability is therefore calculated by
-`Inventory#getTotalAvailableQuantity(String name)`, which adds the stock of that item name across all categories
-without reserving or deducting anything. `RequestManager#listRequests(Inventory)` calls this method whenever the list
-is displayed, so later inventory changes are reflected immediately.
+`Inventory#getTotalAvailableQuantity(String name)`, which adds the stock of that item name across all categories.
+Adding a request does not reserve stock. `RequestManager#listRequests(Inventory)` calls this method whenever the list
+is displayed, so later inventory changes are reflected immediately. Fulfilling a request is the stock-changing
+operation: `Inventory#deductTotalAvailableQuantity(String name, int quantity)` checks the total first, then deducts it
+across categories in inventory display order.
 
 `add-r` builds a `Request`, adds it to the manager, and sorts the list by deadline. `delete-r INDEX` and
 `mark-r INDEX STATUS` use the same one-based positions shown by `list-r`. Because the list is sorted, deleting or
-marking always acts on the row the user sees. `mark-r` accepts `prepared` or `fulfilled` in any capitalization and
-replaces the current status; a new request starts as `pending`.
+marking always acts on the row the user sees. `mark-r` accepts `prepared` or `fulfilled` in any capitalization. A new
+request starts as `pending`. Marking `prepared` changes only the status. Marking `fulfilled` is a one-way operation: it
+deducts the requested total from available stock, is rejected when stock is insufficient, and cannot be repeated or
+reversed.
 
 For example:
 
@@ -986,16 +990,17 @@ mark-r 1 prepared
 ```
 
 `add-r` prints a confirmation, `list-r` shows the pending request with current availability, and `mark-r` changes the
-status shown by the next `list-r`. None of these commands changes inventory stock.
+status shown by the next `list-r`. Marking `prepared`, adding, and deleting requests do not change inventory stock;
+marking `fulfilled` deducts the requested quantity.
 
 | Decision | Rule | Rationale |
 | --- | --- | --- |
 | Deadline format | `d MMMM yyyy`, English month names with an initial capital; today or later | Reuses the session date format and keeps deadlines unambiguous. |
 | Deadline ordering | Earliest deadline first; ties sorted by student name, then item name | Gives a stable list order, so indices do not change between identical listings. |
-| Item category | Not recorded | The requirement lists only student, item, quantity, and deadline. Availability sums stock across categories with the same item name. |
+| Item category | Not recorded | The requirement lists only student, item, quantity, and deadline. Availability and fulfillment both work across categories with the same item name. |
 | Duplicate requests | Allowed | The same student may request the same item again for a different deadline or quantity. |
-| Status changes | `mark-r` sets `prepared` or `fulfilled`; either can replace the other | A simple status field is enough for tracking, and allows corrections without extra commands. |
-| Inventory effect | None; availability is read-only | A request is a tracking record, not a stock reservation. `delete-r` and `mark-r` never change inventory. |
+| Status changes | `mark-r` sets `prepared` or `fulfilled`; `fulfilled` is final | A fulfilled request has already changed stock, so allowing it to return to `prepared` would leave status and inventory inconsistent. |
+| Inventory effect | `fulfilled` deducts; other request commands are read-only | Recording a request stays flexible, while handover is explicit and checked against current stock. `delete-r` never restores stock. |
 
 #### Detailed request addition design
 
@@ -1065,10 +1070,29 @@ sequenceDiagram
     deactivate M
 ```
 
-Addition succeeds even if no Wire exists. A subsequent `list-r` with 15 Wire available shows a shortfall of 5.
-`getTotalAvailableQuantity` matches the complete item name ignoring case across all categories, accumulates using
-a `long`, and caps the displayed total at `Integer.MAX_VALUE`. Each request is checked independently; two requests
-may both show sufficient stock for the same units. No request operation reserves or deducts stock.
+Addition succeeds even if no Wire exists. A request can be recorded while stock is short, but fulfillment checks the
+total before changing anything. `getTotalAvailableQuantity` matches the complete item name ignoring case across all
+categories, accumulates using a `long`, and caps the displayed total at `Integer.MAX_VALUE`. Each request is checked
+independently; two requests may both show sufficient stock for the same units, and the first fulfilled request consumes
+the stock that the second one needs.
+
+#### Detailed request fulfillment design
+
+`mark-r INDEX fulfilled` is the only request command that changes inventory. `prepared` is a status-only change.
+
+1. `Parser` validates the index and status, normalizes the status, and passes the shared inventory to
+   `RequestManager#markRequest`.
+2. `RequestManager` retrieves the request and rejects an already fulfilled request with `RequestException`.
+3. For `fulfilled`, the manager calls `Inventory#deductTotalAvailableQuantity(name, quantity)`. Inventory checks the
+   total before mutation and throws `InsufficientStockException` when the requested quantity is too large.
+4. If stock is sufficient, inventory deducts from categories in display order, removing empty items and categories as
+   needed.
+5. Only after deduction succeeds, the request status becomes `fulfilled` and the manager prints the confirmation.
+
+Because a request does not record a category, deduction uses the same total shown by `list-r`. Two requests can both
+appear fulfillable; the first fulfillment consumes stock and the second is rejected if the remainder is insufficient.
+An insufficient or already-fulfilled attempt leaves both status and inventory unchanged. Fulfillment is final:
+`delete-r` removes the request but does not restore stock, and there is no unfulfill command.
 
 #### Validation and failure behavior
 
@@ -1079,11 +1103,13 @@ may both show sufficient stock for the same units. No request operation reserves
 | Request construction | Null or blank names cause `CommandFormatException`; nonpositive quantities cause `InvalidQuantityException`. Null, blank, malformed, or past deadlines cause `InvalidRequestDeadlineException`. |
 | Date boundary | Impossible calendar dates are rejected by strict parsing. Today is accepted. The public constructor uses the system's default time zone; a package-private constructor accepts a `Clock` for repeatable tests. |
 | Manager insertion | A null request causes `NullPointerException` before the list is modified. Duplicate requests are accepted. |
+| Fulfillment | The request must not already be fulfilled, and total available stock must cover its quantity. Insufficient stock causes `InsufficientStockException`; a repeated or reversed fulfillment causes `RequestException`. Both leave status and inventory unchanged. |
 
 The parser finishes construction before calling the manager. Invalid command values therefore leave the request
-list and inventory unchanged. These guarantees cover expected validation failures, rather than recovery from
-unexpected runtime failures or process termination. Assertions detect programming errors and do not replace input
-validation. Creation, rejection, and status changes emit `FINE` diagnostics without changing normal console output.
+list unchanged. Fulfillment checks stock before any deduction, so a rejected handover leaves inventory unchanged too.
+These guarantees cover expected validation failures, rather than recovery from unexpected runtime failures or process
+termination. Assertions detect programming errors and do not replace input validation. Creation, rejection, and status
+changes emit `FINE` diagnostics without changing normal console output.
 
 #### Design considerations and alternatives
 
@@ -1091,22 +1117,24 @@ validation. Creation, rejection, and status changes emit `FINE` diagnostics with
 | --- | --- |
 | Sort an `ArrayList` on addition | Keeps displayed and stored indices aligned for listing, deletion, and marking. Sorting on display would require translating displayed positions; a priority queue would not directly support indexed commands. |
 | Allow duplicate requests | Preserves separately recorded requirements. Merging by student and item could combine requests with different quantities or deadlines unintentionally. |
-| Read availability on listing | Reflects inventory changes without maintaining a cached stock count. Reserving stock would require release rules for cancellation, fulfillment, and corrections. |
+| Read availability on listing | Reflects inventory changes without maintaining a cached stock count. Adding a request does not reserve stock, so requests can be recorded before stock arrives. |
+| Deduct on fulfillment across categories | Uses the same total that `list-r` displays. Requiring a category would break the documented request format. Deducting in display order keeps the result deterministic. |
+| Make fulfillment final | Reversing fulfillment would require restoring stock and deciding which category receives it. Rejecting the change keeps status and stock consistent. |
 | Inject a clock for model tests | Tests can verify deadlines due today and in the past without depending on the wall clock. The normal command path still uses the local calendar date. |
 
 #### Verification and limitations
 
 `RequestTest` covers trimmed fields, invalid quantities and dates, clock-based deadline boundaries, initial status,
-comparison ordering, and status changes. `RequestManagerTest` covers sorting, tie-breakers, null input,
-indices, and availability display. `ParserRequestTest` covers command formats, rejected inputs,
-confirmations, ordering, and live stock checks. `RequestLoggingTest` verifies request diagnostics; the
-[UI test plan](../test/ui-test-plan.md) records console cases.
+comparison ordering, and status changes. `RequestManagerTest` covers sorting, tie-breakers, null input, indices,
+availability display, fulfillment deductions, insufficient stock, and one-way status changes. `ParserRequestTest`
+covers command formats, rejected inputs, confirmations, ordering, live stock checks, and failed fulfillment.
+`RequestLoggingTest` verifies request diagnostics; the [UI test plan](../test/ui-test-plan.md) records console cases.
 
 Requests exist only in memory. They have no persistent identifiers: adding or deleting a request can change the
 indices used by `delete-r` and `mark-r`, so users must refresh `list-r`. Requests cannot be edited in place and are
-not removed automatically after their deadline. Marking prepared or fulfilled records status only, accepts either
-status regardless of stock, and never creates a loan. Stock movements must be recorded through the relevant
-inventory, loan, or broken-item command.
+not removed automatically after their deadline. Marking prepared records status only. Marking fulfilled deducts stock
+and is final; deleting a fulfilled request does not restore stock, and there is no unfulfill command. Fulfillment also
+does not create a loan; use the loan command instead when the handover is a loan.
 
 ### Broken-item tracking
 

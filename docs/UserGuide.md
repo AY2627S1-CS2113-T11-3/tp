@@ -589,8 +589,8 @@ Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 
 
 ## Student request tracking
 
-Track items that students ask to borrow or collect. Requests are kept in a separate list, do not reserve stock, and
-are displayed in deadline order.
+Track items that students ask to borrow or collect. Requests are kept in a separate list and displayed in deadline
+order. Adding a request does not reserve stock. Marking a request fulfilled deducts its quantity from available stock.
 
 ### Add a request: `add-r`
 
@@ -609,7 +609,7 @@ Creates a request with the student's name, item, quantity, and deadline.
 - The request does not name an inventory category. Availability combines stock with the same item name from all
   categories, ignoring capitalization. It matches the full item name: `Wire` does not match `Jumper Wire`.
 - The item does not need to exist in inventory. A request can exceed available stock; `list-r` shows the shortage
-  so that you can arrange the missing units.
+  so that you can arrange the missing units. The request can only be marked fulfilled once enough stock is available.
 
 Example in an empty request list, with 15 Wire in inventory:
 
@@ -638,7 +638,7 @@ requests and inventory unchanged.
 | --- | --- | --- |
 | `add-r n/ i/Wire q/2 d/8 October 2099` | `Student name cannot be blank.` | Supply the student's name after `n/`. |
 | `add-r n/Alice i/ q/2 d/8 October 2099` | `Item name cannot be blank.` | Supply the requested item after `i/`. |
-| `add-r n/Alice i/Wire q/0 d/8 October 2099` | `Quantity must be a positive integer.` | Enter at least 1. |
+| `add-r n/Alice i/Wire q/0 d/8 October 2099` | `Quantity must be greater than zero.` | Enter at least 1. |
 | `add-r n/Alice i/Wire q/ d/8 October 2099` | `Quantity must be a positive integer.` | Supply a quantity; requests have no default. |
 | `add-r n/Alice i/Wire q/2 d/31 February 2099` | `Deadline must be a valid date in d MMMM yyyy format.` | Use a real calendar date and a full, capitalized English month name. |
 
@@ -672,8 +672,8 @@ Student requests
 
 An empty request list displays `No requests recorded.` between the heading and the closing divider.
 
-Availability is checked again each time `list-r` runs. Removing inventory after adding a request can increase the
-shortfall; adding inventory can remove it. Requests never reserve or consume stock.
+Availability is checked again each time `list-r` runs. Adding or deleting a request does not change inventory.
+Marking a request prepared does not change stock; marking it fulfilled deducts its quantity.
 
 The deletion and marking examples below each assume Alice's request is still present as request 1 and there are
 15 Wire available. Treat them as separate examples; deleting Alice's request removes it from the marking list too.
@@ -709,14 +709,17 @@ Changes the status shown for a request.
 - Use the index from `list-r`.
 - `STATUS` must be `prepared` or `fulfilled`. The status is not case-sensitive, so `Prepared` and `FULFILLED` also
   work.
-- Marking replaces the current status. A fulfilled request can be marked as prepared again if it was marked by
-  mistake.
-- You may mark a pending request directly as fulfilled, even when stock is insufficient. Bob records the status
-  you supply; it does not verify a handover or require a prepared step. `pending` is the initial status and cannot
-  be supplied to `mark-r`.
-- Marking a request does not change inventory stock or create a loan. If the handover is a loan,
-  record it separately with `add-l`, which deducts stock. Use `delete-i` only for an issue or consumption
-  that has not already reduced inventory. Never deduct the same units twice.
+- `prepared` only updates the status. It does not change inventory.
+- `fulfilled` is final. It deducts the requested quantity from available stock across all categories, in inventory
+  display order.
+- If total available stock is less than the requested quantity, the command is rejected. The status and stock stay
+  unchanged.
+- You may mark a pending request directly as fulfilled when enough stock is available. `pending` is the initial
+  status and cannot be supplied to `mark-r`.
+- A fulfilled request cannot be marked again or changed back to prepared. Deleting it with `delete-r` does not
+  restore stock.
+- Fulfilling does not create a loan. If the handover is a loan, record it with `add-l` instead. Do not deduct the
+  same units twice.
 
 Continuing the example above:
 
@@ -740,7 +743,19 @@ Student requests
 --------------------------------------------------------------------
 ```
 
-To complete the request, run:
+To complete the request, Alice needs 20 Wire but only 15 are available. Add the missing 5 in another category first:
+
+```text
+add-i n/Wire c/Spares q/5
+```
+
+Expected output:
+
+```text
+Successfully added: 5x Wire to the inventory
+```
+
+Total available stock is now 20, so the request can be fulfilled:
 
 ```text
 mark-r 1 fulfilled
@@ -752,20 +767,19 @@ Expected output:
 Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
 ```
 
-#### Example: availability after stock changes
+The 20 requested units are now deducted from available stock. The request remains in `list-r` as `[Fulfilled]`, but
+current availability is 0, so the row shows a shortfall of 20:
 
-For Alice's request above, consider these stock changes after marking it fulfilled. This example starts with
-15 Wire in Components and no Wire in Spares, independently of the inventory tutorial.
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 20x Wire by 8 October 2099 (Available: 0) !! Insufficient stock (Shortfall: 20)
+--------------------------------------------------------------------
+```
 
-| Action after marking the request | Available Wire | Shortfall shown by `list-r` |
-| --- | --- | --- |
-| Start with 15 Wire in Components | 15 | 5 |
-| Add `add-i n/Wire c/Spares q/5` | 20 | No warning |
-| Remove `delete-i c/Components i/1 q/3` | 17 | 3 |
-
-This adds Wire to a new category rather than topping up Components. `list-r` combines both categories.
-Another request for Wire would compare its own quantity with the same 17 available units: the first request does
-not set any units aside. Even a fulfilled request continues to show current availability.
+The shortfall describes current stock, not the completed handover. Another request for Wire would see 0 available.
+Deleting the fulfilled request with `delete-r` does not restore the 20 units.
 
 ## Contact management
 
@@ -1172,6 +1186,8 @@ These are examples of the current messages:
 | Invalid or past request deadline | `Deadline must be a valid date in d MMMM yyyy format.` or `Request deadline cannot be before today.` | Use a real date such as `8 October 2099`, with a capitalized full month name, and do not use a date before today. |
 | Unknown request index | `Request index 3 is invalid. There are 2 recorded request(s).` | Use `list-r` to check the index. |
 | Invalid request status | `Status must be "prepared" or "fulfilled".` | Use `prepared` or `fulfilled` after the index. |
+| Request cannot be fulfilled | `Cannot remove 20 Wire. Only 15 are available.` | Add stock or reduce the request by deleting it and adding a corrected one. |
+| Request already fulfilled | `Request 1 is already fulfilled and cannot be changed: Alice - 20x Wire by 8 October 2099` | Use `list-r` to check the status. Fulfilled requests are final. |
 | Missing or reordered broken-item arguments | `Invalid format. Use: add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]` | Supply all required prefixes in that order; omit `m/` entirely if no contact is assigned. |
 | Blank fault description | `Fault description cannot be blank.` | Enter the fault after `f/`. |
 | Invalid reported date | `Date reported must be a valid date in d MMMM yyyy format (e.g., 23 October 2026).` | Use a real date and a capitalized full English month name. |
@@ -1191,21 +1207,21 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
   have sufficient stock even if there is not enough to supply both at once.
-- Requests do not reserve inventory either. Two requests can each show enough stock for the same units, and marking a
-  request as fulfilled does not deduct anything from inventory. Record a loan separately with `add-l`;
-  use `delete-i` for other issues or consumption only if those units have not already been deducted.
+- Requests do not reserve inventory when added. Two requests can each show enough stock for the same units, but the
+  first fulfilled request consumes stock and can leave the second one short.
+- Fulfilled requests cannot be changed back or marked again. Deleting a fulfilled request does not restore stock;
+  there is no unfulfill command.
 - Requests are not removed automatically when their deadline passes. Delete them with `delete-r` when they are no
   longer needed.
-- Requests cannot be edited in place. Delete the old request and add the corrected one.
+- Requests cannot be edited in place. Delete a pending or prepared request and add the corrected one.
 - Session dates are checked against today's date on the computer running Bob. For a session dated today, its start
   time is not checked against the current clock time. Sessions do not disappear automatically after their dates pass.
 - `find-i` searches inventory and active loans only. It does not show item locations, and it cannot use special
   search patterns such as wildcards. If every unit of an item is on loan, the result uses the spelling typed in the
   first matching loan.
-- Commands cannot be chained on one line. Each add or delete command affects one item, session, contact, or request.
+- Commands cannot be chained on one line. Each add or delete command affects one entry.
 - Broken-item reports cannot be edited in place or partially repaired. There is no disposal command, repair history,
   or command to reassign a report's contact. `delete-b` always restores the entire reported quantity.
-- Commands cannot be chained on one line. Each add or delete command affects one entry.
 
 ## FAQ
 
@@ -1215,8 +1231,9 @@ Yes. Run `add-s`, then `list-s`, and use that session's index in `add-p`. The se
 
 **Does an item need to exist in inventory first?**
 
-For session preparation or student requests, no: missing stock is shown as unavailable. For loans and
-broken-item reports, yes: the item must exist in the selected category with enough available units.
+For session preparation or student requests, no: missing stock is shown as unavailable. A request can be recorded
+before stock arrives, but it can only be fulfilled once enough stock is available. For loans and broken-item reports,
+yes: the item must exist in the selected category with enough available units.
 
 **Why can I repeat `add-p` but not `add-i` for the same item?**
 
@@ -1233,14 +1250,14 @@ No inventory adjustment is needed: preparation never removes stock. `delete-p` c
 
 **Does marking a request as fulfilled remove the item from inventory?**
 
-No. Request tracking only records that the item was prepared or handed over. If you lend the units,
-record the loan with `add-l`; this already deducts stock. Use `delete-i` for other issues or consumption
-only when those units have not already been deducted. Do not also use `delete-i` for units recorded
-with `add-l` or `add-b`. `list-r` rechecks available stock each time it is displayed.
+Yes. Marking a request fulfilled deducts the requested quantity from available stock across all categories, in
+inventory display order. `prepared` does not change stock. If stock is insufficient, the command is rejected and the
+request stays pending or prepared. Fulfillment does not create a loan; use `add-l` instead when the handover is a loan.
 
 **Can I change a request's student, item, quantity, or deadline?**
 
-Not in place. Delete the request with `delete-r` and add a corrected one with `add-r`.
+Not in place. Delete the request with `delete-r` and add a corrected one with `add-r`. A fulfilled request cannot be
+changed back, and deleting it does not restore stock.
 
 **Why did deleting a broken-item report increase my inventory?**
 

@@ -279,6 +279,48 @@ public class Inventory {
         throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
     }
 
+    //@@author Lokwx
+    /**
+     * Deducts units by item name across categories in inventory display order.
+     * The total is checked before any stock changes, so an insufficient request leaves inventory untouched.
+     *
+     * @param name Item name, matched without regard to case.
+     * @param quantity Positive number of units to deduct.
+     * @throws CommandException If the name or quantity is invalid, or total available stock is insufficient.
+     */
+    void deductTotalAvailableQuantity(String name, int quantity) throws CommandException {
+        Objects.requireNonNull(name, "Item name must not be null");
+        if (quantity <= 0) {
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        int available = getTotalAvailableQuantity(name);
+        if (available < quantity) {
+            LOGGER.fine(() -> "Rejected total stock deduction: " + name
+                    + ", requested=" + quantity + ", available=" + available);
+            throw new InsufficientStockException(name, quantity, available);
+        }
+
+        int remaining = quantity;
+        for (String category : new ArrayList<>(items.keySet())) {
+            ArrayList<InventoryItem> itemsInCategory = items.get(category);
+            int index = 0;
+            while (index < itemsInCategory.size() && remaining > 0) {
+                InventoryItem item = itemsInCategory.get(index);
+                if (!item.getName().equalsIgnoreCase(name)) {
+                    index++;
+                    continue;
+                }
+                int deduction = Math.min(remaining, item.getQuantity());
+                deductQuantity(category, index, deduction);
+                remaining -= deduction;
+            }
+        }
+        assert remaining == 0 : "Validated total stock deduction must consume the full quantity";
+        assert hasValidState() : "Inventory state must remain valid after total stock deduction";
+        LOGGER.fine(() -> "Deducted " + quantity + " " + name + " from available inventory");
+    }
+    //@@author
+
     //@@author gavinlimsh
     /**
      * Removes broken units from usable stock without printing an inventory-deletion confirmation.
