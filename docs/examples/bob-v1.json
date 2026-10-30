@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "inventory": [
+    {
+      "category": "Glassware",
+      "items": [
+        { "name": "Beaker", "quantity": 7 }
+      ]
+    },
+    {
+      "category": "Safety",
+      "items": [
+        { "name": "Gloves", "quantity": 20 }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "name": "Completed chemistry lab",
+      "date": "2020-01-15",
+      "location": "Lab 1",
+      "startTime": "09:00",
+      "endTime": "11:00",
+      "headcount": 10,
+      "preparation": []
+    },
+    {
+      "name": "Introduction to chemistry",
+      "date": "2099-11-05",
+      "location": "Lab 1",
+      "startTime": "09:00",
+      "endTime": "11:00",
+      "headcount": 10,
+      "preparation": [
+        { "name": "Beaker", "category": "Glassware", "quantity": 13 },
+        { "name": "Gloves", "category": "Safety", "quantity": 20 },
+        { "name": "Test tube", "category": "Glassware", "quantity": 10 }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "studentName": "Alex Tan",
+      "itemName": "Gloves",
+      "quantity": 2,
+      "deadline": "2020-01-15",
+      "status": "fulfilled"
+    },
+    {
+      "studentName": "Jamie Lim",
+      "itemName": "Beaker",
+      "quantity": 8,
+      "deadline": "2099-11-04",
+      "status": "pending"
+    },
+    {
+      "studentName": "Morgan Lee",
+      "itemName": "Gloves",
+      "quantity": 4,
+      "deadline": "2099-11-05",
+      "status": "prepared"
+    }
+  ],
+  "contacts": [
+    {
+      "name": "Example Lab Supplies",
+      "phone": "01234567",
+      "email": "orders@example.com",
+      "role": "Supplier"
+    },
+    {
+      "name": "Example Maintenance",
+      "phone": "07654321",
+      "email": null,
+      "role": null
+    }
+  ],
+  "loans": [
+    {
+      "name": "Beaker",
+      "category": "Glassware",
+      "quantity": 3,
+      "borrowerName": "Taylor Wong",
+      "borrowerPhone": "02345678",
+      "dueDate": "2020-01-16"
+    },
+    {
+      "name": "Microscope",
+      "category": "Equipment",
+      "quantity": 1,
+      "borrowerName": "Casey Ng",
+      "borrowerPhone": "03456789",
+      "dueDate": "2099-11-06"
+    },
+    {
+      "name": "Microscope",
+      "category": "Equipment",
+      "quantity": 1,
+      "borrowerName": "Casey Ng",
+      "borrowerPhone": "03456789",
+      "dueDate": "2099-11-06"
+    }
+  ]
+}

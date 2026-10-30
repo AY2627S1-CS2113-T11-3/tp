@@ -156,6 +156,10 @@ nonblank names, and conflict-free sessions.
 There is no storage component in the current version. Inventory, sessions, preparations, contacts, and loans are created
 when Bob starts and are discarded when the process exits. Persistence and data migration are future work.
 
+Phase 1 of persistence defines the [version-1 storage format and behavior contract](StorageFormat.md), with
+[populated](examples/bob-v1.json) and [empty](examples/bob-v1-empty.json) example snapshots. This is a design
+contract for subsequent implementation phases; startup loading and automatic saving are not available yet.
+
 ### Common classes
 
 The `seedu.bob.exception` package contains checked domain exceptions for invalid commands, indices, quantities, dates,
