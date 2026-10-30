@@ -210,6 +210,46 @@ Search results for "wire"
 1. Wire [Components] (Available: 10, On loan: 0) - Available
 --------------------------------------------------------------------
 
+Successfully added request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+Successfully added request: Bob - 1x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+Cannot remove 12 Wire. Only 10 are available.
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Successfully added: 2x Wire to the inventory
+
+Successfully marked request 1 as fulfilled: Alice - 12x Wire by 31 December 2099
+
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+
+Successfully marked request 2 as prepared: Bob - 1x Wire by 31 December 2099
+
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 12x Wire by 31 December 2099 (Available: 0)
+2. [Prepared] Bob - 1x Wire by 31 December 2099 (Available: 0) !! Insufficient stock (Shortfall: 1)
+--------------------------------------------------------------------
+
+Successfully removed request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+No items match "wire".
+--------------------------------------------------------------------
+
 --------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------

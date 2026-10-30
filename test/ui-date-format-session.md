@@ -1,5 +1,8 @@
 # Date-format message regression session
 
+Historical session from 7 October 2026. This is not evidence for the current build.
+Run `scripts/run-ui-tests.ps1` for current results in `build/ui-plan/transcript.txt`.
+
 Java 25.0.3; command-by-command exact comparison against `test/ui-test-plan.md`.
 Fresh process for each case; stop on the first mismatch.
 Trailing spaces in application output are shown as `␠`.

@@ -15,6 +15,7 @@ import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidRequestDeadlineException;
 import seedu.bob.exception.InvalidRequestStatusException;
+import seedu.bob.exception.RequestException;
 
 /**
  * Represents a student's request for a quantity of an item by a deadline.
@@ -172,20 +173,28 @@ public class Request implements Comparable<Request> {
         return normalizedStatus;
     }
 
+    //@@author gavinlimsh
     /**
-     * Marks this request as prepared or fulfilled.
+     * Applies a validated status transition for package-level callers.
+     * Application commands must use RequestManager so fulfillment also deducts inventory.
+     * A fulfilled request cannot be changed or fulfilled again, even through a retained reference.
      *
      * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
-     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     * @throws CommandException If the status is invalid or the request is already fulfilled.
      */
-    public void markAs(String newStatus) throws InvalidRequestStatusException {
-        this.status = normalizeStatus(newStatus);
+    void markAs(String newStatus) throws CommandException {
+        String normalizedStatus = normalizeStatus(newStatus);
+        if (isFulfilled()) {
+            throw new RequestException("A fulfilled request cannot be changed.");
+        }
+        this.status = normalizedStatus;
 
         assert STATUS_PREPARED.equals(status) || STATUS_FULFILLED.equals(status)
                 : "Validated request status must be prepared or fulfilled";
         LOGGER.fine(() -> "Marked request for " + studentName + " as " + status);
     }
 
+    //@@author Lokwx
     /**
      * Compares requests by deadline, then by student name and item name for deterministic ordering.
      *

@@ -262,8 +262,9 @@ or recording a loan or broken-item report, because those operations can remove e
 
 ### Find an item: `find-i`
 
-Searches for items whose name **or** category contains a keyword, and shows where every unit is: in stock or on
-loan. Use it to answer "Do we have any of these, and can I hand one out now?" without scanning the whole `list-i`.
+Searches for items whose name **or** category contains a keyword and displays available stock and active loans.
+Broken units are excluded; use `list-b` for damage reports. An item with only broken units does not appear here.
+Use this command to check availability without scanning the whole `list-i`.
 
 **Format:** `find-i KEYWORD`
 
@@ -271,9 +272,9 @@ loan. Use it to answer "Do we have any of these, and can I hand one out now?" wi
 - Matching ignores capitalization and finds partial words. `meter` matches `Multimeter`, and `equip` matches every
   item in `Equipment`.
 - Each result shows the item, its category, units available, units on active loans, and a status:
-  - `Available`: at least one unit is in stock.
-  - `All on loan`: every unit is lent out. These items are still found, even though they no longer appear in
-    `list-i`.
+    - `Available`: at least one unit is in stock.
+    - `All on loan`: no units are available, but active loans exist. This label describes the stock and loan
+      records searched here; additional broken units may exist in `list-b`.
 - Items with the same name in different categories are shown as separate results.
 - Searching does not change inventory or loans.
 
@@ -768,17 +769,18 @@ Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
 ```
 
 The 20 requested units are now deducted from available stock. The request remains in `list-r` as `[Fulfilled]`, but
-current availability is 0, so the row shows a shortfall of 20:
+current availability is 0. Completed requests do not display a shortage warning:
 
 ```text
 --------------------------------------------------------------------
 Student requests
 --------------------------------------------------------------------
-1. [Fulfilled] Alice - 20x Wire by 8 October 2099 (Available: 0) !! Insufficient stock (Shortfall: 20)
+1. [Fulfilled] Alice - 20x Wire by 8 October 2099 (Available: 0)
 --------------------------------------------------------------------
 ```
 
-The shortfall describes current stock, not the completed handover. Another request for Wire would see 0 available.
+Availability describes current stock, not the completed handover. Pending and prepared requests still show
+shortage warnings when stock is insufficient. Another request for Wire would see 0 available.
 Deleting the fulfilled request with `delete-r` does not restore the 20 units.
 
 ## Contact management
