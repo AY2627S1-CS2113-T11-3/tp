@@ -3,9 +3,12 @@
 This file is the source of truth for repeatable console UI test cases run with the `test-ui` skill.
 
 The course-style I/O redirection test in `text-ui-test/input.txt` and `text-ui-test/EXPECTED.txt`
-reuses UI-PREP-001, substituting the fixed future date `31 December 2099` for `{{TOMORROW}}`.
-Its shell/batch script compares the full session after execution. The remaining cases below
-are retained for manual command-by-command testing.
+reuses preparation, loan, lookup, broken-item, request-fulfillment, and help scenarios.
+It substitutes the fixed future date `31 December 2099` for `{{TOMORROW}}`.
+Its shell/batch script compares the full session after execution. To execute every active case below
+command by command on Windows, build first, then run `powershell -File scripts/run-ui-tests.ps1`.
+The runner stops at the first mismatch and writes `build/ui-plan/transcript.txt`.
+Use `-CasePrefix UI-REQUEST-` to run just the request cases, for example.
 
 ## Test environment
 
@@ -2422,6 +2425,7 @@ Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -2473,6 +2477,7 @@ Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -7922,7 +7927,6 @@ Components
 --------------------------------------------------------------------
 ```
 
-<!--
 ### UI-BROKEN-REGRESSION-001: Report, reject excessive damage, and restore stock
 
 **Aim:** Verify broken-item commands through the packaged application, including unchanged stock and reports after a rejected addition.
@@ -8095,6 +8099,211 @@ Search results for "wire"
 --------------------------------------------------------------------
 ```
 
+### UI-REQUEST-FULFILLMENT-001: Fulfill once and preserve stock on rejection
+
+**Aim:** Verify insufficient stock, multi-category fulfillment, final status, shortage display, and deletion without restoration.
+
+**Preconditions:** Fresh application with empty inventory and requests. The shared console fixture already has 10 Wire in Components, so it omits Step 1. Run before 31 December 2099.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-r n/Alice i/Wire q/12 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-r n/Bob i/Wire q/1 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added request: Bob - 1x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Cannot remove 12 Wire. Only 10 are available.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 2x Wire to the inventory
+```
+
+#### Step 7
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as fulfilled: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 8
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 9
+
+**Input**
+
+```text
+mark-r 1 prepared
+```
+
+**Expected output**
+
+```text
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 10
+
+**Input**
+
+```text
+mark-r 2 prepared
+```
+
+**Expected output**
+
+```text
+Successfully marked request 2 as prepared: Bob - 1x Wire by 31 December 2099
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 12x Wire by 31 December 2099 (Available: 0)
+2. [Prepared] Bob - 1x Wire by 31 December 2099 (Available: 0) !! Insufficient stock (Shortfall: 1)
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+delete-r 1
+```
+
+**Expected output**
+
+```text
+Successfully removed request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 13
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+No items match "wire".
+--------------------------------------------------------------------
+```
+
+<!--
 ### UI-001: Short title
 
 **Aim:** Describe the behavior being verified.

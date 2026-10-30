@@ -145,7 +145,7 @@ public class RequestManager {
                 Request request = requests.get(i);
                 // Availability is recalculated on every listing because stock may have changed.
                 int available = inventory.getTotalAvailableQuantity(request.getItemName());
-                String shortage = formatShortage(available, request.getQuantity());
+                String shortage = request.isFulfilled() ? "" : formatShortage(available, request.getQuantity());
                 System.out.printf("%d. [%s] %s (Available: %d)%s%n",
                         i + INDEX_OFFSET, displayStatus(request.getStatus()), request, available, shortage);
             }

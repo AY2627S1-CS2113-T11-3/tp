@@ -86,6 +86,7 @@ Bob / Ui  <-->  Parser  <-->  Model managers
                               |-- SessionManager
                               |-- ContactManager
                               |-- RequestManager
+                              |-- BrokenItemManager
                               `-- LoanManager
                                       |
                                       `-- Inventory
@@ -100,20 +101,21 @@ The application uses a lightweight layered architecture:
 
 - **UI** — reads command-line input and displays output.
 - **Logic** — parses commands, validates their formats, and dispatches operations.
-- **Model** — stores inventory, sessions, preparations, contacts, requests, and loans.
+- **Model** — stores inventory, sessions, preparations, contacts, requests, loans, and broken-item reports.
 - **Storage** — not implemented; all data is intentionally in memory for the current version.
 - **Common classes** — shared domain objects, exceptions, and display constants.
 
 `Bob.main` creates one `Parser`, one instance of each model manager, and a shared `Inventory` for the duration of the
 process. The parser receives these objects when handling each command. This keeps the managers independent while allowing
-loans and preparations to query or update inventory.
+loans, request fulfillment, broken-item reports, and preparations to query or update inventory.
+Broken-item tracking also shares the contact manager to resolve whether a selected maintenance contact still exists.
 
 ### UI component
 
 The UI is implemented by [`Bob`](../src/main/java/seedu/bob/Bob.java) and [`Ui`](../src/main/java/seedu/bob/Ui.java).
 
 - `Bob` displays the banner and greeting, reads input using `Scanner`, and separates command responses.
-- `Ui` renders loan confirmations and listings and stores the divider and complete `help` message.
+- `Ui` renders loan and broken-item confirmations and listings and stores the divider and complete `help` message.
 - The UI does not contain business rules; it delegates command handling to `Parser`.
 - The application exits when the user enters `Bye` in any letter case.
 
@@ -128,7 +130,7 @@ For every input line, `Parser`:
 3. checks prefixes, argument order, and value formats;
 4. constructs domain objects where necessary;
 5. invokes the relevant model manager; and
-6. passes loan operation results and listing rows to `Ui` for rendering.
+6. passes loan results or broken-item reports and their manager to `Ui` for rendering.
 
 Commands use fixed prefix orders, such as `n/NAME c/CATEGORY q/QUANTITY`. A shared prefix matcher separates values from
 later arguments. Consequently, a value containing a standalone token such as `a/b` is currently interpreted as another
@@ -148,6 +150,9 @@ The model is composed of domain objects and managers:
 - [`ContactManager`](../src/main/java/seedu/bob/ContactManager.java) stores contacts.
 - [`RequestManager`](../src/main/java/seedu/bob/RequestManager.java) stores deadline-sorted student requests.
 - [`Request`](../src/main/java/seedu/bob/Request.java) validates request details and holds the fulfillment status.
+- [`BrokenItemManager`](../src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
+  and maintenance-contact availability.
+- [`BrokenItem`](../src/main/java/seedu/bob/BrokenItem.java) holds immutable validated damage-report details.
 - [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
 - [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
@@ -159,7 +164,8 @@ nonblank names, and conflict-free sessions.
 ### Storage component
 
 There is no storage component in the current version. Inventory, sessions, preparations, contacts, requests, and
-loans are created when Bob starts and are discarded when the process exits. Persistence and data migration are future work.
+loans and broken-item reports are created when Bob starts and are discarded when the process exits.
+Persistence and data migration are future work.
 
 ### Common classes
 
@@ -1093,6 +1099,14 @@ Because a request does not record a category, deduction uses the same total show
 appear fulfillable; the first fulfillment consumes stock and the second is rejected if the remainder is insufficient.
 An insufficient or already-fulfilled attempt leaves both status and inventory unchanged. Fulfillment is final:
 `delete-r` removes the request but does not restore stock, and there is no unfulfill command.
+
+`Request#markAs` is package-private and independently rejects transitions from fulfilled, including through
+a retained request reference. Package-level application callers must still use `RequestManager#markRequest`
+to coordinate status changes with stock deduction; changing model status alone does not perform a handover.
+The manager retains its index-specific error message for rejected command operations.
+
+Listings show live availability for every request, but shortage warnings apply only to pending or prepared requests.
+A fulfilled request has already received its stock, so a lower current inventory does not imply an incomplete handover.
 
 #### Validation and failure behavior
 
