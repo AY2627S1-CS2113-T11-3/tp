@@ -13,7 +13,7 @@ Use `-CasePrefix UI-REQUEST-` to run just the request cases, for example.
 For a demonstration of the current implementation, run `UI-PERSIST-FINAL-001` and `UI-PERSIST-FINAL-002`
 with `-CasePrefix UI-PERSIST-FINAL-`. These cases create records for all six features, exit, restart using
 the same isolated storage directory, and return the saved loan. The latest demonstration transcript is
-[`ui-current-implementation-session.md`](ui-current-implementation-session.md). Expected outputs below are unchanged.
+[`ui-current-implementation-session.md`](ui-current-implementation-session.md). Expected outputs below include the stock deducted when fulfilling a request.
 
 ## Test environment
 
@@ -9419,7 +9419,7 @@ list-i
 Inventory
 --------------------------------------------------------------------
 Components
-1: Wire (Qty: 10)
+1: Wire (Qty: 5)
 --------------------------------------------------------------------
 ```
 
@@ -9455,7 +9455,7 @@ list-p s/1
 --------------------------------------------------------------------
 Lab preparation: Practice Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
 --------------------------------------------------------------------
-1. Wire [Components] (Required: 20, Available: 10) !! Insufficient items (Shortfall: 10)
+1. Wire [Components] (Required: 20, Available: 5) !! Insufficient items (Shortfall: 15)
 --------------------------------------------------------------------
 ```
 
@@ -9473,7 +9473,7 @@ list-r
 --------------------------------------------------------------------
 Student requests
 --------------------------------------------------------------------
-1. [Fulfilled] Jamie - 5x Wire by {{TOMORROW}} (Available: 10)
+1. [Fulfilled] Jamie - 5x Wire by {{TOMORROW}} (Available: 5)
 --------------------------------------------------------------------
 ```
 
@@ -9542,7 +9542,7 @@ list-i
 Inventory
 --------------------------------------------------------------------
 Components
-1: Wire (Qty: 15)
+1: Wire (Qty: 10)
 --------------------------------------------------------------------
 ```
 
@@ -9625,4 +9625,284 @@ Inventory
 Glassware
 1: Beaker (Qty: 10)
 --------------------------------------------------------------------
+```
+
+
+## Persistence and upstream merge regression contract
+
+Broken-item reports and their contact links persist without repeating stock deductions. Request fulfillment
+deducts stock once and remains final after restarting. These expectations follow the upstream feature contracts.
+The three cases below run in order using one isolated storage group.
+
+### UI-PERSIST-MERGE-001: Save broken reports and fulfilled requests together
+
+**Aim:** Save broken reports and fulfilled requests together.
+
+**Preconditions:** Run MERGE-001, MERGE-002, and MERGE-003 in order.
+
+**Storage group:** `upstream-merge`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Meter c/Equipment q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Meter to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Maintenance t/01234567
+```
+
+**Expected output**
+
+```text
+Successfully added: Maintenance (01234567) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020 m/1
+```
+
+**Expected output**
+
+```text
+Successfully recorded broken item: 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020. Available inventory reduced.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-r n/Jamie i/Meter q/3 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added request: Jamie - 3x Meter by {{TOMORROW}}
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as fulfilled: Jamie - 3x Meter by {{TOMORROW}}
+```
+
+#### Step 6
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-MERGE-002: Restore stock deductions and remove the selected maintenance contact
+
+**Aim:** Restore stock deductions and remove the selected maintenance contact.
+
+**Preconditions:** Run MERGE-001, MERGE-002, and MERGE-003 in order.
+
+**Storage group:** `upstream-merge`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020
+   Contact: Maintenance (01234567)
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Jamie - 3x Meter by {{TOMORROW}} (Available: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Maintenance
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-c n/Maintenance t/01234567
+```
+
+**Expected output**
+
+```text
+Successfully added: Maintenance (01234567) to contacts
+```
+
+#### Step 6
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-MERGE-003: Keep deleted contacts unavailable and restore broken units once
+
+**Aim:** Keep deleted contacts unavailable and restore broken units once.
+
+**Preconditions:** Run MERGE-001, MERGE-002, and MERGE-003 in order.
+
+**Storage group:** `upstream-merge`
+
+#### Step 1
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020
+   Contact: Unavailable (contact deleted)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+delete-b 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted broken-item report: 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020. All units restored to inventory.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
 ```

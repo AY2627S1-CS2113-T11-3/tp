@@ -1,9 +1,16 @@
+<#
+.SYNOPSIS
+Runs the Markdown UI plan in isolated processes and stops at the first mismatch.
+.DESCRIPTION
+Build with Java 25 and gradlew.bat check shadowJar before running this script.
+Expected output comes from the plan. Storage groups support restart scenarios.
+#>
 param(
     [string]$PlanPath = "test/ui-test-plan.md",
     [string]$JarPath = "build/libs/bob.jar",
     [string]$CasePrefix = "UI-",
     #@@author DaynaG3
-    [string]$TranscriptPath = '',
+    [string]$TranscriptPath = 'build/ui-plan/transcript.txt',
     #@@author
     [switch]$EnableAssertions,
     [ValidateRange(1, 60)]
@@ -14,6 +21,10 @@ param(
 $ErrorActionPreference = "Stop"
 #@@author DaynaG3
 if ($TranscriptPath.Length -gt 0) {
+    $transcriptDirectory = Split-Path -Parent $TranscriptPath
+    if ($transcriptDirectory.Length -gt 0) {
+        New-Item -ItemType Directory -Path $transcriptDirectory -Force | Out-Null
+    }
     Start-Transcript -Path $TranscriptPath -Force | Out-Null
 }
 #@@author
