@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
  */
 class InventoryItemTest {
 
+    //@@author DaynaG3
     @Test
     void addQuantity_validAddition_updatesStockAtIntegerBoundary() {
         InventoryItem item = new InventoryItem("Wire", "Components", Integer.MAX_VALUE - 2);
@@ -25,7 +27,9 @@ class InventoryItemTest {
             assertEquals(Integer.MAX_VALUE - 2, item.getQuantity());
         }
     }
+    //@@author
 
+    //@@author Lokwx
     @Test
     void constructor_validArguments_success() {
         InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
@@ -55,6 +59,7 @@ class InventoryItemTest {
         assertThrows(IllegalArgumentException.class, () -> new InventoryItem("Resistor", "Electronics", -5));
     }
 
+    //@@author DaynaG3
     @Test
     void removeQuantity_validPartialRemoval_updatesQuantity() {
         InventoryItem item = new InventoryItem("Resistor", "Electronics", 50);
@@ -76,4 +81,5 @@ class InventoryItemTest {
         assertThrows(IllegalArgumentException.class, () -> item.removeQuantity(51));
         assertEquals(50, item.getQuantity());
     }
+    //@@author
 }

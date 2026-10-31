@@ -91,7 +91,7 @@ class AppStateTest {
         preparation.addItem("Beaker", "Glassware", 2, 10);
         preparation.removeItem(1, 7);
         original.getRequestManager().addRequest(new Request("Jamie", "Beaker", 8, date));
-        original.getRequestManager().markRequest(1, "prepared");
+        original.getRequestManager().markRequest(1, "prepared", original.getInventory());
         original.getContactManager().addContact(new Contact("Supplier", "01234567", null, "Repairs"));
         original.getLoanManager().addLoan(new Loan("Beaker", "Glassware", 3,
                 new Contact("Taylor", "02345678", null, null), date));
@@ -131,7 +131,7 @@ class AppStateTest {
         AppSnapshot beforeChanges = first.toSnapshot();
 
         first.getInventory().removeItem("Glassware", 1, 1);
-        first.getRequestManager().markRequest(2, "fulfilled");
+        first.getRequestManager().markRequest(2, "prepared", first.getInventory());
         first.getSessionManager().getSession(2).getPreparation().removeItem(1, 1);
         first.getContactManager().deleteContact(1);
         first.getLoanManager().returnLoan(1);

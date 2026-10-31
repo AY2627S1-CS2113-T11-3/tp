@@ -26,5 +26,30 @@ list-l
 list-l overdue
 return 1
 list-l overdue
+find-i wire
+find-i COMP
+find-i battery
+find-i
+add-b n/Wire c/Components q/3 f/Frayed insulation d/1 January 2000
+list-b
+find-i wire
+add-b n/Wire c/Components q/8 f/Cracked casing d/1 January 2000
+list-b
+find-i wire
+delete-b 1
+list-b
+find-i wire
+add-r n/Alice i/Wire q/12 d/31 December 2099
+add-r n/Bob i/Wire q/1 d/31 December 2099
+mark-r 1 fulfilled
+find-i wire
+add-i n/Wire c/Spares q/2
+mark-r 1 fulfilled
+mark-r 1 fulfilled
+mark-r 1 prepared
+mark-r 2 prepared
+list-r
+delete-r 1
+find-i wire
 help
 Bye

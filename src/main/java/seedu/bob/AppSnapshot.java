@@ -8,9 +8,16 @@ import java.util.List;
  * List constructors make defensive copies; domain validation takes place during restoration.
  */
 public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, List<SessionEntry> sessions,
-        List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans) {
+        List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans,
+        List<BrokenItemEntry> brokenItems) {
 
     public static final int CURRENT_VERSION = 1;
+
+    /** Builds the original version-1 shape, before broken-item reports were available. */
+    public AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, List<SessionEntry> sessions,
+            List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans) {
+        this(schemaVersion, inventory, sessions, requests, contacts, loans, List.of());
+    }
 
     /** Copies every root collection, rejecting null collections and entries. */
     public AppSnapshot {
@@ -19,6 +26,7 @@ public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, 
         requests = List.copyOf(requests);
         contacts = List.copyOf(contacts);
         loans = List.copyOf(loans);
+        brokenItems = List.copyOf(brokenItems);
     }
 
     /** An ordered inventory category with its available items. */
@@ -52,6 +60,14 @@ public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, 
 
     /** A contact whose optional email and role may be null; phone numbers remain strings. */
     public record ContactEntry(String name, String phone, String email, String role) {
+    }
+
+    /**
+     * Broken units with a one-based active contact index, a deleted contact's details, or neither.
+     * Active indices retain identity even when two registered contacts have identical details.
+     */
+    public record BrokenItemEntry(String name, String category, int quantity, String faultDescription,
+            String reportedDate, Integer contactIndex, ContactEntry deletedContact) {
     }
 
     /** An active loan independent of available inventory and the contact list. */

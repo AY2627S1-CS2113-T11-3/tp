@@ -83,6 +83,7 @@ public class Bob {
             return 0;
             //@@author
         }
+        //@@author
         System.out.println("Hello " + in.nextLine() + ", welcome to Bob!");
         System.out.println(Ui.DIVIDER);
         //@@author DaynaG3
@@ -96,6 +97,7 @@ public class Bob {
         boolean hasPendingChanges = loaded.source() == LoadResult.Source.BACKUP;
         //@@author
         while (in.hasNextLine()) {
+            //@@author
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");

@@ -15,6 +15,7 @@ public class AppState {
     private final RequestManager requestManager;
     private final ContactManager contactManager;
     private final LoanManager loanManager;
+    private final BrokenItemManager brokenItemManager;
 
     /** Creates empty application state using the computer's clock for overdue queries. */
     public AppState() {
@@ -39,6 +40,7 @@ public class AppState {
         this.requestManager = requestManager;
         this.contactManager = contactManager;
         this.loanManager = new LoanManager(inventory, clock);
+        this.brokenItemManager = new BrokenItemManager(inventory, contactManager);
     }
 
     public Inventory getInventory() {
@@ -61,6 +63,10 @@ public class AppState {
         return loanManager;
     }
 
+    public BrokenItemManager getBrokenItemManager() {
+        return brokenItemManager;
+    }
+
     /**
      * Returns an immutable, independent snapshot of every persisted feature.
      *
@@ -68,7 +74,8 @@ public class AppState {
      */
     public AppSnapshot toSnapshot() {
         return new AppSnapshot(AppSnapshot.CURRENT_VERSION, inventory.toSnapshot(), sessionManager.toSnapshot(),
-                requestManager.toSnapshot(), contactManager.toSnapshot(), loanManager.toSnapshot());
+                requestManager.toSnapshot(), contactManager.toSnapshot(), loanManager.toSnapshot(),
+                brokenItemManager.toSnapshot());
     }
 
     /**
@@ -102,6 +109,7 @@ public class AppState {
                     SessionManager.restore(snapshot.sessions()), RequestManager.restore(snapshot.requests()),
                     ContactManager.restore(snapshot.contacts()), clock);
             restored.loanManager.restoreLoans(snapshot.loans());
+            restored.brokenItemManager.restoreReports(snapshot.brokenItems(), clock);
             return restored;
         } catch (CommandException | IllegalArgumentException | NullPointerException e) {
             throw new InvalidSnapshotException("Invalid saved state: " + e.getMessage(), e);

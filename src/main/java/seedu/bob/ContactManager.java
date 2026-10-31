@@ -95,6 +95,39 @@ public class ContactManager {
         return contacts.get(userIndex - INDEX_OFFSET);
     }
 
+    //@@author DaynaG3
+    /** Returns the selected contact's one-based snapshot position, or zero if absent or unassigned. */
+    int getContactIndex(Contact selectedContact) {
+        for (int i = 0; i < contacts.size(); i++) {
+            if (contacts.get(i) == selectedContact) {
+                return i + INDEX_OFFSET;
+            }
+        }
+        return 0;
+    }
+    //@@author
+
+    //@@author gavinlimsh
+    /**
+     * Checks whether the exact selected contact is still registered, regardless of its list position.
+     * A newly added contact with identical details does not replace a deleted contact's links.
+     *
+     * @param selectedContact Contact to look for, or {@code null} when unassigned.
+     * @return Whether the same contact object remains registered.
+     */
+    public boolean containsContact(Contact selectedContact) {
+        if (selectedContact == null) {
+            return false;
+        }
+        for (Contact contact : contacts) {
+            if (contact == selectedContact) {
+                return true;
+            }
+        }
+        return false;
+    }
+    //@@author
+
     /**
      * Returns whether the contact list contains only nonnull contacts.
      */

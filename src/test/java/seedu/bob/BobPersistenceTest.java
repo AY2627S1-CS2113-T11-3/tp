@@ -44,7 +44,7 @@ class BobPersistenceTest {
                 "add-l n/Beaker c/Glassware q/3 b/Taylor t/02345678 d/" + date,
                 "return 1",
                 "add-l n/Beaker c/Glassware q/2 b/Taylor t/02345678 d/" + date,
-                "delete-l 1", "delete-c 1", "delete-r 1", "delete-s 1", "delete-i c/Glassware i/1 q/10");
+                "delete-l 1", "delete-c 1", "delete-r 1", "delete-s 1", "delete-i c/Glassware i/1 q/8");
 
         SessionResult result = run("Alex\n" + String.join("\n", commands) + "\nBye\n", storage);
 
@@ -52,7 +52,7 @@ class BobPersistenceTest {
         assertEquals(commands.size(), storage.attempts);
         assertEquals(new AppState().toSnapshot(), storage.load().snapshot());
         AppSnapshot loanSnapshot = storage.saved.get(8);
-        assertEquals(7, loanSnapshot.inventory().getFirst().items().getFirst().quantity());
+        assertEquals(5, loanSnapshot.inventory().getFirst().items().getFirst().quantity());
         assertEquals(3, loanSnapshot.loans().getFirst().quantity());
         assertEquals(13, loanSnapshot.sessions().getFirst().preparation().getFirst().quantity());
         assertEquals("fulfilled", loanSnapshot.requests().getFirst().status());
@@ -74,6 +74,43 @@ class BobPersistenceTest {
         assertTrue(restarted.output().contains("[Prepared] Jamie"));
         assertEquals(10, storage.load().snapshot().inventory().getFirst().items().getFirst().quantity());
         assertTrue(storage.load().snapshot().loans().isEmpty());
+    }
+
+    @Test
+    void run_fulfilledRequestAfterRestart_keepsDeductionAndRejectsRepeatedFulfillment() throws Exception {
+        RecordingStorage storage = new RecordingStorage(directory.resolve("bob.json"), 0);
+        String date = LocalDate.now().plusYears(1)
+                .format(DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH));
+        run("Alex\nadd-i n/Meter c/Equipment q/10\nadd-r n/Jamie i/Meter q/3 d/" + date
+                + "\nmark-r 1 fulfilled\nBye\n", storage);
+        int savedBeforeRestart = storage.attempts;
+
+        SessionResult restarted = run("Alex\nmark-r 1 fulfilled\nlist-i\nBye\n", storage);
+
+        assertEquals(0, restarted.exitCode());
+        assertTrue(restarted.output().contains("already fulfilled and cannot be changed"));
+        assertTrue(restarted.output().contains("Meter (Qty: 7)"));
+        assertEquals(savedBeforeRestart, storage.attempts);
+        assertEquals("fulfilled", storage.load().snapshot().requests().getFirst().status());
+        assertEquals(7, storage.load().snapshot().inventory().getFirst().items().getFirst().quantity());
+    }
+
+    @Test
+    void run_brokenReportAcrossRestart_savesBothReportAndRestoredInventory() throws Exception {
+        RecordingStorage storage = new RecordingStorage(directory.resolve("bob.json"), 0);
+        run("Alex\nadd-i n/Meter c/Equipment q/5\n"
+                + "add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020\nBye\n", storage);
+
+        assertEquals(2, storage.attempts);
+        assertEquals(1, storage.load().snapshot().brokenItems().size());
+        SessionResult restarted = run("Alex\nlist-i\nlist-b\ndelete-b 1\nBye\n", storage);
+
+        assertEquals(0, restarted.exitCode());
+        assertTrue(restarted.output().contains("Meter (Qty: 3)"));
+        assertTrue(restarted.output().contains("Contact: Not assigned"));
+        assertEquals(3, storage.attempts);
+        assertTrue(storage.load().snapshot().brokenItems().isEmpty());
+        assertEquals(5, storage.load().snapshot().inventory().getFirst().items().getFirst().quantity());
     }
 
     @Test

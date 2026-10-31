@@ -44,6 +44,10 @@ final class SnapshotCodec {
                 throw new StorageException(StorageException.Kind.UNSUPPORTED_VERSION,
                         "Unsupported data version: " + version + ".", null);
             }
+            // Earlier version-1 files predate broken-item tracking and have no reports.
+            if (!root.has("brokenItems")) {
+                root.add("brokenItems", new JsonArray());
+            }
             validateRoot(root);
             AppSnapshot snapshot = GSON.fromJson(root, AppSnapshot.class);
             AppState.restore(snapshot);
@@ -111,7 +115,7 @@ final class SnapshotCodec {
 
     /** Checks exact field sets at every level; nullable values are limited to optional contact details. */
     private static void validateRoot(JsonObject root) throws StorageException {
-        requireObject(root, "schemaVersion", "inventory", "sessions", "requests", "contacts", "loans");
+        requireObject(root, "schemaVersion", "inventory", "sessions", "requests", "contacts", "loans", "brokenItems");
         for (JsonElement value : requireArray(root, "inventory")) {
             JsonObject category = requireObject(value, "category", "items");
             requireStrings(category, "category");
@@ -138,12 +142,18 @@ final class SnapshotCodec {
             requireInteger(request.get("quantity"));
         }
         for (JsonElement value : requireArray(root, "contacts")) {
-            JsonObject contact = requireObject(value, "name", "phone", "email", "role");
-            requireStrings(contact, "name", "phone");
-            for (String field : Set.of("email", "role")) {
-                if (!contact.get(field).isJsonNull()) {
-                    requireStrings(contact, field);
-                }
+            validateContact(value);
+        }
+        for (JsonElement value : requireArray(root, "brokenItems")) {
+            JsonObject report = requireObject(value, "name", "category", "quantity", "faultDescription",
+                    "reportedDate", "contactIndex", "deletedContact");
+            requireStrings(report, "name", "category", "faultDescription", "reportedDate");
+            requireInteger(report.get("quantity"));
+            if (!report.get("contactIndex").isJsonNull()) {
+                requireInteger(report.get("contactIndex"));
+            }
+            if (!report.get("deletedContact").isJsonNull()) {
+                validateContact(report.get("deletedContact"));
             }
         }
         for (JsonElement value : requireArray(root, "loans")) {
@@ -151,6 +161,17 @@ final class SnapshotCodec {
                     "borrowerPhone", "dueDate");
             requireStrings(loan, "name", "category", "borrowerName", "borrowerPhone", "dueDate");
             requireInteger(loan.get("quantity"));
+        }
+    }
+
+    /** Checks nullable contact details for both registered and deleted-contact snapshots. */
+    private static void validateContact(JsonElement value) throws StorageException {
+        JsonObject contact = requireObject(value, "name", "phone", "email", "role");
+        requireStrings(contact, "name", "phone");
+        for (String field : Set.of("email", "role")) {
+            if (!contact.get(field).isJsonNull()) {
+                requireStrings(contact, field);
+            }
         }
     }
 

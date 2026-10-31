@@ -3,9 +3,12 @@
 This file is the source of truth for repeatable console UI test cases run with the `test-ui` skill.
 
 The course-style I/O redirection test in `text-ui-test/input.txt` and `text-ui-test/EXPECTED.txt`
-reuses UI-PREP-001, substituting the fixed future date `31 December 2099` for `{{TOMORROW}}`.
-Its shell/batch script compares the full session after execution. The remaining cases below
-are retained for manual command-by-command testing.
+reuses preparation, loan, lookup, broken-item, request-fulfillment, and help scenarios.
+It substitutes the fixed future date `31 December 2099` for `{{TOMORROW}}`.
+Its shell/batch script compares the full session after execution. To execute every active case below
+command by command on Windows, build first, then run `powershell -File scripts/run-ui-tests.ps1`.
+The runner stops at the first mismatch and writes `build/ui-plan/transcript.txt`.
+Use `-CasePrefix UI-REQUEST-` to run just the request cases, for example.
 
 For a demonstration of the current implementation, run `UI-PERSIST-FINAL-001` and `UI-PERSIST-FINAL-002`
 with `-CasePrefix UI-PERSIST-FINAL-`. These cases create records for all six features, exit, restart using
@@ -98,7 +101,7 @@ Clock-controlled unit tests cover midnight rollover, calendar boundaries, and ti
 
 ## Defensive programming: phase 1 exception contract
 
-Loan command syntax and stdout remain unchanged. Invalid dates and non-integer loan indices retain
+Loan command syntax and stdout remain unchanged. Invalid dates and loan indices that are not integers retain
 their parsing causes in checked exceptions without exposing stack traces to the user. Loan inventory
 helpers reject invalid names, categories, and quantities before mutation, including direct domain calls.
 UI-LOAN-DEFENSIVE-001 records recovery after rejected commands; the existing overflow, date, index,
@@ -111,7 +114,7 @@ Expected outputs are recorded before implementation and before running the affec
 Assertions check loan invariants and exact stock/list-size changes during additions, corrections, and
 returns. Private deduction helpers assert their already-validated preconditions. Expected user errors
 still use checked exceptions with assertions disabled. Duplicate loans and past due dates remain valid.
-After this phase, run the full plan normally and again with `java -ea -jar build/libs/duke.jar`.
+After this phase, run the full plan normally and again with `java -ea -jar build/libs/bob.jar`.
 Both runs must produce the same expected stdout. Unit tests use faulty
 inventory test doubles to prove missing deduction/restoration is detected before the loan list changes.
 The normal launch scripts remain unchanged; debug launch is `java -ea -jar build/libs/bob.jar`.
@@ -2429,6 +2432,7 @@ Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -2451,6 +2455,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye
@@ -2475,6 +2484,7 @@ Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -2497,6 +2507,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye
@@ -2602,7 +2617,7 @@ Bye
 **Input**
 
 ```text
-add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+add-c n/NUS Infrastructure t/65161234 r/Air conditioning and lighting repairs
 ```
 
 **Expected output**
@@ -2681,7 +2696,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -2717,7 +2732,7 @@ list-c
 --------------------------------------------------------------------
 Contacts
 --------------------------------------------------------------------
-1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+1. NUS Infrastructure (65161234) - Air conditioning and lighting repairs
 2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
 3. Email Only (12345678, a@b.com)
 4. Bare (00123456)
@@ -3639,7 +3654,7 @@ Lab preparation: Baseline Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10
 --------------------------------------------------------------------
 ```
 
-### UI-SESSION-LIST-003: Sort sessions by date then time then name
+### UI-SESSION-LIST-003: Sort sessions by date, time, and name
 
 **Aim:** Verify the chronological ordering contract, including alphabetical ties, using out-of-order additions.
 
@@ -7916,6 +7931,382 @@ Inventory
 --------------------------------------------------------------------
 Components
 1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-BROKEN-REGRESSION-001: Report, reject excessive damage, and restore stock
+
+**Aim:** Verify broken-item commands through the packaged application, including unchanged stock and reports after a rejected addition.
+
+**Preconditions:** Start a fresh Bob process, enter `Alex`, and begin with empty inventory, loans, and broken reports. The fixed report date is in the past. In the shared console fixture, the earlier steps already provide 10 Wire and no active loans or reports, so its setup command is omitted.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-b n/Wire c/Components q/3 f/Frayed insulation d/1 January 2000
+```
+
+**Expected output**
+
+```text
+Successfully recorded broken item: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. Available inventory reduced.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+add-b n/Wire c/Components q/8 f/Cracked casing d/1 January 2000
+```
+
+**Expected output**
+
+```text
+Cannot report 8 Wire as broken. Only 7 are available.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-b 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted broken-item report: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. All units restored to inventory.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+No broken items recorded.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+### UI-REQUEST-FULFILLMENT-001: Fulfill once and preserve stock on rejection
+
+**Aim:** Verify insufficient stock, multi-category fulfillment, final status, shortage display, and deletion without restoration.
+
+**Preconditions:** Fresh application with empty inventory and requests. The shared console fixture already has 10 Wire in Components, so it omits Step 1. Run before 31 December 2099.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-r n/Alice i/Wire q/12 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-r n/Bob i/Wire q/1 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added request: Bob - 1x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Cannot remove 12 Wire. Only 10 are available.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 2x Wire to the inventory
+```
+
+#### Step 7
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as fulfilled: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 8
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 9
+
+**Input**
+
+```text
+mark-r 1 prepared
+```
+
+**Expected output**
+
+```text
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+```
+
+#### Step 10
+
+**Input**
+
+```text
+mark-r 2 prepared
+```
+
+**Expected output**
+
+```text
+Successfully marked request 2 as prepared: Bob - 1x Wire by 31 December 2099
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 12x Wire by 31 December 2099 (Available: 0)
+2. [Prepared] Bob - 1x Wire by 31 December 2099 (Available: 0) !! Insufficient stock (Shortfall: 1)
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+delete-r 1
+```
+
+**Expected output**
+
+```text
+Successfully removed request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 13
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+No items match "wire".
 --------------------------------------------------------------------
 ```
 

@@ -146,12 +146,118 @@ No overdue loans.
 --------------------------------------------------------------------
 
 --------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "COMP"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+2. Red LED [Components] (Available: 3, On loan: 0) - Available
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "battery"
+--------------------------------------------------------------------
+No items match "battery".
+--------------------------------------------------------------------
+
+Invalid format. Use: find-i KEYWORD
+
+Successfully recorded broken item: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. Available inventory reduced.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Cannot report 8 Wire as broken. Only 7 are available.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Not assigned
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 7, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Successfully deleted broken-item report: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. All units restored to inventory.
+
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+No broken items recorded.
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Successfully added request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+Successfully added request: Bob - 1x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+Cannot remove 12 Wire. Only 10 are available.
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 10, On loan: 0) - Available
+--------------------------------------------------------------------
+
+Successfully added: 2x Wire to the inventory
+
+Successfully marked request 1 as fulfilled: Alice - 12x Wire by 31 December 2099
+
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+
+Request 1 is already fulfilled and cannot be changed: Alice - 12x Wire by 31 December 2099
+
+Successfully marked request 2 as prepared: Bob - 1x Wire by 31 December 2099
+
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 12x Wire by 31 December 2099 (Available: 0)
+2. [Prepared] Bob - 1x Wire by 31 December 2099 (Available: 0) !! Insufficient stock (Shortfall: 1)
+--------------------------------------------------------------------
+
+Successfully removed request: Alice - 12x Wire by 31 December 2099
+Request list updated. Run list-r to see the latest order.
+
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+No items match "wire".
+--------------------------------------------------------------------
+
+--------------------------------------------------------------------
 Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
+  find-i KEYWORD
 Lab sessions
   add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
   delete-s INDEX
@@ -174,6 +280,11 @@ Loans
   list-l [overdue]
   delete-l INDEX
   return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
 Other
   help
   Bye
