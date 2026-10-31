@@ -1,0 +1,70 @@
+@startuml
+!include loan-style.puml
+hide footbox
+
+participant "Bob" as B
+participant ":Parser" as P
+participant "state:AppState" as A
+participant ":Storage" as S
+participant "SnapshotCodec" as C
+participant "AppState\n(static restore)" as V
+participant "Java NIO Files" as F
+
+note over B : One ordinary command, excluding Bye.
+B -> P : handleCommand(input, state)
+activate P
+P -> A : toSnapshot()
+A --> P : before
+P -> P : validate and dispatch\nto model managers
+P -> A : toSnapshot()
+A --> P : after
+P --> B : hasChanged
+deactivate P
+
+alt no actual change
+    note over B, P
+        No change: read-only, rejected,
+        or unchanged command. No save.
+    end note
+else state changed
+    B -> B : hasPendingChanges = true
+    B -> A : toSnapshot()
+    A --> B : snapshot
+    B -> S : save(snapshot)
+    activate S
+    alt successful save
+        S -> C : encode(snapshot)
+        activate C
+        C -> V : restore(snapshot)
+        V --> C : validated temporary state
+        C --> S : JSON
+        deactivate C
+        S -> F : create directory;\nwrite complete temporary snapshot
+        S -> S : read and validate previous main
+        opt previous main exists and is valid
+            S -> F : write previous main\nto backup temporary file
+            S -> F : atomically replace bob.json.bak
+        end
+        S -> F : atomically replace bob.json\nwith temporary snapshot
+        S -> F : clean up remaining temporary files
+        S --> B : success
+        B -> B : hasPendingChanges = false
+    else validation or file operation throws
+        S -> F : clean up temporary files, if any
+        S --> B : StorageException
+        B -> B : keep pending state;\nprint unsaved-change warning
+    end
+    deactivate S
+end
+
+note over S, F
+  Any failure stops subsequent save steps.
+  A failed backup update prevents main replacement.
+  A corrupt main is not promoted to backup;
+  an unsupported main version aborts the save.
+end note
+note over B
+  Pending state is retried on the next changed command or exit.
+  A failed Bye save offers retry, cancel, or exit.
+end note
+@enduml

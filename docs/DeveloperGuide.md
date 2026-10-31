@@ -12,6 +12,8 @@
   - [Logic component](#logic-component)
   - [Model component](#model-component)
   - [Storage component](#storage-component)
+    - [Automatic saving](#automatic-saving)
+    - [Startup and recovery](#startup-and-recovery)
   - [Common classes](#common-classes)
 - [Implementation](#implementation)
   - [Inventory management](#inventory-management)
@@ -76,22 +78,7 @@ Bob prints a banner, asks for the user's name, and then accepts one command per 
 
 ## Design
 
-Bob is a command-line application with a simple component structure:
-
-```text
-User
-  |
-  v
-Bob / Ui  <-->  Parser  <-->  Model managers
-                              |-- Inventory
-                              |-- SessionManager
-                              |-- ContactManager
-                              |-- RequestManager
-                              |-- BrokenItemManager
-                              `-- LoanManager
-                                      |
-                                      `-- Inventory
-```
+Bob is a command-line application whose runtime models are persisted as complete local snapshots.
 
 `Bob` starts the application and wires the components together. `Ui` contains shared display text, `Parser` validates
 and dispatches commands, and the model classes store the current application state in memory.
@@ -110,6 +97,15 @@ The application uses a lightweight layered architecture:
 `Inventory` for the duration of the process. The parser receives these objects when handling each command. This keeps
 the managers independent while allowing loans, fulfilled requests, broken-item reports, and preparations to
 query or update inventory. Broken-item tracking shares the contact manager to preserve selected contacts.
+
+![Application architecture including record storage](images/storage-architecture.png)
+
+*Figure A1: Runtime components and storage dependencies. Solid arrows show component use; dashed arrows show
+snapshot conversion and validation. The manager group represents the existing model classes, not a new Java class.*
+
+`Bob` coordinates startup, command handling, and saving. `AppState` keeps the shared managers together, while
+`Storage` handles files and `SnapshotCodec` handles JSON conversion and validation. Managers do not read or write
+files themselves. The snapshot boundary allows a loaded dataset to be validated before it becomes live state.
 
 ### UI component
 
@@ -169,6 +165,11 @@ nonblank names, and conflict-free sessions.
 The [version-1 storage format and behavior contract](StorageFormat.md) defines the persisted fields and recovery
 rules, with [populated](examples/bob-v1.json) and [empty](examples/bob-v1-empty.json) examples.
 
+![Storage classes and immutable snapshot boundary](images/storage-class.png)
+
+*Figure S1: Selected storage classes and members. Dependencies show temporary use; `LoadResult` holds one snapshot
+and records whether it came from the main file, backup, or a new empty directory. Routine accessors are omitted.*
+
 The model boundary consists of `AppState.toSnapshot()` and `AppState.restore(snapshot)`.
 Snapshots use Java records (data classes with generated accessors and value equality) and defensive list copies,
 so a later inventory deduction, request status change, or preparation edit cannot alter an earlier snapshot.
@@ -220,6 +221,51 @@ dates, statuses, ordering, independence, strict JSON, stock restoration, backup 
 unchanged-file checks, every mutation type, and failed-save exit choices. File-writing tests use JUnit temporary
 directories. The `UI-PERSIST-*` cases in the [UI test plan](../test/ui-test-plan.md) test the packaged executable,
 including fresh-process restarts and injected filesystem failures, with chronological phase transcripts.
+
+#### Automatic saving
+
+![Command change detection and atomic snapshot saving](images/storage-save-sequence.png)
+
+*Figure S2: One ordinary command and its automatic save. The live `state:AppState` is separate from the static
+restoration call used to validate a temporary state. The detailed file operations show the successful path;
+the alternative summarizes a failure at any validation or file operation. A failed backup update stops the save
+before main-file replacement.*
+
+The parser compares independent snapshots around command execution. When they differ, `Bob` marks the live state
+as pending and asks `Storage` to save a fresh complete snapshot. `SnapshotCodec.encode()` validates it through
+temporary model restoration before producing JSON. The backup is replaced only from a valid previous main file.
+The new main is installed only after the temporary write and any required backup replacement succeed. Failed saves
+keep the latest live state pending for a later changed command or exit; ordinary command confirmations still describe
+the in-memory operation.
+
+#### Startup and recovery
+
+![Main-file selection, backup recovery, and startup restoration](images/storage-load-activity.png)
+
+*Figure S3: Startup file selection and restoration for an interactive session. An unsupported main version stops
+startup before backup fallback. Both files must be absent to start empty; unusable files never mean empty state.*
+
+`Storage.load()` reports the selected source without repairing files. JSON decoding already validates domain state;
+`Bob` then restores the independent managers used by the running session. Loans and broken reports reconnect to the
+shared inventory without replaying deductions. Backup recovery is reported after the greeting and remains pending
+until the next successful change or exit saves a repaired main file. EOF before the startup name exits without a
+command session; that input-handling branch is omitted from the activity diagram.
+
+#### Diagram sources
+
+The architecture and storage diagrams reuse the existing [`loan-style.puml`](diagrams/loan-style.puml) styling.
+Editable sources: [architecture](diagrams/storage-architecture.puml), [storage classes](diagrams/storage-class.puml),
+[automatic-save sequence](diagrams/storage-save-sequence.puml), and
+[startup activity](diagrams/storage-load-activity.puml). Keep the corresponding PNGs in `docs/images/` in sync.
+
+With Java 25 and the same local PlantUML JAR used for the other diagrams, regenerate them from the repository root:
+
+```text
+java "-Djava.awt.headless=true" -jar build/diagram-tools/plantuml-1.2025.10.jar -charset UTF-8 -tpng -o ../images docs/diagrams/storage-*.puml
+```
+
+The JAR path above refers to the local rendering tool under `build/`; the editable sources and rendered images are
+kept in the repository.
 
 ### Common classes
 
