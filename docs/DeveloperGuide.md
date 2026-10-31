@@ -21,6 +21,7 @@
   - [Session preparation](#session-preparation)
   - [Contact management](#contact-management)
   - [Loan tracking](#loan-tracking)
+    - [Loan history](#loan-history)
   - [Student request tracking](#student-request-tracking)
   - [Broken-item tracking](#broken-item-tracking)
   - [Validation and error handling](#validation-and-error-handling)
@@ -150,11 +151,12 @@ The model is composed of domain objects and managers:
 - [`BrokenItemManager`](../src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
   and maintenance-contact availability.
 - [`BrokenItem`](../src/main/java/seedu/bob/BrokenItem.java) holds immutable validated damage-report details.
-- [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
+- [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) retains all loan records and exposes active-only views using the shared inventory.
 - [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
+- [`LoanRecord`](../src/main/java/seedu/bob/LoanRecord.java) retains a permanent ID, lifecycle status, and recording/closure timestamps.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
 - `AppState` groups the managers, exports snapshots, and restores complete independent model state.
-- `AppSnapshot` and its nested records describe version-1 storage values without retaining mutable model references.
+- `AppSnapshot` and its nested records describe version-2 storage values without retaining mutable model references.
 
 Managers expose operations rather than their mutable internal collections. Where a collection is returned for querying,
 the implementation returns an immutable snapshot. Domain classes maintain invariants such as positive quantities,
@@ -162,8 +164,9 @@ nonblank names, and conflict-free sessions.
 
 ### Storage component
 
-The [version-1 storage format and behavior contract](StorageFormat.md) defines the persisted fields and recovery
-rules, with [populated](examples/bob-v1.json) and [empty](examples/bob-v1-empty.json) examples.
+The [version-2 storage format and behavior contract](StorageFormat.md) defines the persisted fields and recovery
+rules, with [loan-ledger](examples/bob-v2.json) and [empty](examples/bob-v2-empty.json) examples.
+The older version-1 examples remain fixtures for strict, non-writing migration tests.
 
 ![Storage classes and immutable snapshot boundary](images/storage-class.png)
 
@@ -189,7 +192,8 @@ back, protecting newer-format records. Neither unusable files nor unreadable dir
 
 `SnapshotCodec` uses Gson with strict parsing and a bounded reader that detects duplicate object keys. It checks
 exact field sets and primitive types before deserialization, including explicit nullable contact fields and integer
-ranges. Earlier version-1 files without `brokenItems` load with an empty report list.
+ranges. Version-1 active loans are converted to version-2 history entries in memory, with deterministic IDs
+and unknown recording timestamps. Earlier version-1 files without `brokenItems` load with an empty report list.
 Domain restoration then checks values, duplicates, and session conflicts. JSON errors, unsupported versions,
 and I/O failures are distinguished by `StorageException.Kind`. The default `data` directory is ignored by Git.
 
@@ -198,7 +202,7 @@ the previous valid main as a backup, then replaces the main with an atomic move.
 the save. A corrupt main is never copied over a valid backup. Unsupported atomic moves fail explicitly rather
 than falling back to an in-place write. Temporary cleanup never removes the main or backup. This protects complete
 snapshots across process interruption; it is not a guarantee against all disk or power failures. Concurrent writers
-to the same directory and automatic schema migration are unsupported.
+to the same directory and migration from unsupported schema versions are not supported.
 
 Broken reports are restored separately from available inventory, without deducting their units again.
 Active contact positions reconnect reports to the exact restored contact; deleted-contact details restore a
@@ -783,7 +787,7 @@ word), so a value containing a word such as `a/b` cannot be entered. This affect
 
 ### Loan tracking
 
-Loan tracking supports recording loans (`add-l`), listing active or overdue loans (`list-l [overdue]`), correcting an
+Loan tracking supports recording loans (`add-l`), listing active, overdue, complete-history, or returned-only views, correcting an
 incorrect record (`delete-l INDEX`), and recording a full return (`return INDEX`). Each accepted loan deducts available
 stock; either removal command restores the entire loan quantity before removing the record.
 
@@ -794,17 +798,19 @@ This gives all features a consistent view of available stock. Loan tracking divi
 
 - **Parser** validates command syntax, constructs domain objects, invokes the manager, and passes results to the UI.
 - **Loan** captures item details, quantity, borrower name and phone, and a strictly parsed due date.
-- **LoanManager** maintains active loans, coordinates stock changes, and evaluates overdue status using its `Clock`.
+- **LoanManager** maintains all lifecycle records, coordinates stock changes, and evaluates overdue status using its `Clock`.
+- **LoanRecord** wraps loan details with a stable ID, status, and optional recording/closure timestamps.
 - **Inventory** locates items case-insensitively, validates stock changes, and removes or recreates depleted entries.
 - **Ui** renders successful results, warnings, listing rows, and empty states.
 
-`LoanManager` stores an `ArrayList<Loan>` in insertion order. Each addition creates an independent record, even when its
-item and borrower match another loan. The displayed index is a one-based position in the full active list.
+`LoanManager` stores an `ArrayList<LoanRecord>` in creation order and a persisted `nextLoanId`. Each addition is
+independent, even when its details match another record. Active lists filter `ACTIVE` records before assigning
+one-based action indices; returned and voided records remain in the full collection with their permanent IDs.
 
 ![Loan tracking class diagram](images/loan-tracking-class.png)
 
-*Figure 6: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
-snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
+*Figure 6: Selected loan classes and navigable relationships. The manager retains lifecycle wrappers around immutable
+loan details. The filled diamond shows that a loan owns its private item snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
 result classes, constructors, routine getters, and inventory internals are omitted.*
 
 The `InventoryItem` owned by a loan is a separate object from live inventory stock. `Loan` exposes only its values, so
@@ -814,7 +820,7 @@ details of a loan even when the source inventory entry disappears or a source co
 
 #### Key operations
 
-- `LoanManager#addLoan(Loan loan)` deducts stock, appends the loan, and returns a `LoanAdditionResult` with its addition-time
+- `LoanManager#addLoan(Loan loan)` deducts stock, appends a new active `LoanRecord`, advances its ID counter, and returns a `LoanAdditionResult` with its addition-time
   overdue flag. The UI uses that flag for the backlog warning.
 - `Inventory#lendItem(String name, String category, int quantity)` validates and deducts available units. It shares the
   private deduction path with `delete-i`, including cleanup of depleted items and empty categories.
@@ -822,7 +828,9 @@ details of a loan even when the source inventory entry disappears or a source co
   its full-list index, and its query-time overdue flag.
 - `Loan#isOverdue(LocalDate today)` returns whether its due date is strictly before the supplied date.
 - `LoanManager#returnLoan(int userIndex)` and `deleteLoan(int userIndex)` delegate to the private
-  `removeLoanAndRestoreStock()` method and return the removed loan for their distinct UI confirmations.
+  `closeLoanAndRestoreStock()` method, replacing the selected wrapper with `RETURNED` or `VOIDED` metadata after
+  stock restoration. They return the original loan details for their distinct UI confirmations.
+- `getLoanHistory()` and `getReturnedLoans()` return immutable record views; IDs and recorded dates are rendered by `Ui`.
 - `Inventory#restoreStock(String name, String category, int quantity)` merges matching stock or recreates a missing item
   or category. It rejects integer overflow before changing stock.
 
@@ -842,7 +850,8 @@ add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
 
 `Parser` validates the prefixes and quantity, constructs a borrower `Contact`, and constructs a `Loan`. The loan copies
 the borrower's values, parses the due date, and creates its item snapshot. Construction does not alter stock.
-`LoanManager#addLoan()` then asks inventory to deduct two units before appending the record. Inventory now holds three
+`LoanManager#addLoan()` validates the next ID and captures the recording time, then deducts two units before
+appending the record and advancing the counter. Inventory now holds three
 units, while loan 1 independently records two.
 
 **Step 2: Keep a repeated loan separate**
@@ -868,7 +877,7 @@ the candidate loan. `Parser` displays the error; no success confirmation or over
 return 1
 ```
 
-The manager restores the first loan's two units before removing that record. The second loan becomes index 1 without
+The manager restores the first loan's two units before marking its record `RETURNED` and recording its closure time. The second loan becomes index 1 without
 changing its recorded quantity or due date. Users should refresh `list-l` after removal before choosing another index.
 
 **Step 5: Correct an incorrect record**
@@ -878,7 +887,8 @@ delete-l 1
 ```
 
 This uses the same restoration path as a return but displays a correction confirmation. All five units are available
-again, and the active loan list is empty. Neither removal command changes supplier contacts nor session requirements.
+again, and the active loan list is empty. History retains the first record as `RETURNED` and the second as `VOIDED`.
+Neither closure changes supplier contacts or session requirements.
 
 | After operation | Available Multimeters | Active loans, in displayed order |
 | --- | --- | --- |
@@ -903,17 +913,18 @@ omitted. `Ui` is shown by its class name because its display methods are static.
 *Figure 7: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
 
 If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
-stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
+stops before `records.add(record)` or counter advancement. The manager computes the addition result's overdue flag before deduction, but returns it
 only after successful insertion; a rejected backlog request therefore produces no overdue warning.
 
 #### Interactions during a full return
 
-`returnLoan()` and `deleteLoan()` share `removeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
+`returnLoan()` and `deleteLoan()` share `closeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
 and successful restoration. A correction follows the same model interaction, followed by `Ui.showLoanDeleted()`.
 
 ![Successful full loan return sequence diagram](images/loan-return-sequence.png)
 
-*Figure 8: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+*Figure 8: The selected active record is resolved, a closed replacement is prepared, its units are restored, and only
+then is the replacement installed. The original ID and loan details remain in history.*
 
 Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
 inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
@@ -955,8 +966,8 @@ Independent snapshots are simpler for the supported full-return workflow.
 
 **Aspect 2: Coordinating inventory and loan changes**
 
-**Current approach:** `LoanManager` coordinates both operations, deducting before insertion and restoring before removal.
-Inventory owns matching, quantity validation, and cleanup. Both return and correction reuse one restoration path.
+**Current approach:** `LoanManager` coordinates both operations, deducting before insertion and restoring before closure.
+Inventory owns matching, quantity validation, and cleanup. Both return and correction reuse one restoration path while retaining distinct terminal statuses.
 
 This prevents expected stock errors from leaving an accepted record without a matching stock change. It also avoids
 duplicating inventory rules in the parser.
@@ -967,14 +978,15 @@ commands sequentially and commits inventory and loans together as one file snaps
 
 **Aspect 3: Identifying loans in filtered views**
 
-**Current approach:** Keep an insertion-ordered list and carry its one-based positions into filtered result rows.
+**Current approach:** Retain permanent IDs for bookkeeping, while carrying full active-list positions into active
+and overdue result rows. The complete ledger is filtered before action indices are assigned.
 
 The same index selects the same active record in either view, without maintaining a second index map. Positions can
 change after removal, so users must obtain a fresh listing.
 
-**Alternative:** Assign permanent loan IDs and store records in a map. IDs remain stable after deletion but require ID
-generation and a different command/display convention. Full-list positions match the project's session and contact
-commands and are sufficient for this version.
+**Alternative:** Change all action commands to accept permanent IDs and store records in a map. This would avoid
+stale action positions, but changes established command semantics. The implementation keeps explicit history IDs
+separate from active indices; ID generation and its durable counter are required for the ledger in either case.
 
 **Aspect 4: Determining overdue status**
 
@@ -1030,7 +1042,7 @@ The alternative above could provide a suitable foundation for that extension.
 
 | Component | Responsibility |
 | --- | --- |
-| `Parser` | Exact prefix order, positive integer conversion, plain removal indices, and the optional lowercase `overdue` filter. |
+| `Parser` | Exact prefix order, positive integers, active action indices, and lowercase `overdue`, `history`, or `returned` filters. |
 | `Loan` / `Contact` | Nonblank item and borrower details, digits-only phone, positive quantity, and a valid due date. |
 | `LoanManager` | Nonnull dependencies/records, valid full-list indices, clock-based overdue queries, and operation ordering. |
 | `Inventory` | Valid identifiers, matching stock, positive quantities, sufficient available stock, and overflow-safe restoration. |
@@ -1047,12 +1059,14 @@ checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../t
 
 #### Loan tracking limitations
 
-- Returns and corrections always restore the complete quantity. Partial returns, loan editing, and return history are
-  not supported.
+- Returns and corrections always restore the complete quantity. Partial returns, loan editing, and history deletion
+  are not supported.
 - Loan indices are list positions, so previously captured indices can become stale after removal.
 - Stock is matched by case-insensitive name/category, without a permanent item identifier.
 - Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
-- Active loans persist with available inventory; completed returns and corrections leave no history.
+- All loan records persist with available inventory. History accumulates and increases snapshot comparison/write costs.
+
+The [loan history design](#loan-history) below explains retention, migration, and the alternatives considered.
 
 #### Diagram sources
 
@@ -1064,6 +1078,140 @@ The section follows the walkthrough and design-alternatives format of the
 [AB3 implementation example](https://se-education.org/addressbook-level3/DeveloperGuide.html#proposed-implementation).
 See the [SE-EDU PlantUML tutorial](https://se-education.org/guides/tutorials/plantUml.html) for editing and image export.
 Export PNGs into `docs/images/` after changing a source so the guide's images remain in sync.
+
+#### Loan history
+
+**Status: implemented.** Active, returned, and voided records persist in schema version 2. The following design
+record explains the lifecycle, migration rules, and alternatives considered. Existing action commands
+still use active-list indices; the additional views expose permanent identities for bookkeeping.
+
+##### Objective and lifecycle
+
+The manager keeps every successfully recorded loan for bookkeeping, including loans that have been returned or corrected.
+It uses one permanent, insertion-ordered collection and derives active and historical views from it.
+An incorrect entry closed with `delete-l` remains as a voided record, distinguishable from a genuine return.
+
+| Operation | Record change | Inventory effect |
+| --- | --- | --- |
+| `add-l ...` | Create a new `ACTIVE` record with a permanent ID. | Deduct the recorded quantity once. |
+| `return INDEX` | Replace the selected active record with a `RETURNED` version and closure timestamp. | Restore its complete quantity once. |
+| `delete-l INDEX` | Replace the selected active record with a `VOIDED` version and closure timestamp. | Restore its complete quantity once. |
+| History query or restart | Preserve records and their statuses. | No deductions or restorations. |
+
+`RETURNED` and `VOIDED` are terminal states: neither can be returned or voided again. Normal commands should not
+permanently erase records. Retaining voided entries preserves an account of corrections without counting them as
+completed borrowing. Optional correction reasons, editing, partial returns, reopening records, export, and permanent
+history deletion are outside the initial implementation.
+
+##### Record model, identifiers, and timestamps
+
+Keep `Loan` as the existing immutable snapshot of item details, quantity, borrower name and phone, and due date.
+The implementation adds an immutable `LoanRecord` wrapper for lifecycle metadata; closing a loan replaces its wrapper while
+retaining its ID and original loan details. Existing references to loan details cannot change historical values.
+
+| Model/storage value | Purpose and validation |
+| --- | --- |
+| `loanId` | Positive, permanent sequential ID. Separate loans receive different IDs even when all their details match. |
+| `loan` | Existing immutable `Loan` details, including captured borrower values rather than live contact references. |
+| `status` | Exactly `ACTIVE`, `RETURNED`, or `VOIDED`; unsupported values are rejected. |
+| `recordedAt` | Timestamp when the loan entry was recorded in Bob. Nullable for imported records whose original timestamp is unknown. |
+| `closedAt` | Timestamp when Bob records the return or correction. Required for closed records and absent for active records. |
+| `nextLoanId` | Manager-level counter persisted alongside the records; positive and greater than every stored loan ID. |
+
+The manager's injected `Clock` supplies timestamps. ISO offset timestamps preserve their local-time context in
+storage; the console intentionally shows readable calendar dates in that recorded offset. `recordedAt` is not an
+asserted physical borrowing time: backlog loans are
+already supported, and entering a past due date does not reveal when the item was actually borrowed. Similarly,
+`closedAt` records the closure command's time. Do not invent missing dates during migration.
+
+IDs and the next-ID counter use validated positive 64-bit integers; existing quantity limits remain unchanged.
+Validate ID availability and construct the candidate record before deducting stock. Advance the counter only after
+an accepted addition, and reject counter overflow before any inventory change. Loading rejects duplicate IDs,
+invalid counters, malformed timestamps, and inconsistent status/closure fields.
+
+Keep `return INDEX` and `delete-l INDEX` tied to the latest active-loan list. Resolve those positions through the
+filtered active records, not through positions in the complete collection. Overdue listings retain full active-list
+positions, as they do today. A permanent loan ID is an identity for bookkeeping, not another name for a displayed
+active index. History output must label IDs clearly and direct users to `list-l` before selecting an active index.
+
+##### Stock consistency and integration
+
+`LoanManager` should remain the only coordinator of loan and inventory changes. Before a return or correction,
+validate the active index and prepare the closed record. Restore inventory before replacing the active record.
+An invalid index, an already closed record, or stock-restoration overflow must leave both inventory and the record
+unchanged. A closed record must never restore stock again, including after a restart.
+
+Preserve `getLoans()` as an active-only view so callers such as `ItemFinder` do not mistake historical quantities
+for equipment still on loan. Active and overdue result rows should continue using the existing display rules.
+Late status for an active loan remains a query-time calculation; a permanently stored overdue flag would become stale.
+
+For example, start with five available units and record loans of two and one units. Returning active index 1 should
+leave four units available, retain the first record as `RETURNED`, and display the second record at active index 1.
+Voiding that remaining active loan should restore availability to five and retain its record as `VOIDED`.
+History then contains both original IDs, while the active view is empty. Restarting must preserve this result.
+
+##### Persistence and version-1 compatibility
+
+Use schema version 2 because loan storage changes from active-only entries to permanent records with lifecycle
+metadata. Extend `AppSnapshot`, `AppState`, and `SnapshotCodec` to include every loan record and `nextLoanId`.
+Keep inventory, loan history, and the other feature collections in the same complete snapshot, so the existing
+atomic main-file replacement cannot save an inventory return separately from its loan status.
+
+The version-2 reader also accepts valid version-1 files. Convert their loans into `ACTIVE` records in memory,
+assign IDs in their existing order, set `nextLoanId` above the assigned IDs, and leave unknown recording timestamps
+null. Preserve all other saved features, including compatibility with the older omission of `brokenItems`.
+Perform conversion before restoring the current model, without replaying add or return commands or changing stock.
+
+Reading a valid version-1 main file, including read-only commands followed by ordinary exit, should not rewrite it.
+The next successful data-changing command saves version 2 and retains the validated previous main as its backup.
+Recovering an older backup restores that ledger and its counter together. Newer lost IDs are not reserved;
+sequential IDs are stable within the retained dataset, not globally unique across independent or rolled-back copies.
+Existing backup recovery still marks restored state as pending and may repair the main on exit. Loading or saving
+must continue to reject unsupported newer versions and preserve the existing backup, temporary-file, and failure
+handling rules. Version-2 validation must not weaken strict version-1 validation.
+
+History and counter changes must participate in snapshot equality so the existing autosave detection sees closures
+and new records. A failed save leaves the full changed live state pending and reports the existing warning; later
+retry must save the same IDs and timestamps without repeating a stock operation. A disk save failure does not turn
+a successful in-memory return into a second return attempt.
+
+Previously returned or deleted loans cannot be reliably reconstructed from version-1 active-only snapshots.
+Existing backups are previous snapshots, not a complete loan ledger. Migration imports available active records;
+history retention starts with this feature, without fabricating earlier returns or their dates.
+
+##### Commands and views
+
+| Command | View |
+| --- | --- |
+| `list-l` | Active loans only, preserving existing command behavior. |
+| `list-l overdue` | Overdue active loans, retaining active-list indices. |
+| `list-l history` | All active, returned, and voided records in creation order. |
+| `list-l returned` | Returned records only. |
+
+History rows include the permanent ID, status, item/category, quantity, borrower details, due date, and
+recording/closure dates. The complete offset timestamps remain stored in JSON. An imported missing timestamp
+is shown as `Unknown`, rather than as today's date.
+Use creation order rather than sorting on timestamps, which can be unknown for imported records. Queries should
+return immutable result rows, render through `Ui`, and never mutate the model or rewrite storage files.
+Exact output, empty states, and argument validation were recorded in the UI plan before implementation.
+
+##### Considerations and alternatives
+
+| Design question | Recommended approach and rationale | Alternative and tradeoff |
+| --- | --- | --- |
+| Where to keep active and closed records | One permanent collection with filtered views avoids duplicating a loan or moving it between independent lists. | Separate active and history collections simplify individual queries but need coordinated moves and additional uniqueness checks. |
+| How to represent lifecycle metadata | Wrap immutable `Loan` details in a `LoanRecord`, replacing the wrapper when closing. This keeps existing loan value behavior separate from bookkeeping. | Add mutable lifecycle fields directly to `Loan`; fewer classes, but retained references and snapshot independence become harder to reason about. |
+| How to identify records | Persist sequential IDs and their next counter; they are readable and preserve identity after list renumbering. Keep active indices for existing action commands. | UUIDs avoid a shared counter but are less convenient to read. Switching all actions to permanent IDs would change existing command semantics. |
+| How to retain corrections | Mark incorrect entries `VOIDED`, preserving their details separately from genuine returns. | Hard deletion loses the correction trail; treating corrections as returns would misrepresent bookkeeping. |
+| Where to store history | Extend the existing complete JSON snapshot so inventory and history are replaced together. | A separate history file needs coordination across two file replacements. SQLite could provide database transactions and efficient larger queries, but adds dependencies and migration work. |
+| How to evolve the file format | Write version 2 and explicitly convert valid version-1 data in memory. Older readers can reject the new version clearly. | Reuse version 1 with optional lifecycle fields; fewer version branches, but it changes the meaning of an established strict format and complicates compatibility. |
+| How to represent a full audit trail | Retain each original loan plus its terminal status and timestamps. This is sufficient for the implemented full-return workflow. | An append-only event log could record every action, but requires event replay, validation, and recovery rules. Consider it if partial returns or record edits are added. |
+| How to handle historical dates | Preserve known timestamps and display unknown imported values explicitly. | Using migration time as the original recording time makes old records look newly created and gives misleading bookkeeping dates. |
+| How to scale retained history | Start with the existing in-memory collection and complete snapshots for the expected small dataset. Document that records accumulate. | Filtering, pagination, archival, or database storage may become useful as history grows; pagination alone does not reduce snapshot-copying or disk-write costs. |
+
+Permanent IDs do not require changing the available-stock inventory model or adding permanent item identifiers.
+The earlier total-stock alternative remains a separate design choice. Partial returns would require additional
+quantity invariants and return-event data, so they should not be included implicitly in this history extension.
 
 ### Student request tracking
 

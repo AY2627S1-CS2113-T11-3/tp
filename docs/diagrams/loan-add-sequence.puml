@@ -6,7 +6,7 @@ skinparam maxMessageSize 240
 participant ":Parser" as Parser
 participant ":LoanManager" as Manager
 participant ":Inventory" as Inventory
-participant "loans:ArrayList<Loan>" as Loans
+participant "records:ArrayList<LoanRecord>" as Loans
 participant "Ui" as Ui
 
 [-> Parser : handleCommand("add-l ...", ...)
@@ -18,7 +18,8 @@ end ref
 Parser -> Manager : addLoan(loan)
 activate Manager
 note over Manager
-    Capture today using the clock.
+    Validate next ID; capture recording time.
+    Prepare an ACTIVE LoanRecord.
     Create LoanAdditionResult with
     loan.isOverdue(today).
 end note
@@ -30,9 +31,10 @@ note right of Inventory
 end note
 Inventory --> Manager : completed
 deactivate Inventory
-Manager -> Loans : add(loan)
+Manager -> Loans : add(record)
 activate Loans
 Loans --> Manager : true
+Manager -> Manager : nextLoanId++
 deactivate Loans
 Manager --> Parser : result: LoanAdditionResult
 deactivate Manager

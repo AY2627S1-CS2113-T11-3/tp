@@ -26,7 +26,8 @@ class AppSnapshot <<record>> {
     -sessions: List<SessionEntry> {readOnly}
     -requests: List<RequestEntry> {readOnly}
     -contacts: List<ContactEntry> {readOnly}
-    -loans: List<LoanEntry> {readOnly}
+    -loanRecords: List<LoanRecordEntry> {readOnly}
+    -nextLoanId: long {readOnly}
     -brokenItems: List<BrokenItemEntry> {readOnly}
 }
 class LoadResult <<record>> {

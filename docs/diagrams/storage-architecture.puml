@@ -10,7 +10,7 @@ component "Parser\nCommand validation and dispatch" as Logic
 
 package "Model" {
     component "AppState\nShared application state" as State
-    component "Model managers\nInventory, sessions, contacts,\nrequests, loans, broken reports" as Managers
+    component "Model managers\nInventory, sessions, contacts,\nrequests, loan history, broken reports" as Managers
 }
 
 package "Storage" as Persistence {
