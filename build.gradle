@@ -17,7 +17,9 @@ repositories {
 dependencies {
     String jUnitVersion = '5.14.4'
 
+    //@@author DaynaG3
     implementation 'com.google.code.gson:gson:2.15.0'
+//@@author
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${jUnitVersion}"
 

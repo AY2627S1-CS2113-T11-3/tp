@@ -85,6 +85,7 @@ public class Parser {
      * Creates a parser that dispatches commands to the managers supplied for each invocation.
      */
     public Parser() {
+        //@@author DaynaG3
     }
 
     /**
@@ -100,6 +101,7 @@ public class Parser {
         handleCommand(input, state.getInventory(), state.getSessionManager(), state.getContactManager(),
                 state.getRequestManager(), state.getLoanManager());
         return !before.equals(state.toSnapshot());
+        //@@author
     }
 
     /**

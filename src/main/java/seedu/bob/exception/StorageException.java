@@ -1,3 +1,4 @@
+//@@author DaynaG3
 package seedu.bob.exception;
 
 /** Represents an expected persistence failure without exposing saved personal data in user messages. */

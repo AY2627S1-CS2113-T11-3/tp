@@ -2,7 +2,9 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.Collections;
+//@@author DaynaG3
 import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -22,6 +24,7 @@ public class RequestManager {
     /** Kept sorted by deadline so displayed positions can be used by {@code delete-r} and {@code mark-r}. */
     private final ArrayList<Request> requests = new ArrayList<>();
 
+    //@@author DaynaG3
     /** Exports requests in their current deadline order with their saved statuses. */
     List<AppSnapshot.RequestEntry> toSnapshot() {
         List<AppSnapshot.RequestEntry> entries = new ArrayList<>();
@@ -41,6 +44,7 @@ public class RequestManager {
         assert manager.hasValidState() : "Restored requests must be valid and sorted";
         return manager;
     }
+    //@@author
 
     /**
      * Adds a request, sorts the list by deadline, and prints a confirmation.

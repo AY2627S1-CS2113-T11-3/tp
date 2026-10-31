@@ -2,7 +2,9 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+//@@author DaynaG3
 import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -34,6 +36,7 @@ public class Inventory {
      * Creates an empty inventory with categories and items kept in insertion order.
      */
     public Inventory() {
+        //@@author DaynaG3
     }
 
     /** Copies available stock while retaining category and item display order. */
@@ -73,6 +76,7 @@ public class Inventory {
         }
         assert inventory.hasValidState() : "Restored inventory must contain valid unique items";
         return inventory;
+        //@@author
     }
 
     /**

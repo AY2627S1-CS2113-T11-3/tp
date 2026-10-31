@@ -1,3 +1,4 @@
+//@@author DaynaG3
 package seedu.bob.exception;
 
 /** Indicates that a complete saved snapshot cannot be restored into a valid application state. */

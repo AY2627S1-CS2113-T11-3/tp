@@ -49,12 +49,14 @@ public class Session implements Comparable<Session> {
      */
     public Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount) throws CommandException {
+        //@@author DaynaG3
         this(name, dateText, location, startTimeText, endTimeText, headcount, false);
     }
 
     /** Shares structural validation while allowing historical dates only for saved records. */
     private Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount, boolean isRestoring) throws CommandException {
+        //@@author
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -76,7 +78,9 @@ public class Session implements Comparable<Session> {
                     "Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
                             + "Ensure the month is capitalized.");
         }
+        //@@author DaynaG3
         if (!isRestoring && date.isBefore(LocalDate.now())) {
+            //@@author
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
 
@@ -95,6 +99,7 @@ public class Session implements Comparable<Session> {
         if (!startTime.isBefore(endTime)) {
             throw new InvalidSessionTimeException("Start time must be earlier than end time.");
         }
+        //@@author DaynaG3
     }
 
     /** Restores a session and its total requirements without replaying preparation commands. */
@@ -112,6 +117,7 @@ public class Session implements Comparable<Session> {
     AppSnapshot.SessionEntry toSnapshot() {
         return new AppSnapshot.SessionEntry(name, date.toString(), location, SnapshotFormat.formatTime(startTime),
                 SnapshotFormat.formatTime(endTime), headcount, preparation.toSnapshot());
+        //@@author
     }
 
     /**

@@ -1,12 +1,18 @@
 package seedu.bob;
 
+//@@author DaynaG3
 import java.nio.file.Path;
+//@@author
 import java.util.Scanner;
+//@@author DaynaG3
 import java.util.logging.Level;
+//@@author
 import java.util.logging.Logger;
 
+//@@author DaynaG3
 import seedu.bob.exception.InvalidSnapshotException;
 import seedu.bob.exception.StorageException;
+//@@author
 
 /**
  * Runs the interactive Bob lab management application.
@@ -15,10 +21,12 @@ public class Bob {
 
     private static final Logger LOGGER = Logger.getLogger(Bob.class.getName());
 
+    //@@author DaynaG3
     /** Distinguishes an exit cancellation from a completed save or an acknowledged unsaved exit. */
     private enum ExitDecision {
         SAVED, CANCELED, UNSAVED
     }
+    //@@author
 
     /**
      * Creates an application instance; interactive startup is performed by {@link #main(String[])}.
@@ -33,6 +41,7 @@ public class Bob {
      * @param args Command-line arguments, which are not used.
      */
     public static void main(String[] args) {
+        //@@author DaynaG3
         int exitCode = run(new Scanner(System.in), new Storage(Path.of("data/bob.json")));
         if (exitCode != 0) {
             System.exit(exitCode);
@@ -41,8 +50,10 @@ public class Bob {
 
     /** Runs an isolated session and returns an exit code, allowing tests to supply temporary storage. */
     static int run(Scanner in, Storage storage) {
+        //@@author
         LOGGER.info("Initializing Bob application");
 
+        //@@author DaynaG3
         LoadResult loaded;
         AppState state;
         try {
@@ -54,6 +65,7 @@ public class Bob {
             System.out.println("Bob has stopped; saved files were not changed.");
             return 1;
         }
+        //@@author
 
         String banner = "  ____        _     \n"
                 + " |  _ \\      | |    \n"
@@ -67,20 +79,27 @@ public class Bob {
         if (!in.hasNextLine()) {
             LOGGER.info("Input ended before a user name was provided");
             LOGGER.info("Exiting Bob application cleanly");
+            //@@author DaynaG3
             return 0;
+            //@@author
         }
         System.out.println("Hello " + in.nextLine() + ", welcome to Bob!");
         System.out.println(Ui.DIVIDER);
+        //@@author DaynaG3
         if (loaded.source() == LoadResult.Source.BACKUP) {
             System.out.println("Recovered data from backup. It may not include the latest changes.");
         }
+        //@@author
 
         Parser parser = new Parser();
+        //@@author DaynaG3
         boolean hasPendingChanges = loaded.source() == LoadResult.Source.BACKUP;
+        //@@author
         while (in.hasNextLine()) {
             String line = in.nextLine();
             if (line.trim().equalsIgnoreCase("Bye")) {
                 LOGGER.info("User requested application termination");
+                //@@author DaynaG3
                 if (!hasPendingChanges) {
                     return 0;
                 }
@@ -96,15 +115,19 @@ public class Bob {
                         hasPendingChanges = false;
                     }
                 }
+                //@@author
             }
             System.out.println();
         }
 
+        //@@author DaynaG3
         if (hasPendingChanges && !save(storage, state)) {
             System.out.println("Input ended with unsaved changes. The last saved data was kept.");
             return 1;
         }
+        //@@author
         LOGGER.info("Exiting Bob application cleanly");
+        //@@author DaynaG3
         return 0;
     }
 
@@ -149,5 +172,6 @@ public class Bob {
                 System.out.println("Choose retry, cancel, or exit.");
             }
         }
+        //@@author
     }
 }

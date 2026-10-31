@@ -68,12 +68,14 @@ public class Request implements Comparable<Request> {
      */
     Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock)
             throws CommandException {
+        //@@author DaynaG3
         this(studentName, itemName, quantity, deadlineText, clock, false);
     }
 
     /** Reuses validation while retaining historical deadlines and saved display text during restoration. */
     private Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock,
             boolean isRestoring) throws CommandException {
+        //@@author
         Objects.requireNonNull(clock, "Clock must not be null");
         String trimmedStudentName = studentName == null ? "" : studentName.trim();
         String trimmedItemName = itemName == null ? "" : itemName.trim();
@@ -103,14 +105,18 @@ public class Request implements Comparable<Request> {
                     InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
         }
         // A deadline is a calendar date, so requests due today are still accepted.
+        //@@author DaynaG3
         if (!isRestoring && parsedDeadline.isBefore(LocalDate.now(clock))) {
+            //@@author
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
                     InvalidRequestDeadlineException.PAST_DATE_MESSAGE);
         }
 
+        //@@author DaynaG3
         this.studentName = isRestoring ? studentName : trimmedStudentName;
         this.itemName = isRestoring ? itemName : trimmedItemName;
+        //@@author
         this.quantity = quantity;
         this.deadline = parsedDeadline;
 
@@ -119,6 +125,7 @@ public class Request implements Comparable<Request> {
         assert quantity > 0 : "Validated quantity must be positive";
         assert deadline != null : "Validated deadline must not be null";
         LOGGER.fine(() -> "Created request for " + this.studentName + " for " + this.itemName);
+        //@@author DaynaG3
     }
 
     /** Restores historical requests and exact saved statuses without applying a command status transition. */
@@ -141,6 +148,7 @@ public class Request implements Comparable<Request> {
     /** Exports the current status with the original deadline, not a derived availability value. */
     AppSnapshot.RequestEntry toSnapshot() {
         return new AppSnapshot.RequestEntry(studentName, itemName, quantity, deadline.toString(), status);
+        //@@author
     }
 
     public String getStudentName() {

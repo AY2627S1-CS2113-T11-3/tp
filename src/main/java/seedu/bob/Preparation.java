@@ -21,6 +21,7 @@ public class Preparation {
      * Creates an empty preparation list for a session without reserving inventory.
      */
     public Preparation() {
+        //@@author DaynaG3
     }
 
     /** Restores a validated total without multiplying by headcount or accumulating duplicate records. */
@@ -46,6 +47,7 @@ public class Preparation {
             entries.add(new AppSnapshot.PreparationEntry(item.getName(), item.getCategory(), item.getQuantity()));
         }
         return List.copyOf(entries);
+        //@@author
     }
 
     /**

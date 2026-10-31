@@ -46,6 +46,7 @@ public class LoanManager {
         this.inventory = Objects.requireNonNull(inventory, "Loan inventory must not be null");
         this.clock = Objects.requireNonNull(clock, "Loan clock must not be null");
         assert hasValidState() : "A new loan manager must have valid dependencies and an empty loan list";
+        //@@author DaynaG3
     }
 
     /** Exports independent active-loan records without storing their derived overdue flags. */
@@ -69,6 +70,7 @@ public class LoanManager {
                     SnapshotFormat.toCommandDate(entry.dueDate())));
         }
         assert hasValidState() : "Restored loans must retain valid independent records";
+        //@@author
     }
 
     /**

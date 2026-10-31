@@ -1,3 +1,4 @@
+//@@author DaynaG3
 package seedu.bob;
 
 /** A completely validated snapshot and its origin, used to report recovery and schedule a repair save. */

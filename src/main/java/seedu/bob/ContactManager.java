@@ -1,11 +1,15 @@
 package seedu.bob;
 
 import java.util.ArrayList;
+//@@author DaynaG3
 import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
+//@@author DaynaG3
 import seedu.bob.exception.CommandException;
+//@@author
 import seedu.bob.exception.InvalidContactIndexException;
 
 /**
@@ -25,6 +29,7 @@ public class ContactManager {
      * Creates an empty supplier and maintenance contact list.
      */
     public ContactManager() {
+        //@@author DaynaG3
     }
 
     /** Copies contacts without losing optional fields or leading zeros in phone numbers. */
@@ -44,6 +49,7 @@ public class ContactManager {
             manager.contacts.add(new Contact(entry.name(), entry.phone(), entry.email(), entry.role()));
         }
         return manager;
+        //@@author
     }
 
     /**
