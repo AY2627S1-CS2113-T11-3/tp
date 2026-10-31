@@ -5,8 +5,8 @@ for each session, track student requests, keep contacts, and track resources loa
 session's headcount to calculate required quantities and compare them with the inventory. Requests are sorted by
 deadline and show whether the requested quantity is currently in inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
-contacts, requests, and loans.
+**Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
+from that same directory restores inventory, sessions, preparations, requests, contacts, and active loans.
 
 ## Contents
 
@@ -19,6 +19,7 @@ contacts, requests, and loans.
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
+- [Saving and restoring data](#saving-and-restoring-data)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -70,11 +71,12 @@ contacts, requests, and loans.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
 6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
-   the source code. Each launch starts with empty lists.
+   the source code. Launch from the same directory to restore your saved records. The first launch starts empty.
 
 ## Command format
 
-- Enter each command on one line and press Enter. There are no follow-up selection prompts after a command.
+- Enter each command on one line and press Enter. Normal commands need no follow-up selection.
+  If Bob cannot save while exiting, it offers `retry`, `cancel`, or `exit` as described below.
 - UPPER_CASE words in the formats below are placeholders. Replace them with your own values.
 - Square brackets around a parameter mean it is optional. Do not type the brackets.
 - Commands and prefixes are case-sensitive: use `add-i`, not `ADD-I`, and `n/`, not `N/`.
@@ -866,13 +868,65 @@ Loans due today or in the future do not produce this warning. Invalid or insuffi
 are rejected without adding a loan or printing an overdue warning. Returned and corrected records
 are removed from both active and overdue lists.
 
-All loans disappear when Bob exits; persistence is planned for V2.0b. Return history and partial returns
-remain unsupported.
+Active loans persist between launches. Return history and partial returns remain unsupported.
+
+## Saving and restoring data
+
+Bob saves automatically after each command that changes data. There is no separate save command. Listing data,
+viewing help, rejected commands, and marking a request with its existing status do not rewrite saved files.
+An ordinary command's response is complete when its following blank line appears.
+
+The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, and active
+loans. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
+shortages are recalculated when displayed. Preparation and requests still do not reserve or deduct stock.
+
+The files are relative to your terminal's working directory, not the location of `bob.jar`:
+
+| File | Purpose |
+| --- | --- |
+| `data/bob.json` | Latest successfully saved complete state. |
+| `data/bob.json.bak` | Previous valid state, retained after replacing an existing save. |
+
+If both files are absent, Bob starts empty and creates its first save after a data-changing command. Launching
+from another directory selects different files. Use one running Bob process per data directory. Files are local
+plain-text JSON and include contact and borrower details; keep them in a location appropriate for those records.
+
+If the main save is missing or unusable and a valid backup exists, Bob restores the backup and displays:
+
+```text
+Recovered data from backup. It may not include the latest changes.
+```
+
+Recovery may lose the most recent change. Bob repairs the main save on the next successful change or when you
+exit. A corrupt main file is never copied over the valid backup. If no usable saved state exists, Bob stops
+before asking for your name and preserves the files. An unsupported data version also stops startup, even if
+an older backup is available. Keep copies of the files before investigating; restore a known valid copy or use
+the Bob version that supports the saved format. Do not replace the files with empty data to silence an error.
+
+If a change cannot be saved, Bob keeps it in the running application and prints a warning with the affected
+file path. A command's success confirmation describes the in-memory change; the accompanying warning means
+it has not reached disk. Resolve the reported file-access problem and make another change, or use `Bye` to
+retry saving. Closing or terminating the process while this warning remains can lose unsaved changes.
+
+Completed saves use temporary files and atomic replacement to avoid partially written main snapshots. This
+does not guarantee recovery from every disk or power failure. Back up the `data` directory separately if needed.
 
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
-Bob exits without a farewell message or a save prompt. All data entered during the run is discarded.
+Bob normally exits without a farewell message; completed changes are already saved. If unsaved changes remain,
+Bob tries saving them first. If that fails, it displays:
+
+```text
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+- `retry`: try saving again and exit if successful.
+- `cancel`: continue using Bob with the unsaved data still in memory.
+- `exit`: explicitly exit without those unsaved changes. Earlier saved data remains available.
+
+Choices ignore capitalization. Explicit unsaved exit returns a nonzero process exit code. If standard input
+ends, Bob retries a pending save once and exits with a nonzero code if it fails, without waiting for an answer.
 
 ## Errors and troubleshooting
 
@@ -918,7 +972,8 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 
 ## Current limitations
 
-- There is no saving, loading, export, or recovery after exit. All data is held in memory.
+- Storage is local to one working directory and one running process. There is no cloud sync, automatic format
+  migration, or import/export command. Unsaved changes and the newest change after backup recovery can be lost.
 - `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
@@ -966,7 +1021,9 @@ Not in place. Delete the request with `delete-r` and add a corrected one with `a
 
 **Can I keep my data for the next launch or transfer it to another computer?**
 
-Not in the current version. Bob has no save or import function; a new launch starts with empty lists.
+Yes. Restart from the same working directory to restore `data/bob.json`. To transfer records, exit Bob after
+successful saving and copy the `data` directory into the working directory on the other computer. Use a Bob
+version that supports the same saved format. There is no interactive import command.
 
 ## Command summary
 
@@ -994,4 +1051,4 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | List overdue loans only | `list-l overdue` |
 | Delete an incorrect loan and restore stock | `delete-l INDEX` |
 | Record a full return and restore stock | `return INDEX` |
-| Exit and discard data | `Bye` |
+| Exit, retrying any unsaved changes | `Bye` |
