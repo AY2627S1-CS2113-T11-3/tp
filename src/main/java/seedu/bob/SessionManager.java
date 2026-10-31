@@ -3,9 +3,15 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.Collections;
+//@@author DaynaG3
+import java.util.List;
+//@@author gavinlimsh
 import java.util.Objects;
 import java.util.logging.Logger;
 
+//@@author DaynaG3
+import seedu.bob.exception.CommandException;
+//@@author gavinlimsh
 import seedu.bob.exception.InvalidSessionIndexException;
 import seedu.bob.exception.SessionConflictException;
 
@@ -25,6 +31,26 @@ public class SessionManager {
     public SessionManager() {
     }
 
+    //@@author DaynaG3
+    /** Exports sessions with their preparation lists in chronological order. */
+    List<AppSnapshot.SessionEntry> toSnapshot() {
+        List<AppSnapshot.SessionEntry> entries = new ArrayList<>();
+        for (Session session : sessions) {
+            entries.add(session.toSnapshot());
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Builds a new conflict-free schedule without printing addition confirmations. */
+    static SessionManager restore(List<AppSnapshot.SessionEntry> entries) throws CommandException {
+        SessionManager manager = new SessionManager();
+        for (AppSnapshot.SessionEntry entry : entries) {
+            manager.addSessionSilently(Session.restore(entry));
+        }
+        return manager;
+    }
+    //@@author gavinlimsh
+
     /**
      * Adds a session to the schedule, sorts it chronologically, and prints a confirmation.
      *
@@ -39,6 +65,18 @@ public class SessionManager {
         LOGGER.info("Attempting to add new session: " + session.getName());
 
         //@@author DaynaG3
+        addSessionSilently(session);
+        //@@author gavinlimsh
+
+        LOGGER.info("Session successfully added to schedule and sorted chronologically.");
+        System.out.println("Successfully added: " + session.toString());
+        //@@author DaynaG3
+    }
+
+    /** Shares conflict validation and ordering between commands and silent snapshot restoration. */
+    private void addSessionSilently(Session session) throws SessionConflictException {
+        //@@author gavinlimsh
+
         for (Session existingSession : sessions) {
             if (session.conflictsWith(existingSession)) {
                 //@@author
@@ -55,8 +93,6 @@ public class SessionManager {
         //@@author DaynaG3
         assert hasValidState() : "Schedule must remain conflict-free after addition";
         //@@author
-        LOGGER.info("Session successfully added to schedule and sorted chronologically.");
-        System.out.println("Successfully added: " + session.toString());
     }
 
     /**

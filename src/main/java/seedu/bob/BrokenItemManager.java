@@ -1,6 +1,9 @@
 //@@author gavinlimsh
 package seedu.bob;
 
+//@@author DaynaG3
+import java.time.Clock;
+//@@author gavinlimsh
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,6 +40,43 @@ public class BrokenItemManager {
         this.contactManager = Objects.requireNonNull(contactManager, "Contact manager must not be null");
         assert hasValidState() : "A new broken-item manager must have valid dependencies";
     }
+
+    //@@author DaynaG3
+    /** Copies reports and contact identity without including mutable model references. */
+    List<AppSnapshot.BrokenItemEntry> toSnapshot() {
+        List<AppSnapshot.BrokenItemEntry> entries = new ArrayList<>();
+        for (BrokenItem item : brokenItems) {
+            Contact contact = item.getContact();
+            int index = contactManager.getContactIndex(contact);
+            AppSnapshot.ContactEntry deletedContact = contact != null && index == 0
+                    ? new AppSnapshot.ContactEntry(contact.getName(), contact.getPhone(),
+                            contact.getEmail(), contact.getRole()) : null;
+            entries.add(new AppSnapshot.BrokenItemEntry(item.getName(), item.getCategory(), item.getQuantity(),
+                    item.getFaultDescription(), item.getReportedDate().toString(),
+                    index == 0 ? null : index, deletedContact));
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Restores reports silently; saved available inventory already excludes their broken units. */
+    void restoreReports(List<AppSnapshot.BrokenItemEntry> entries, Clock clock) throws CommandException {
+        for (AppSnapshot.BrokenItemEntry entry : entries) {
+            if (entry.contactIndex() != null && entry.deletedContact() != null) {
+                throw new BrokenItemException("A saved report cannot link both an active and a deleted contact.");
+            }
+            Contact contact = null;
+            if (entry.contactIndex() != null) {
+                contact = contactManager.getContact(entry.contactIndex());
+            } else if (entry.deletedContact() != null) {
+                AppSnapshot.ContactEntry saved = entry.deletedContact();
+                contact = new Contact(saved.name(), saved.phone(), saved.email(), saved.role());
+            }
+            brokenItems.add(new BrokenItem(entry.name(), entry.category(), entry.quantity(),
+                    entry.faultDescription(), SnapshotFormat.toCommandDate(entry.reportedDate()), contact, clock));
+        }
+        assert hasValidState() : "Restored reports must be valid without deducting available stock";
+    }
+    //@@author gavinlimsh
 
     /**
      * Removes usable stock and appends a validated report without printing a confirmation.

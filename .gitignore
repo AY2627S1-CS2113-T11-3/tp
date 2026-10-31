@@ -18,3 +18,8 @@ _temp/
 
 /text-ui-test/ACTUAL.TXT
 text-ui-test/EXPECTED-UNIX.TXT
+
+#@@author DaynaG3
+# Runtime persistence snapshots, backups, and temporary writes
+/data/
+#@@author

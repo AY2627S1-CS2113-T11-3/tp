@@ -47,7 +47,7 @@ class ParserHelpTest {
             //@@author DaynaG3
             + "Loans\n"
             + "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE\n"
-            + "  list-l [overdue]\n"
+            + "  list-l [overdue|history|returned]\n"
             + "  delete-l INDEX\n"
             + "  return INDEX\n"
             //@@author

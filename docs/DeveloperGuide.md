@@ -12,6 +12,8 @@
   - [Logic component](#logic-component)
   - [Model component](#model-component)
   - [Storage component](#storage-component)
+    - [Automatic saving](#automatic-saving)
+    - [Startup and recovery](#startup-and-recovery)
   - [Common classes](#common-classes)
 - [Implementation](#implementation)
   - [Inventory management](#inventory-management)
@@ -19,6 +21,7 @@
   - [Session preparation](#session-preparation)
   - [Contact management](#contact-management)
   - [Loan tracking](#loan-tracking)
+    - [Loan history](#loan-history)
   - [Student request tracking](#student-request-tracking)
   - [Broken-item tracking](#broken-item-tracking)
   - [Validation and error handling](#validation-and-error-handling)
@@ -31,6 +34,7 @@
 - [Address Book Level 3](https://se-education.org/addressbook-level3/) — used as the structure and documentation style reference.
 - [Gradle](https://gradle.org/) — used for build automation, dependency management, and test execution.
 - [JUnit 5](https://junit.org/junit5/) — used for automated unit and integration tests.
+- [Gson](https://google.github.io/gson/UserGuide.html) — converts dedicated snapshot records to and from JSON.
 - [Java logging API](https://docs.oracle.com/en/java/javase/25/docs/api/java.logging/module-summary.html) — used for diagnostic logging.
 
 ## Setting up and getting started
@@ -75,22 +79,7 @@ Bob prints a banner, asks for the user's name, and then accepts one command per 
 
 ## Design
 
-Bob is a command-line application with a simple component structure:
-
-```text
-User
-  |
-  v
-Bob / Ui  <-->  Parser  <-->  Model managers
-                              |-- Inventory
-                              |-- SessionManager
-                              |-- ContactManager
-                              |-- RequestManager
-                              |-- BrokenItemManager
-                              `-- LoanManager
-                                      |
-                                      `-- Inventory
-```
+Bob is a command-line application whose runtime models are persisted as complete local snapshots.
 
 `Bob` starts the application and wires the components together. `Ui` contains shared display text, `Parser` validates
 and dispatches commands, and the model classes store the current application state in memory.
@@ -101,14 +90,23 @@ The application uses a lightweight layered architecture:
 
 - **UI** — reads command-line input and displays output.
 - **Logic** — parses commands, validates their formats, and dispatches operations.
-- **Model** — stores inventory, sessions, preparations, contacts, requests, loans, and broken-item reports.
-- **Storage** — not implemented; all data is intentionally in memory for the current version.
+- **Model** — stores inventory, sessions, preparations, contacts, and loans.
+- **Storage** — validates and loads local JSON snapshots, retains a backup, and saves complete state atomically.
 - **Common classes** — shared domain objects, exceptions, and display constants.
 
-`Bob.main` creates one `Parser`, one instance of each model manager, and a shared `Inventory` for the duration of the
-process. The parser receives these objects when handling each command. This keeps the managers independent while allowing
-loans, request fulfillment, broken-item reports, and preparations to query or update inventory.
-Broken-item tracking also shares the contact manager to resolve whether a selected maintenance contact still exists.
+`Bob.main` creates one `Parser` and an `AppState` that owns one instance of each model manager and a shared
+`Inventory` for the duration of the process. The parser receives these objects when handling each command. This keeps
+the managers independent while allowing loans, fulfilled requests, broken-item reports, and preparations to
+query or update inventory. Broken-item tracking shares the contact manager to preserve selected contacts.
+
+![Application architecture including record storage](images/storage-architecture.png)
+
+*Figure A1: Runtime components and storage dependencies. Solid arrows show component use; dashed arrows show
+snapshot conversion and validation. The manager group represents the existing model classes, not a new Java class.*
+
+`Bob` coordinates startup, command handling, and saving. `AppState` keeps the shared managers together, while
+`Storage` handles files and `SnapshotCodec` handles JSON conversion and validation. Managers do not read or write
+files themselves. The snapshot boundary allows a loaded dataset to be validated before it becomes live state.
 
 ### UI component
 
@@ -153,9 +151,12 @@ The model is composed of domain objects and managers:
 - [`BrokenItemManager`](../src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
   and maintenance-contact availability.
 - [`BrokenItem`](../src/main/java/seedu/bob/BrokenItem.java) holds immutable validated damage-report details.
-- [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
+- [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) retains all loan records and exposes active-only views using the shared inventory.
 - [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
+- [`LoanRecord`](../src/main/java/seedu/bob/LoanRecord.java) retains a permanent ID, lifecycle status, and recording/closure timestamps.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
+- `AppState` groups the managers, exports snapshots, and restores complete independent model state.
+- `AppSnapshot` and its nested records describe version-2 storage values without retaining mutable model references.
 
 Managers expose operations rather than their mutable internal collections. Where a collection is returned for querying,
 the implementation returns an immutable snapshot. Domain classes maintain invariants such as positive quantities,
@@ -163,9 +164,112 @@ nonblank names, and conflict-free sessions.
 
 ### Storage component
 
-There is no storage component in the current version. Inventory, sessions, preparations, contacts, requests, and
-loans and broken-item reports are created when Bob starts and are discarded when the process exits.
-Persistence and data migration are future work.
+The [version-2 storage format and behavior contract](StorageFormat.md) defines the persisted fields and recovery
+rules, with [loan-ledger](examples/bob-v2.json) and [empty](examples/bob-v2-empty.json) examples.
+The older version-1 examples remain fixtures for strict, non-writing migration tests.
+
+![Storage classes and immutable snapshot boundary](images/storage-class.png)
+
+*Figure S1: Selected storage classes and members. Dependencies show temporary use; `LoadResult` holds one snapshot
+and records whether it came from the main file, backup, or a new empty directory. Routine accessors are omitted.*
+
+The model boundary consists of `AppState.toSnapshot()` and `AppState.restore(snapshot)`.
+Snapshots use Java records (data classes with generated accessors and value equality) and defensive list copies,
+so a later inventory deduction, request status change, or preparation edit cannot alter an earlier snapshot.
+`AppState.restore(snapshot, clock)` also accepts an explicit clock for deterministic overdue tests.
+
+Restoration constructs new managers and returns them only after every record passes domain validation. An invalid
+snapshot raises `InvalidSnapshotException` with the underlying cause; existing state is never modified. Saved
+sessions and requests may have past dates, while normal creation commands retain their today-or-later checks.
+Preparation quantities are restored as totals. Loans are restored independently of available stock, then attached
+to the shared inventory so subsequent returns restore the correct quantities. Loading does not replay commands or
+print addition confirmations. `SnapshotFormat` converts ISO storage dates/times to the existing domain formats.
+
+`Storage` resolves an explicit path, normally `data/bob.json` relative to the working directory. Its `load()`
+returns a validated snapshot and `LoadResult.Source` (`MAIN`, `BACKUP`, or `NEW`), without writing files. A
+corrupt/missing main can recover from a valid backup. Unsupported main versions stop loading without falling
+back, protecting newer-format records. Neither unusable files nor unreadable directories are treated as empty state.
+
+`SnapshotCodec` uses Gson with strict parsing and a bounded reader that detects duplicate object keys. It checks
+exact field sets and primitive types before deserialization, including explicit nullable contact fields and integer
+ranges. Version-1 active loans are converted to version-2 history entries in memory, with deterministic IDs
+and unknown recording timestamps. Earlier version-1 files without `brokenItems` load with an empty report list.
+Domain restoration then checks values, duplicates, and session conflicts. JSON errors, unsupported versions,
+and I/O failures are distinguished by `StorageException.Kind`. The default `data` directory is ignored by Git.
+
+`Storage.save(snapshot)` validates the complete state, closes a temporary sibling file after writing, preserves
+the previous valid main as a backup, then replaces the main with an atomic move. A failed backup update aborts
+the save. A corrupt main is never copied over a valid backup. Unsupported atomic moves fail explicitly rather
+than falling back to an in-place write. Temporary cleanup never removes the main or backup. This protects complete
+snapshots across process interruption; it is not a guarantee against all disk or power failures. Concurrent writers
+to the same directory and migration from unsupported schema versions are not supported.
+
+Broken reports are restored separately from available inventory, without deducting their units again.
+Active contact positions reconnect reports to the exact restored contact; deleted-contact details restore a
+separate object so an identical replacement contact cannot reconnect an old report.
+
+`Bob.run(scanner, storage)` loads before accepting commands and returns an exit code for isolated integration tests.
+`main` uses that code as the process status on failure. Normal loads are silent; backup recovery is reported after
+the greeting. `Parser.handleCommand(input, state)` compares independent snapshots before and after execution to
+report actual changes, including whether a repeated status command changed anything. This keeps the existing
+command handlers and their output intact; the extra in-memory copying is sufficient for the expected small dataset.
+
+Bob saves synchronously after changes and tracks failed saves as pending. A confirmation describes the in-memory
+operation; a following warning explicitly identifies an unsaved change. The next changed command or exit retries
+the full latest state. Recovered backup state is also pending until saved. Failed `Bye` saves offer `retry`, `cancel`,
+or `exit`; cancellation preserves live state. EOF never waits for another answer. Unsaved exit and failed EOF saves
+return a nonzero code. Read-only, rejected, and unchanged commands do not write files.
+
+`AppStateTest`, `StorageTest`, `BobStartupTest`, and `BobPersistenceTest` cover complete round trips, historical
+dates, statuses, ordering, independence, strict JSON, stock restoration, backup recovery, failed atomic moves,
+unchanged-file checks, every mutation type, and failed-save exit choices. File-writing tests use JUnit temporary
+directories. The `UI-PERSIST-*` cases in the [UI test plan](../test/ui-test-plan.md) test the packaged executable,
+including fresh-process restarts and injected filesystem failures, with chronological phase transcripts.
+
+#### Automatic saving
+
+![Command change detection and atomic snapshot saving](images/storage-save-sequence.png)
+
+*Figure S2: One ordinary command and its automatic save. The live `state:AppState` is separate from the static
+restoration call used to validate a temporary state. The detailed file operations show the successful path;
+the alternative summarizes a failure at any validation or file operation. A failed backup update stops the save
+before main-file replacement.*
+
+The parser compares independent snapshots around command execution. When they differ, `Bob` marks the live state
+as pending and asks `Storage` to save a fresh complete snapshot. `SnapshotCodec.encode()` validates it through
+temporary model restoration before producing JSON. The backup is replaced only from a valid previous main file.
+The new main is installed only after the temporary write and any required backup replacement succeed. Failed saves
+keep the latest live state pending for a later changed command or exit; ordinary command confirmations still describe
+the in-memory operation.
+
+#### Startup and recovery
+
+![Main-file selection, backup recovery, and startup restoration](images/storage-load-activity.png)
+
+*Figure S3: Startup file selection and restoration for an interactive session. An unsupported main version stops
+startup before backup fallback. Both files must be absent to start empty; unusable files never mean empty state.*
+
+`Storage.load()` reports the selected source without repairing files. JSON decoding already validates domain state;
+`Bob` then restores the independent managers used by the running session. Loans and broken reports reconnect to the
+shared inventory without replaying deductions. Backup recovery is reported after the greeting and remains pending
+until the next successful change or exit saves a repaired main file. EOF before the startup name exits without a
+command session; that input-handling branch is omitted from the activity diagram.
+
+#### Diagram sources
+
+The architecture and storage diagrams reuse the existing [`loan-style.puml`](diagrams/loan-style.puml) styling.
+Editable sources: [architecture](diagrams/storage-architecture.puml), [storage classes](diagrams/storage-class.puml),
+[automatic-save sequence](diagrams/storage-save-sequence.puml), and
+[startup activity](diagrams/storage-load-activity.puml). Keep the corresponding PNGs in `docs/images/` in sync.
+
+With Java 25 and the same local PlantUML JAR used for the other diagrams, regenerate them from the repository root:
+
+```text
+java "-Djava.awt.headless=true" -jar build/diagram-tools/plantuml-1.2025.10.jar -charset UTF-8 -tpng -o ../images docs/diagrams/storage-*.puml
+```
+
+The JAR path above refers to the local rendering tool under `build/`; the editable sources and rendered images are
+kept in the repository.
 
 ### Common classes
 
@@ -282,7 +386,7 @@ rejection, and identical names in different categories. `InventoryItemTest` cove
 blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
 the implementation rather than assuming the documentation proves correctness.
 
-Inventory exists only in memory and is lost when Bob exits. Addition does not rename entries or restock existing
+Available inventory is saved automatically and restored when Bob restarts. Addition does not rename entries or restock existing
 ones. Categories and names are free text; case-insensitive matching does not correct spelling differences.
 Matching scans categories and then the selected list. With assertions enabled, the additional invariant check also
 compares pairs of items within each category, which is suitable for the expected small data set.
@@ -464,7 +568,7 @@ the same validation exceptions and messages as malformed strings.
 - Sessions cannot span midnight. Date checks occur during construction; sessions are not automatically removed afterward,
   and today's start time is not compared with the current clock time.
 - There is no command to edit a session. Deleting and recreating one produces a new session with empty preparation.
-- The schedule exists only in memory and is not preserved after the application exits.
+- Historical sessions remain in saved state; storage restoration omits only the new-command past-date restriction.
 
 ### Session preparation
 
@@ -653,7 +757,7 @@ scenarios are recorded as `UI-PREP-*` in the [UI test plan](../test/ui-test-plan
 - Item indices are list positions, so they shift after an item is fully removed.
 - `listPreparation()` prints directly from `Parser`, rather than through `Ui` as loan tracking does. Moving it into
   `Ui` would make the output easier to test and keep display code in one place.
-- Preparation, like all application data, exists only in memory and is discarded on exit.
+- Preparation totals persist with their owning sessions across application restarts.
 
 #### Preparation diagram sources
 
@@ -683,7 +787,7 @@ word), so a value containing a word such as `a/b` cannot be entered. This affect
 
 ### Loan tracking
 
-Loan tracking supports recording loans (`add-l`), listing active or overdue loans (`list-l [overdue]`), correcting an
+Loan tracking supports recording loans (`add-l`), listing active, overdue, complete-history, or returned-only views, correcting an
 incorrect record (`delete-l INDEX`), and recording a full return (`return INDEX`). Each accepted loan deducts available
 stock; either removal command restores the entire loan quantity before removing the record.
 
@@ -694,17 +798,19 @@ This gives all features a consistent view of available stock. Loan tracking divi
 
 - **Parser** validates command syntax, constructs domain objects, invokes the manager, and passes results to the UI.
 - **Loan** captures item details, quantity, borrower name and phone, and a strictly parsed due date.
-- **LoanManager** maintains active loans, coordinates stock changes, and evaluates overdue status using its `Clock`.
+- **LoanManager** maintains all lifecycle records, coordinates stock changes, and evaluates overdue status using its `Clock`.
+- **LoanRecord** wraps loan details with a stable ID, status, and optional recording/closure timestamps.
 - **Inventory** locates items case-insensitively, validates stock changes, and removes or recreates depleted entries.
 - **Ui** renders successful results, warnings, listing rows, and empty states.
 
-`LoanManager` stores an `ArrayList<Loan>` in insertion order. Each addition creates an independent record, even when its
-item and borrower match another loan. The displayed index is a one-based position in the full active list.
+`LoanManager` stores an `ArrayList<LoanRecord>` in creation order and a persisted `nextLoanId`. Each addition is
+independent, even when its details match another record. Active lists filter `ACTIVE` records before assigning
+one-based action indices; returned and voided records remain in the full collection with their permanent IDs.
 
 ![Loan tracking class diagram](images/loan-tracking-class.png)
 
-*Figure 6: Selected loan classes and navigable relationships. The filled diamond shows that a loan owns its private item
-snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
+*Figure 6: Selected loan classes and navigable relationships. The manager retains lifecycle wrappers around immutable
+loan details. The filled diamond shows that a loan owns its private item snapshot. The dashed dependency on `Contact` is used during construction; no contact reference is retained. Parser, UI,
 result classes, constructors, routine getters, and inventory internals are omitted.*
 
 The `InventoryItem` owned by a loan is a separate object from live inventory stock. `Loan` exposes only its values, so
@@ -714,7 +820,7 @@ details of a loan even when the source inventory entry disappears or a source co
 
 #### Key operations
 
-- `LoanManager#addLoan(Loan loan)` deducts stock, appends the loan, and returns a `LoanAdditionResult` with its addition-time
+- `LoanManager#addLoan(Loan loan)` deducts stock, appends a new active `LoanRecord`, advances its ID counter, and returns a `LoanAdditionResult` with its addition-time
   overdue flag. The UI uses that flag for the backlog warning.
 - `Inventory#lendItem(String name, String category, int quantity)` validates and deducts available units. It shares the
   private deduction path with `delete-i`, including cleanup of depleted items and empty categories.
@@ -722,7 +828,9 @@ details of a loan even when the source inventory entry disappears or a source co
   its full-list index, and its query-time overdue flag.
 - `Loan#isOverdue(LocalDate today)` returns whether its due date is strictly before the supplied date.
 - `LoanManager#returnLoan(int userIndex)` and `deleteLoan(int userIndex)` delegate to the private
-  `removeLoanAndRestoreStock()` method and return the removed loan for their distinct UI confirmations.
+  `closeLoanAndRestoreStock()` method, replacing the selected wrapper with `RETURNED` or `VOIDED` metadata after
+  stock restoration. They return the original loan details for their distinct UI confirmations.
+- `getLoanHistory()` and `getReturnedLoans()` return immutable record views; IDs and recorded dates are rendered by `Ui`.
 - `Inventory#restoreStock(String name, String category, int quantity)` merges matching stock or recreates a missing item
   or category. It rejects integer overflow before changing stock.
 
@@ -742,7 +850,8 @@ add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
 
 `Parser` validates the prefixes and quantity, constructs a borrower `Contact`, and constructs a `Loan`. The loan copies
 the borrower's values, parses the due date, and creates its item snapshot. Construction does not alter stock.
-`LoanManager#addLoan()` then asks inventory to deduct two units before appending the record. Inventory now holds three
+`LoanManager#addLoan()` validates the next ID and captures the recording time, then deducts two units before
+appending the record and advancing the counter. Inventory now holds three
 units, while loan 1 independently records two.
 
 **Step 2: Keep a repeated loan separate**
@@ -768,7 +877,7 @@ the candidate loan. `Parser` displays the error; no success confirmation or over
 return 1
 ```
 
-The manager restores the first loan's two units before removing that record. The second loan becomes index 1 without
+The manager restores the first loan's two units before marking its record `RETURNED` and recording its closure time. The second loan becomes index 1 without
 changing its recorded quantity or due date. Users should refresh `list-l` after removal before choosing another index.
 
 **Step 5: Correct an incorrect record**
@@ -778,7 +887,8 @@ delete-l 1
 ```
 
 This uses the same restoration path as a return but displays a correction confirmation. All five units are available
-again, and the active loan list is empty. Neither removal command changes supplier contacts nor session requirements.
+again, and the active loan list is empty. History retains the first record as `RETURNED` and the second as `VOIDED`.
+Neither closure changes supplier contacts or session requirements.
 
 | After operation | Available Multimeters | Active loans, in displayed order |
 | --- | --- | --- |
@@ -803,17 +913,18 @@ omitted. `Ui` is shown by its class name because its display methods are static.
 *Figure 7: Stock deduction succeeds before the loan is appended. The manager returns data to Parser, which invokes Ui.*
 
 If command parsing or domain construction fails, the manager is never called. If inventory rejects lending, execution
-stops before `loans.add(loan)`. The manager computes the addition result's overdue flag before deduction, but returns it
+stops before `records.add(record)` or counter advancement. The manager computes the addition result's overdue flag before deduction, but returns it
 only after successful insertion; a rejected backlog request therefore produces no overdue warning.
 
 #### Interactions during a full return
 
-`returnLoan()` and `deleteLoan()` share `removeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
+`returnLoan()` and `deleteLoan()` share `closeLoanAndRestoreStock()`. The sequence shows `return 1` using a valid index
 and successful restoration. A correction follows the same model interaction, followed by `Ui.showLoanDeleted()`.
 
 ![Successful full loan return sequence diagram](images/loan-return-sequence.png)
 
-*Figure 8: The selected record is retrieved, its units are restored, and only then is it removed from the active list.*
+*Figure 8: The selected active record is resolved, a closed replacement is prepared, its units are restored, and only
+then is the replacement installed. The original ID and loan details remain in history.*
 
 Restoration matches the item name and category ignoring case. If the entry has disappeared after lending all its stock,
 inventory recreates it; otherwise, the quantity is increased. If adding the quantity would exceed `Integer.MAX_VALUE`,
@@ -855,26 +966,27 @@ Independent snapshots are simpler for the supported full-return workflow.
 
 **Aspect 2: Coordinating inventory and loan changes**
 
-**Current approach:** `LoanManager` coordinates both operations, deducting before insertion and restoring before removal.
-Inventory owns matching, quantity validation, and cleanup. Both return and correction reuse one restoration path.
+**Current approach:** `LoanManager` coordinates both operations, deducting before insertion and restoring before closure.
+Inventory owns matching, quantity validation, and cleanup. Both return and correction reuse one restoration path while retaining distinct terminal statuses.
 
 This prevents expected stock errors from leaving an accepted record without a matching stock change. It also avoids
 duplicating inventory rules in the parser.
 
 **Alternative:** Change the loan list first and roll back on a stock error. That adds rollback paths and another source
-of state inconsistency. A database transaction would offer stronger guarantees if persistence or concurrent access is
-introduced, but the application currently processes commands sequentially in memory.
+of state inconsistency. A database transaction could support stronger concurrent-update guarantees. Bob processes
+commands sequentially and commits inventory and loans together as one file snapshot.
 
 **Aspect 3: Identifying loans in filtered views**
 
-**Current approach:** Keep an insertion-ordered list and carry its one-based positions into filtered result rows.
+**Current approach:** Retain permanent IDs for bookkeeping, while carrying full active-list positions into active
+and overdue result rows. The complete ledger is filtered before action indices are assigned.
 
 The same index selects the same active record in either view, without maintaining a second index map. Positions can
 change after removal, so users must obtain a fresh listing.
 
-**Alternative:** Assign permanent loan IDs and store records in a map. IDs remain stable after deletion but require ID
-generation and a different command/display convention. Full-list positions match the project's session and contact
-commands and are sufficient for this version.
+**Alternative:** Change all action commands to accept permanent IDs and store records in a map. This would avoid
+stale action positions, but changes established command semantics. The implementation keeps explicit history IDs
+separate from active indices; ID generation and its durable counter are required for the ledger in either case.
 
 **Aspect 4: Determining overdue status**
 
@@ -930,7 +1042,7 @@ The alternative above could provide a suitable foundation for that extension.
 
 | Component | Responsibility |
 | --- | --- |
-| `Parser` | Exact prefix order, positive integer conversion, plain removal indices, and the optional lowercase `overdue` filter. |
+| `Parser` | Exact prefix order, positive integers, active action indices, and lowercase `overdue`, `history`, or `returned` filters. |
 | `Loan` / `Contact` | Nonblank item and borrower details, digits-only phone, positive quantity, and a valid due date. |
 | `LoanManager` | Nonnull dependencies/records, valid full-list indices, clock-based overdue queries, and operation ordering. |
 | `Inventory` | Valid identifiers, matching stock, positive quantities, sufficient available stock, and overflow-safe restoration. |
@@ -947,12 +1059,14 @@ checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../t
 
 #### Loan tracking limitations
 
-- Returns and corrections always restore the complete quantity. Partial returns, loan editing, and return history are
-  not supported.
+- Returns and corrections always restore the complete quantity. Partial returns, loan editing, and history deletion
+  are not supported.
 - Loan indices are list positions, so previously captured indices can become stale after removal.
 - Stock is matched by case-insensitive name/category, without a permanent item identifier.
 - Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
-- Loans, like all application data, exist only in memory and are discarded on exit.
+- All loan records persist with available inventory. History accumulates and increases snapshot comparison/write costs.
+
+The [loan history design](#loan-history) below explains retention, migration, and the alternatives considered.
 
 #### Diagram sources
 
@@ -964,6 +1078,158 @@ The section follows the walkthrough and design-alternatives format of the
 [AB3 implementation example](https://se-education.org/addressbook-level3/DeveloperGuide.html#proposed-implementation).
 See the [SE-EDU PlantUML tutorial](https://se-education.org/guides/tutorials/plantUml.html) for editing and image export.
 Export PNGs into `docs/images/` after changing a source so the guide's images remain in sync.
+
+#### Loan history
+
+**Status: implemented.** Active, returned, and voided records persist in schema version 2. The following design
+record retains the original considerations, alternatives, and phased verification plan. Existing action commands
+still use active-list indices; the additional views expose permanent identities for bookkeeping.
+
+##### Objective and lifecycle
+
+The manager keeps every successfully recorded loan for bookkeeping, including loans that have been returned or corrected.
+It uses one permanent, insertion-ordered collection and derives active and historical views from it.
+An incorrect entry closed with `delete-l` remains as a voided record, distinguishable from a genuine return.
+
+| Operation | Record change | Inventory effect |
+| --- | --- | --- |
+| `add-l ...` | Create a new `ACTIVE` record with a permanent ID. | Deduct the recorded quantity once. |
+| `return INDEX` | Replace the selected active record with a `RETURNED` version and closure timestamp. | Restore its complete quantity once. |
+| `delete-l INDEX` | Replace the selected active record with a `VOIDED` version and closure timestamp. | Restore its complete quantity once. |
+| History query or restart | Preserve records and their statuses. | No deductions or restorations. |
+
+`RETURNED` and `VOIDED` are terminal states: neither can be returned or voided again. Normal commands should not
+permanently erase records. Retaining voided entries preserves an account of corrections without counting them as
+completed borrowing. Optional correction reasons, editing, partial returns, reopening records, export, and permanent
+history deletion are outside the initial implementation.
+
+##### Record model, identifiers, and timestamps
+
+Keep `Loan` as the existing immutable snapshot of item details, quantity, borrower name and phone, and due date.
+The implementation adds an immutable `LoanRecord` wrapper for lifecycle metadata; closing a loan replaces its wrapper while
+retaining its ID and original loan details. Existing references to loan details cannot change historical values.
+
+| Model/storage value | Purpose and validation |
+| --- | --- |
+| `loanId` | Positive, permanent sequential ID. Separate loans receive different IDs even when all their details match. |
+| `loan` | Existing immutable `Loan` details, including captured borrower values rather than live contact references. |
+| `status` | Exactly `ACTIVE`, `RETURNED`, or `VOIDED`; unsupported values are rejected. |
+| `recordedAt` | Timestamp when the loan entry was recorded in Bob. Nullable for imported records whose original timestamp is unknown. |
+| `closedAt` | Timestamp when Bob records the return or correction. Required for closed records and absent for active records. |
+| `nextLoanId` | Manager-level counter persisted alongside the records; positive and greater than every stored loan ID. |
+
+The manager's injected `Clock` supplies timestamps. ISO offset timestamps preserve their local-time context in
+storage; the console intentionally shows readable calendar dates in that recorded offset. `recordedAt` is not an
+asserted physical borrowing time: backlog loans are
+already supported, and entering a past due date does not reveal when the item was actually borrowed. Similarly,
+`closedAt` records the closure command's time. Do not invent missing dates during migration.
+
+IDs and the next-ID counter use validated positive 64-bit integers; existing quantity limits remain unchanged.
+Validate ID availability and construct the candidate record before deducting stock. Advance the counter only after
+an accepted addition, and reject counter overflow before any inventory change. Loading rejects duplicate IDs,
+invalid counters, malformed timestamps, and inconsistent status/closure fields.
+
+Keep `return INDEX` and `delete-l INDEX` tied to the latest active-loan list. Resolve those positions through the
+filtered active records, not through positions in the complete collection. Overdue listings retain full active-list
+positions, as they do today. A permanent loan ID is an identity for bookkeeping, not another name for a displayed
+active index. History output must label IDs clearly and direct users to `list-l` before selecting an active index.
+
+##### Stock consistency and integration
+
+`LoanManager` should remain the only coordinator of loan and inventory changes. Before a return or correction,
+validate the active index and prepare the closed record. Restore inventory before replacing the active record.
+An invalid index, an already closed record, or stock-restoration overflow must leave both inventory and the record
+unchanged. A closed record must never restore stock again, including after a restart.
+
+Preserve `getLoans()` as an active-only view so callers such as `ItemFinder` do not mistake historical quantities
+for equipment still on loan. Active and overdue result rows should continue using the existing display rules.
+Late status for an active loan remains a query-time calculation; a permanently stored overdue flag would become stale.
+
+For example, start with five available units and record loans of two and one units. Returning active index 1 should
+leave four units available, retain the first record as `RETURNED`, and display the second record at active index 1.
+Voiding that remaining active loan should restore availability to five and retain its record as `VOIDED`.
+History then contains both original IDs, while the active view is empty. Restarting must preserve this result.
+
+##### Persistence and version-1 compatibility
+
+Use schema version 2 because loan storage changes from active-only entries to permanent records with lifecycle
+metadata. Extend `AppSnapshot`, `AppState`, and `SnapshotCodec` to include every loan record and `nextLoanId`.
+Keep inventory, loan history, and the other feature collections in the same complete snapshot, so the existing
+atomic main-file replacement cannot save an inventory return separately from its loan status.
+
+The version-2 reader also accepts valid version-1 files. Convert their loans into `ACTIVE` records in memory,
+assign IDs in their existing order, set `nextLoanId` above the assigned IDs, and leave unknown recording timestamps
+null. Preserve all other saved features, including compatibility with the older omission of `brokenItems`.
+Perform conversion before restoring the current model, without replaying add or return commands or changing stock.
+
+Reading a valid version-1 main file, including read-only commands followed by ordinary exit, should not rewrite it.
+The next successful data-changing command saves version 2 and retains the validated previous main as its backup.
+Recovering an older backup restores that ledger and its counter together. Newer lost IDs are not reserved;
+sequential IDs are stable within the retained dataset, not globally unique across independent or rolled-back copies.
+Existing backup recovery still marks restored state as pending and may repair the main on exit. Loading or saving
+must continue to reject unsupported newer versions and preserve the existing backup, temporary-file, and failure
+handling rules. Version-2 validation must not weaken strict version-1 validation.
+
+History and counter changes must participate in snapshot equality so the existing autosave detection sees closures
+and new records. A failed save leaves the full changed live state pending and reports the existing warning; later
+retry must save the same IDs and timestamps without repeating a stock operation. A disk save failure does not turn
+a successful in-memory return into a second return attempt.
+
+Previously returned or deleted loans cannot be reliably reconstructed from version-1 active-only snapshots.
+Existing backups are previous snapshots, not a complete loan ledger. Migration imports available active records;
+history retention starts with this feature, without fabricating earlier returns or their dates.
+
+##### Commands and views
+
+| Command | View |
+| --- | --- |
+| `list-l` | Active loans only, preserving existing command behavior. |
+| `list-l overdue` | Overdue active loans, retaining active-list indices. |
+| `list-l history` | All active, returned, and voided records in creation order. |
+| `list-l returned` | Returned records only. |
+
+History rows include the permanent ID, status, item/category, quantity, borrower details, due date, and
+recording/closure dates. The complete offset timestamps remain stored in JSON. An imported missing timestamp
+is shown as `Unknown`, rather than as today's date.
+Use creation order rather than sorting on timestamps, which can be unknown for imported records. Queries should
+return immutable result rows, render through `Ui`, and never mutate the model or rewrite storage files.
+Exact output, empty states, and argument validation were recorded in the UI plan before implementation.
+
+##### Considerations and alternatives
+
+| Design question | Recommended approach and rationale | Alternative and tradeoff |
+| --- | --- | --- |
+| Where to keep active and closed records | One permanent collection with filtered views avoids duplicating a loan or moving it between independent lists. | Separate active and history collections simplify individual queries but need coordinated moves and additional uniqueness checks. |
+| How to represent lifecycle metadata | Wrap immutable `Loan` details in a `LoanRecord`, replacing the wrapper when closing. This keeps existing loan value behavior separate from bookkeeping. | Add mutable lifecycle fields directly to `Loan`; fewer classes, but retained references and snapshot independence become harder to reason about. |
+| How to identify records | Persist sequential IDs and their next counter; they are readable and preserve identity after list renumbering. Keep active indices for existing action commands. | UUIDs avoid a shared counter but are less convenient to read. Switching all actions to permanent IDs would change existing command semantics. |
+| How to retain corrections | Mark incorrect entries `VOIDED`, preserving their details separately from genuine returns. | Hard deletion loses the correction trail; treating corrections as returns would misrepresent bookkeeping. |
+| Where to store history | Extend the existing complete JSON snapshot so inventory and history are replaced together. | A separate history file needs coordination across two file replacements. SQLite could provide database transactions and efficient larger queries, but adds dependencies and migration work. |
+| How to evolve the file format | Write version 2 and explicitly convert valid version-1 data in memory. Older readers can reject the new version clearly. | Reuse version 1 with optional lifecycle fields; fewer version branches, but it changes the meaning of an established strict format and complicates compatibility. |
+| How to represent a full audit trail | Retain each original loan plus its terminal status and timestamps. This is sufficient for the implemented full-return workflow. | An append-only event log could record every action, but requires event replay, validation, and recovery rules. Consider it if partial returns or record edits are added. |
+| How to handle historical dates | Preserve known timestamps and display unknown imported values explicitly. | Using migration time as the original recording time makes old records look newly created and gives misleading bookkeeping dates. |
+| How to scale retained history | Start with the existing in-memory collection and complete snapshots for the expected small dataset. Document that records accumulate. | Filtering, pagination, archival, or database storage may become useful as history grows; pagination alone does not reduce snapshot-copying or disk-write costs. |
+
+Permanent IDs do not require changing the available-stock inventory model or adding permanent item identifiers.
+The earlier total-stock alternative remains a separate design choice. Partial returns would require additional
+quantity invariants and return-event data, so they should not be included implicitly in this history extension.
+
+##### Implementation phases and verification record
+
+| Phase | Work and completion criteria | Verification |
+| --- | --- | --- |
+| 1: Contract | Finalize lifecycle rules, IDs, timestamps, ordering, schema examples, and exact command outputs. Record phase-specific cases in `test/ui-test-plan.md`. | Reviewed behavior, sample data, and expected UI responses exist before implementation. |
+| 2: Model and lifecycle | Add `LoanRecord`, retain all records, derive active views, and implement stock-safe return and void transitions. Preserve existing loan APIs where practical. | Unit tests cover duplicate details, stable IDs, renumbering, immutable queries, repeated closure, rejected additions, and stock-restoration failure. Existing loan UI cases pass. |
+| 3: Durable history | Implement version-2 snapshots, strict validation, version-1 conversion, counter restoration, and autosave integration. | Active, returned, and voided records round-trip; migration, backup recovery, and failed-save retry tests pass without duplicate stock changes. Restart UI cases pass. |
+| 4: History UI | Add history and returned-only views, clearly labeled IDs and timestamps, help text, empty states, and strict syntax handling. | Exact UI comparisons pass for mixed statuses, imported dates, duplicate details, and history after restart. Read-only cases prove saved files are unchanged. |
+| 5: Regression and documentation | Update the User Guide, Developer Guide, storage contract, examples, and UML to reflect the implemented behavior. | Java 25 `check` and the complete UI suite pass, including a create/return/void/restart workflow with exact inventory quantities. |
+
+Phases 2 and 3 were kept on the feature branch until durable round trips passed, avoiding a released intermediate
+implementation that could lose closed records on exit. At each implementation phase,
+follow the SE-EDU Java coding standard, run Java 25 unit tests and Checkstyle through `check`, and use the `test-ui`
+skill for the relevant recorded console cases before proceeding. Stop UI execution at the first mismatch, preserve
+expected outputs, and record the chronological result. Use fixed clocks for timestamps and temporary directories
+for file-writing tests. The [UI test plan](../test/ui-test-plan.md) contains the reusable loan-history cases
+and expected outputs for these verification steps.
 
 ### Student request tracking
 
@@ -1144,7 +1410,7 @@ availability display, fulfillment deductions, insufficient stock, and one-way st
 covers command formats, rejected inputs, confirmations, ordering, live stock checks, and failed fulfillment.
 `RequestLoggingTest` verifies request diagnostics; the [UI test plan](../test/ui-test-plan.md) records console cases.
 
-Requests exist only in memory. They have no persistent identifiers: adding or deleting a request can change the
+Requests persist across application restarts. They have no persistent identifiers: adding or deleting a request can change the
 indices used by `delete-r` and `mark-r`, so users must refresh `list-r`. Requests cannot be edited in place and are
 not removed automatically after their deadline. Marking prepared records status only. Marking fulfilled deducts stock
 and is final; deleting a fulfilled request does not restore stock, and there is no unfulfill command. Fulfillment also
@@ -1221,11 +1487,11 @@ reported date, and optional contact even if deduction removes the last usable in
 would not represent multiple faults or batches with different contacts.
 
 **Store a contact reference rather than its displayed index.** This prevents accidental reassignment after
-deletion or renumbering. Persistent contact IDs would be preferable if storage is introduced; object identity
-is sufficient for the current in-memory application.
+deletion or renumbering. Each complete snapshot preserves object identity using active contact positions
+or separate deleted-contact details. Durable contact IDs would support future cross-file imports.
 
 Reports cannot be edited, partially repaired, disposed of, or reassigned to another contact. Deletion restores
-all units and keeps no repair history. Data is lost when the application exits. Future persistence or concurrent
+all units and keeps no repair history. Reports persist across restarts without repeating stock deductions. Concurrent
 commands would require coordinated storage of reports and inventory changes.
 
 #### Verification and diagram sources
@@ -1268,7 +1534,7 @@ Use `java -ea -jar build/libs/bob.jar` for debugging; Gradle tests enable assert
 
 The project uses Gradle and the Gradle wrapper for reproducible builds. Java code follows the SE-EDU Java coding standard,
 and `check` runs compilation, automated tests, and Checkstyle. Changes should be developed on a feature branch and
-verified with `check` before review. The repository currently has no persistence or release automation beyond the Gradle
+verified with `check` before review. Local persistence is implemented; release automation is limited to the Gradle
 build and the project's CI configuration.
 
 Logging is intended for diagnostics rather than user interaction. `Bob`, `Parser`, `Inventory`, `SessionManager`, and
@@ -1382,7 +1648,8 @@ Use case ends.
 3. Invalid user input should produce a clear error message and should not partially modify application state.
 4. Collections exposed for querying should not allow callers to mutate manager state accidentally.
 5. The code should remain maintainable through JavaDoc, Checkstyle, unit tests, and feature-level UI tests.
-6. The current version does not promise persistence, multi-user access, encryption, or recovery after process termination.
+6. Completed snapshots must survive restarting from the same working directory. Multi-user access, encryption,
+   unsaved-change recovery, and guarantees against every power or disk failure are outside the storage contract.
 
 ### Glossary
 
@@ -1396,8 +1663,9 @@ Use case ends.
 
 ## Appendix: Instructions for manual testing
 
-These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each scenario
-with a fresh Bob process because application data is not persisted.
+These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each
+independent scenario with a fresh process and an empty temporary working directory. For restart scenarios, keep
+that scenario's directory between processes. Never run destructive fixture setup against a user's data directory.
 
 ### Launch and shutdown
 

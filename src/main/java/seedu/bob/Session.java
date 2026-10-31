@@ -59,14 +59,21 @@ public class Session implements Comparable<Session> {
 
     /**
      * Creates a session using the supplied clock's local date for repeatable date validation.
-     * Null date and time strings are treated as invalid input, just like empty strings.
+     * Null date and time strings receive the same validation messages as empty strings.
      *
      * @throws CommandException If any session value is invalid.
      * @throws NullPointerException If the clock is null.
      */
     Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount, Clock clock) throws CommandException {
+        this(name, dateText, location, startTimeText, endTimeText, headcount, clock, false);
+    }
+
+    /** Shares structural validation while allowing historical dates only for saved records. */
+    private Session(String name, String dateText, String location, String startTimeText, String endTimeText,
+            int headcount, Clock clock, boolean isRestoring) throws CommandException {
         Objects.requireNonNull(clock, "Session clock must not be null");
+        //@@author
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -92,7 +99,9 @@ public class Session implements Comparable<Session> {
                             + "Ensure the month is capitalized.");
             //@@author DaynaG3
         }
-        if (date.isBefore(LocalDate.now(clock))) {
+        //@@author DaynaG3
+        if (!isRestoring && date.isBefore(LocalDate.now(clock))) {
+            //@@author
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
         //@@author
@@ -117,6 +126,24 @@ public class Session implements Comparable<Session> {
         if (!startTime.isBefore(endTime)) {
             throw new InvalidSessionTimeException("Start time must be earlier than end time.");
         }
+        //@@author DaynaG3
+    }
+
+    /** Restores a session and its total requirements without replaying preparation commands. */
+    static Session restore(AppSnapshot.SessionEntry entry) throws CommandException {
+        Session session = new Session(entry.name(), SnapshotFormat.toCommandDate(entry.date()), entry.location(),
+                SnapshotFormat.toCommandTime(entry.startTime()), SnapshotFormat.toCommandTime(entry.endTime()),
+                entry.headcount(), Clock.systemDefaultZone(), true);
+        for (AppSnapshot.PreparationEntry item : entry.preparation()) {
+            session.preparation.restoreItem(item);
+        }
+        return session;
+    }
+
+    /** Exports the owning session together with its independent preparation totals. */
+    AppSnapshot.SessionEntry toSnapshot() {
+        return new AppSnapshot.SessionEntry(name, date.toString(), location, SnapshotFormat.formatTime(startTime),
+                SnapshotFormat.formatTime(endTime), headcount, preparation.toSnapshot());
         //@@author
     }
 

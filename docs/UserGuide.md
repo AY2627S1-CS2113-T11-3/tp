@@ -6,8 +6,9 @@ Preparation uses the
 session's headcount to calculate required quantities and compare them with the inventory. Requests are sorted by
 deadline and show whether the requested quantity is currently in inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
-contacts, requests, loans, and broken-item reports.
+**Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
+from that same directory restores inventory, sessions, preparations, requests, contacts, active and closed loan records, and
+broken-item reports.
 
 ## Contents
 
@@ -20,6 +21,8 @@ contacts, requests, loans, and broken-item reports.
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
+  - [View loan history](#view-loan-history-list-l-history)
+- [Saving and restoring data](#saving-and-restoring-data)
 - [Broken-item tracking](#broken-item-tracking)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
@@ -72,11 +75,12 @@ contacts, requests, loans, and broken-item reports.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
 6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
-   the source code. Each launch starts with empty lists.
+   the source code. Launch from the same directory to restore your saved records. The first launch starts empty.
 
 ## Command format
 
-- Enter each command on one line and press Enter. There are no follow-up selection prompts after a command.
+- Enter each command on one line and press Enter. Normal commands need no follow-up selection.
+  If Bob cannot save while exiting, it offers `retry`, `cancel`, or `exit` as described below.
 - UPPER_CASE words in the formats below are placeholders. Replace them with your own values.
 - Square brackets around a parameter mean it is optional. Do not type the brackets.
 - Commands and prefixes are case-sensitive: use `add-i`, not `ADD-I`, and `n/`, not `N/`.
@@ -140,7 +144,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items
@@ -933,7 +937,7 @@ An empty list displays `No active loans.` between the heading and closing divide
 
 **Format:** `delete-l INDEX`
 
-Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
+Marks an incorrect active loan as `VOIDED`, retains it in history, and restores its entire quantity to inventory. Use the index
 from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
 This command corrects an entry. Use `return` when the borrower has actually returned the items.
 Partial deletion is not supported.
@@ -989,7 +993,7 @@ change supplier contacts, sessions, or other loans.
 - Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
 - A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
   always check `list-l` before the next operation.
-- Returned records are removed immediately; return history is not retained in this version.
+- Returned records leave the active list immediately and remain in history as `RETURNED`.
 
 ### Track overdue loans: `list-l overdue`
 
@@ -1027,8 +1031,89 @@ Loans due today or in the future do not produce this warning. Invalid or insuffi
 are rejected without adding a loan or printing an overdue warning. Returned and corrected records
 are removed from both active and overdue lists.
 
-All loans disappear when Bob exits; persistence is planned for V2.0b. Return history and partial returns
-remain unsupported.
+Active, returned, and voided loans persist between launches. Partial returns remain unsupported.
+
+### View loan history: `list-l history`
+
+**Format:** `list-l history`
+
+Displays every recorded loan in creation order, including active loans, completed returns, and incorrect entries
+that were voided using `delete-l`. Use `list-l returned` to show genuine returns only; voided entries are excluded.
+Both filters are lowercase and accept no additional arguments.
+
+Each history row shows a permanent loan ID, status, original item/borrower details, due date, and recording/closure
+dates. The console shows calendar dates in the timestamp's original timezone offset; the save file retains the full
+offset timestamps. These dates describe when the commands were recorded, which may differ from a backlog loan's
+physical borrowing or return date. An active record has `Closed: -`.
+
+For example, a returned record may appear as:
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: 31 October 2026 | Closed: 1 November 2026
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+**A loan ID is not an active-list index.** Continue using the latest `list-l` or `list-l overdue` indices for
+`return INDEX` and `delete-l INDEX`. IDs are not recycled when records close, even after the active list becomes empty. Repeated loans
+with identical details remain separate records. Closed records cannot be returned or voided again.
+
+An empty history displays `No loan records.`. An empty returned-only view displays `No returned loans.`.
+Backup recovery restores an earlier ledger and its ID counter; changes lost after that backup may include loan IDs.
+Viewing history changes no stock and does not rewrite saved files. There is no command to permanently erase history,
+edit a historical entry, or record a partial return.
+
+When loading older version-1 data, existing active loans receive IDs and show `Recorded: Unknown` because their
+original recording times were not saved. Their original item, borrower, due date, and available stock are preserved.
+Earlier returned/deleted loans cannot be recovered automatically. The next successful change saves the upgraded
+format; keep using the updated Bob build after that upgrade.
+
+## Saving and restoring data
+
+Bob saves automatically after each command that changes data. There is no separate save command. Listing data,
+viewing help, rejected commands, and marking a request with its existing status do not rewrite saved files.
+An ordinary command's response is complete when its following blank line appears.
+
+The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, complete
+loan history and its next-ID counter, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
+shortages are recalculated when displayed. Preparation and pending/prepared requests do not reserve stock.
+Fulfilling a request deducts stock once;
+loading a fulfilled request does not deduct it again.
+
+The files are relative to your terminal's working directory, not the location of `bob.jar`:
+
+| File | Purpose |
+| --- | --- |
+| `data/bob.json` | Latest successfully saved complete state. |
+| `data/bob.json.bak` | Previous valid state, retained after replacing an existing save. |
+
+If both files are absent, Bob starts empty and creates its first save after a data-changing command. Launching
+from another directory selects different files. Use one running Bob process per data directory. Files are local
+plain-text JSON and include contact and borrower details; keep them in a location appropriate for those records.
+
+If the main save is missing or unusable and a valid backup exists, Bob restores the backup and displays:
+
+```text
+Recovered data from backup. It may not include the latest changes.
+```
+
+Recovery may lose the most recent change. Bob repairs the main save on the next successful change or when you
+exit. A corrupt main file is never copied over the valid backup. If no usable saved state exists, Bob stops
+before asking for your name and preserves the files. An unsupported data version also stops startup, even if
+an older backup is available. Keep copies of the files before investigating; restore a known valid copy or use
+the Bob version that supports the saved format. Do not replace the files with empty data to silence an error.
+
+If a change cannot be saved, Bob keeps it in the running application and prints a warning with the affected
+file path. A command's success confirmation describes the in-memory change; the accompanying warning means
+it has not reached disk. Resolve the reported file-access problem and make another change, or use `Bye` to
+retry saving. Closing or terminating the process while this warning remains can lose unsaved changes.
+
+Completed saves use temporary files and atomic replacement to avoid partially written main snapshots. This
+does not guarantee recovery from every disk or power failure. Back up the `data` directory separately if needed.
 
 ## Broken-item tracking
 
@@ -1146,7 +1231,19 @@ the available quantity exceed `2147483647`, Bob rejects the command and leaves t
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
-Bob exits without a farewell message or a save prompt. All data entered during the run is discarded.
+Bob normally exits without a farewell message; completed changes are already saved. If unsaved changes remain,
+Bob tries saving them first. If that fails, it displays:
+
+```text
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+- `retry`: try saving again and exit if successful.
+- `cancel`: continue using Bob with the unsaved data still in memory.
+- `exit`: explicitly exit without those unsaved changes. Earlier saved data remains available.
+
+Choices ignore capitalization. Explicit unsaved exit returns a nonzero process exit code. If standard input
+ends, Bob retries a pending save once and exits with a nonzero code if it fails, without waiting for an answer.
 
 ## Errors and troubleshooting
 
@@ -1204,7 +1301,8 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 
 ## Current limitations
 
-- There is no saving, loading, export, or recovery after exit. All data is held in memory.
+- Storage is local to one working directory and one running process. There is no cloud sync, automatic format
+  migration, or import/export command. Unsaved changes and the newest change after backup recovery can be lost.
 - `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
@@ -1269,7 +1367,9 @@ disposal and partial repairs are not supported.
 
 **Can I keep my data for the next launch or transfer it to another computer?**
 
-Not in the current version. Bob has no save or import function; a new launch starts with empty lists.
+Yes. Restart from the same working directory to restore `data/bob.json`. To transfer records, exit Bob after
+successful saving and copy the `data` directory into the working directory on the other computer. Use a Bob
+version that supports the same saved format. There is no interactive import command.
 
 ## Command summary
 
@@ -1296,9 +1396,11 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans with overdue markers | `list-l` |
 | List overdue loans only | `list-l overdue` |
-| Delete an incorrect loan and restore stock | `delete-l INDEX` |
+| List all active, returned, and voided loan records | `list-l history` |
+| List genuine returned loans only | `list-l returned` |
+| Void an incorrect loan and restore stock | `delete-l INDEX` |
 | Record a full return and restore stock | `return INDEX` |
 | Report broken inventory units | `add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]` |
 | List broken-item reports and contacts | `list-b` |
 | Remove a repaired or incorrect report and restore stock | `delete-b INDEX` |
-| Exit and discard data | `Bye` |
+| Exit, retrying any unsaved changes | `Bye` |
