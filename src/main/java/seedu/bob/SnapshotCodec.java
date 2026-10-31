@@ -20,7 +20,7 @@ import com.google.gson.stream.JsonToken;
 import seedu.bob.exception.InvalidSnapshotException;
 import seedu.bob.exception.StorageException;
 
-/** Enforces the version-1 JSON shape before Gson creates typed snapshot records. */
+/** Validates supported JSON schemas and migrates version-1 active loans before creating current snapshots. */
 final class SnapshotCodec {
 
     private static final Gson GSON = new GsonBuilder().serializeNulls().setPrettyPrinting()
@@ -40,15 +40,18 @@ final class SnapshotCodec {
             }
             JsonObject root = document.getAsJsonObject();
             int version = requireInteger(root.get("schemaVersion"));
-            if (version != AppSnapshot.CURRENT_VERSION) {
+            if (version != 1 && version != AppSnapshot.CURRENT_VERSION) {
                 throw new StorageException(StorageException.Kind.UNSUPPORTED_VERSION,
                         "Unsupported data version: " + version + ".", null);
             }
             // Earlier version-1 files predate broken-item tracking and have no reports.
-            if (!root.has("brokenItems")) {
+            if (version == 1 && !root.has("brokenItems")) {
                 root.add("brokenItems", new JsonArray());
             }
-            validateRoot(root);
+            validateRoot(root, version == 1);
+            if (version == 1) {
+                migrateActiveLoans(root);
+            }
             AppSnapshot snapshot = GSON.fromJson(root, AppSnapshot.class);
             AppState.restore(snapshot);
             return snapshot;
@@ -113,9 +116,16 @@ final class SnapshotCodec {
         }
     }
 
-    /** Checks exact field sets at every level; nullable values are limited to optional contact details. */
-    private static void validateRoot(JsonObject root) throws StorageException {
-        requireObject(root, "schemaVersion", "inventory", "sessions", "requests", "contacts", "loans", "brokenItems");
+    /** Checks exact field sets and types, allowing null only for documented contact and timestamp values. */
+    private static void validateRoot(JsonObject root, boolean isLegacy) throws StorageException {
+        if (isLegacy) {
+            requireObject(root, "schemaVersion", "inventory", "sessions", "requests", "contacts", "loans",
+                    "brokenItems");
+        } else {
+            requireObject(root, "schemaVersion", "inventory", "sessions", "requests", "contacts", "loanRecords",
+                    "brokenItems", "nextLoanId");
+            requireLong(root.get("nextLoanId"));
+        }
         for (JsonElement value : requireArray(root, "inventory")) {
             JsonObject category = requireObject(value, "category", "items");
             requireStrings(category, "category");
@@ -156,12 +166,50 @@ final class SnapshotCodec {
                 validateContact(report.get("deletedContact"));
             }
         }
-        for (JsonElement value : requireArray(root, "loans")) {
-            JsonObject loan = requireObject(value, "name", "category", "quantity", "borrowerName",
-                    "borrowerPhone", "dueDate");
-            requireStrings(loan, "name", "category", "borrowerName", "borrowerPhone", "dueDate");
-            requireInteger(loan.get("quantity"));
+        if (isLegacy) {
+            for (JsonElement value : requireArray(root, "loans")) {
+                validateLoan(value);
+            }
+        } else {
+            for (JsonElement value : requireArray(root, "loanRecords")) {
+                JsonObject record = requireObject(value, "loanId", "loan", "status", "recordedAt", "closedAt");
+                requireLong(record.get("loanId"));
+                requireStrings(record, "status");
+                for (String field : Set.of("recordedAt", "closedAt")) {
+                    if (!record.get(field).isJsonNull()) {
+                        requireStrings(record, field);
+                    }
+                }
+                validateLoan(record.get("loan"));
+            }
         }
+    }
+
+    /** Checks captured values independently of lifecycle metadata or available stock. */
+    private static void validateLoan(JsonElement value) throws StorageException {
+        JsonObject loan = requireObject(value, "name", "category", "quantity", "borrowerName",
+                "borrowerPhone", "dueDate");
+        requireStrings(loan, "name", "category", "borrowerName", "borrowerPhone", "dueDate");
+        requireInteger(loan.get("quantity"));
+    }
+
+    /** Converts a validated version-1 document in memory; the source file is never rewritten during loading. */
+    private static void migrateActiveLoans(JsonObject root) {
+        JsonArray records = new JsonArray();
+        long id = 1;
+        for (JsonElement loan : root.getAsJsonArray("loans")) {
+            JsonObject record = new JsonObject();
+            record.addProperty("loanId", id++);
+            record.add("loan", loan);
+            record.addProperty("status", "ACTIVE");
+            record.add("recordedAt", JsonNull.INSTANCE);
+            record.add("closedAt", JsonNull.INSTANCE);
+            records.add(record);
+        }
+        root.remove("loans");
+        root.add("loanRecords", records);
+        root.addProperty("nextLoanId", id);
+        root.addProperty("schemaVersion", AppSnapshot.CURRENT_VERSION);
     }
 
     /** Checks nullable contact details for both registered and deleted-contact snapshots. */
@@ -208,6 +256,15 @@ final class SnapshotCodec {
             throw invalidData();
         }
         return Integer.parseInt(number);
+    }
+
+    /** Parses an exact signed 64-bit JSON integer; positivity is checked at the model boundary. */
+    private static long requireLong(JsonElement value) throws StorageException {
+        if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                || !value.getAsString().matches("-?(0|[1-9][0-9]*)")) {
+            throw invalidData();
+        }
+        return Long.parseLong(value.getAsString());
     }
 
     private static StorageException invalidData() {

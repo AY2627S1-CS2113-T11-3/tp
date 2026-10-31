@@ -156,6 +156,7 @@ function Set-StorageFixture([string]$workingDirectory, [string]$fixture) {
     $main = Join-Path $dataDirectory 'bob.json'
     $backup = Join-Path $dataDirectory 'bob.json.bak'
     switch ($fixture) {
+        'history' { Copy-Item -LiteralPath (Join-Path $exampleDirectory 'bob-v2.json') -Destination $main }
         'populated' { Copy-Item -LiteralPath (Join-Path $exampleDirectory 'bob-v1.json') -Destination $main }
         'recovery' {
             [IO.File]::WriteAllText($main, 'broken main')
@@ -164,7 +165,7 @@ function Set-StorageFixture([string]$workingDirectory, [string]$fixture) {
         'backup-only' { Copy-Item -LiteralPath (Join-Path $exampleDirectory 'bob-v1.json') -Destination $backup }
         'corrupt' { [IO.File]::WriteAllText($main, 'broken main') }
         'newer' {
-            [IO.File]::WriteAllText($main, '{"schemaVersion":2,"newFormat":true}')
+            [IO.File]::WriteAllText($main, '{"schemaVersion":3,"newFormat":true}')
             Copy-Item -LiteralPath (Join-Path $exampleDirectory 'bob-v1-empty.json') -Destination $backup
         }
         'blocked-backup' {

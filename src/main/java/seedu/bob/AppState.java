@@ -75,7 +75,7 @@ public class AppState {
     public AppSnapshot toSnapshot() {
         return new AppSnapshot(AppSnapshot.CURRENT_VERSION, inventory.toSnapshot(), sessionManager.toSnapshot(),
                 requestManager.toSnapshot(), contactManager.toSnapshot(), loanManager.toSnapshot(),
-                brokenItemManager.toSnapshot());
+                brokenItemManager.toSnapshot(), loanManager.getNextLoanId());
     }
 
     /**
@@ -108,7 +108,7 @@ public class AppState {
             AppState restored = new AppState(Inventory.restore(snapshot.inventory()),
                     SessionManager.restore(snapshot.sessions()), RequestManager.restore(snapshot.requests()),
                     ContactManager.restore(snapshot.contacts()), clock);
-            restored.loanManager.restoreLoans(snapshot.loans());
+            restored.loanManager.restoreRecords(snapshot.loanRecords(), snapshot.nextLoanId());
             restored.brokenItemManager.restoreReports(snapshot.brokenItems(), clock);
             return restored;
         } catch (CommandException | IllegalArgumentException | NullPointerException e) {

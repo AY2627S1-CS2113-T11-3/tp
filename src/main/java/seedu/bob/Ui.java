@@ -1,5 +1,10 @@
 package seedu.bob;
 
+//@@author DaynaG3
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+//@@author
 import java.util.List;
 import java.util.Objects;
 
@@ -45,7 +50,7 @@ public class Ui {
             //@@author DaynaG3
             "Loans",
             "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE",
-            "  list-l [overdue]",
+            "  list-l [overdue|history|returned]",
             "  delete-l INDEX",
             "  return INDEX",
             //@@author
@@ -58,6 +63,12 @@ public class Ui {
             "  help",
             "  Bye",
             DIVIDER);
+
+    //@@author DaynaG3
+    /** Displays the recorded local date; full offset timestamps remain available in storage. */
+    private static final DateTimeFormatter HISTORY_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH);
+    //@@author
 
     /**
      * Creates an instance; display constants can also be accessed directly through the class.
@@ -123,6 +134,36 @@ public class Ui {
             System.out.println(isOverdueOnly ? "No overdue loans." : "No active loans.");
         }
         System.out.println(DIVIDER);
+    }
+
+    /**
+     * Displays permanent loan identities, lifecycle statuses, and recorded dates without exposing action indices.
+     *
+     * @param records Immutable history rows selected by the manager in creation order.
+     * @param isReturnedOnly Whether the heading describes the returned-only query.
+     * @throws NullPointerException If the list or a record is null.
+     */
+    public static void showLoanHistory(List<LoanRecord> records, boolean isReturnedOnly) {
+        Objects.requireNonNull(records, "Loan history must not be null");
+        System.out.println(DIVIDER);
+        System.out.println(isReturnedOnly ? "Returned loans" : "Loan history");
+        System.out.println(DIVIDER);
+        for (LoanRecord record : records) {
+            System.out.printf("Loan ID %d [%s] %s%n", record.loanId(), record.status(), record.loan());
+            System.out.printf("   Recorded: %s | Closed: %s%n",
+                    formatLoanDate(record.recordedAt(), "Unknown"), formatLoanDate(record.closedAt(), "-"));
+        }
+        if (records.isEmpty()) {
+            System.out.println(isReturnedOnly ? "No returned loans." : "No loan records.");
+        } else {
+            System.out.println("Loan IDs are permanent. Use list-l for active indices.");
+        }
+        System.out.println(DIVIDER);
+    }
+
+    /** Formats the date in its original offset instead of converting it through the viewer's current timezone. */
+    private static String formatLoanDate(OffsetDateTime timestamp, String absentText) {
+        return timestamp == null ? absentText : timestamp.format(HISTORY_DATE_FORMAT);
     }
 
     //@@author J-unn-y

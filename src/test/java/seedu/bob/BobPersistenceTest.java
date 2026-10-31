@@ -50,10 +50,17 @@ class BobPersistenceTest {
 
         assertEquals(0, result.exitCode());
         assertEquals(commands.size(), storage.attempts);
-        assertEquals(new AppState().toSnapshot(), storage.load().snapshot());
+        AppSnapshot completed = storage.load().snapshot();
+        assertTrue(completed.inventory().isEmpty());
+        assertTrue(completed.sessions().isEmpty());
+        assertTrue(completed.requests().isEmpty());
+        assertTrue(completed.contacts().isEmpty());
+        assertEquals(List.of("RETURNED", "VOIDED"),
+                completed.loanRecords().stream().map(AppSnapshot.LoanRecordEntry::status).toList());
+        assertEquals(3, completed.nextLoanId());
         AppSnapshot loanSnapshot = storage.saved.get(8);
         assertEquals(5, loanSnapshot.inventory().getFirst().items().getFirst().quantity());
-        assertEquals(3, loanSnapshot.loans().getFirst().quantity());
+        assertEquals(3, loanSnapshot.loanRecords().getFirst().loan().quantity());
         assertEquals(13, loanSnapshot.sessions().getFirst().preparation().getFirst().quantity());
         assertEquals("fulfilled", loanSnapshot.requests().getFirst().status());
     }
@@ -73,7 +80,7 @@ class BobPersistenceTest {
         assertTrue(restarted.output().contains("Beaker (Qty: 7)"));
         assertTrue(restarted.output().contains("[Prepared] Jamie"));
         assertEquals(10, storage.load().snapshot().inventory().getFirst().items().getFirst().quantity());
-        assertTrue(storage.load().snapshot().loans().isEmpty());
+        assertEquals("RETURNED", storage.load().snapshot().loanRecords().getFirst().status());
     }
 
     @Test
@@ -111,6 +118,25 @@ class BobPersistenceTest {
         assertEquals(3, storage.attempts);
         assertTrue(storage.load().snapshot().brokenItems().isEmpty());
         assertEquals(5, storage.load().snapshot().inventory().getFirst().items().getFirst().quantity());
+    }
+
+    @Test
+    void run_returnSaveFailsThenExitRetries_keepsIdentityTimestampAndSingleStockRestoration() throws Exception {
+        RecordingStorage storage = new RecordingStorage(directory.resolve("bob.json"), 0);
+        run("Alex\nadd-i n/Meter c/Equipment q/5\n"
+                + "add-l n/Meter c/Equipment q/2 b/Jamie t/01234567 d/31 December 2099\nBye\n", storage);
+        storage.remainingFailures = 1;
+
+        SessionResult result = run("Alex\nreturn 1\nBye\n", storage);
+
+        assertEquals(0, result.exitCode());
+        assertTrue(result.output().contains("Warning: changes are only in memory."));
+        assertEquals(4, storage.attempts);
+        assertEquals(storage.attempted.get(2), storage.attempted.get(3));
+        AppSnapshot saved = storage.load().snapshot();
+        assertEquals(5, saved.inventory().getFirst().items().getFirst().quantity());
+        assertEquals(1, saved.loanRecords().getFirst().loanId());
+        assertEquals("RETURNED", saved.loanRecords().getFirst().status());
     }
 
     @Test
@@ -233,6 +259,7 @@ class BobPersistenceTest {
         private int attempts;
         private int remainingFailures;
         private final List<AppSnapshot> saved = new ArrayList<>();
+        private final List<AppSnapshot> attempted = new ArrayList<>();
 
         RecordingStorage(Path path, int remainingFailures) {
             super(path);
@@ -242,6 +269,7 @@ class BobPersistenceTest {
         @Override
         public void save(AppSnapshot snapshot) throws StorageException {
             attempts++;
+            attempted.add(snapshot);
             if (remainingFailures != 0) {
                 if (remainingFailures > 0) {
                     remainingFailures--;

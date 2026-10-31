@@ -2452,7 +2452,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items
@@ -2504,7 +2504,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items
@@ -3893,7 +3893,7 @@ list-l extra
 **Expected output**
 
 ```text
-Invalid format. Use: list-l [overdue]
+Invalid format. Use: list-l [overdue|history|returned]
 ```
 
 #### Step 3
@@ -7556,7 +7556,7 @@ list-l OVERDUE
 **Expected output**
 
 ```text
-Invalid format. Use: list-l [overdue]
+Invalid format. Use: list-l [overdue|history|returned]
 ```
 
 #### Step 7
@@ -7570,7 +7570,7 @@ list-l overdue extra
 **Expected output**
 
 ```text
-Invalid format. Use: list-l [overdue]
+Invalid format. Use: list-l [overdue|history|returned]
 ```
 
 #### Step 8
@@ -7584,7 +7584,7 @@ list-l overdue overdue
 **Expected output**
 
 ```text
-Invalid format. Use: list-l [overdue]
+Invalid format. Use: list-l [overdue|history|returned]
 ```
 
 #### Step 9
@@ -7598,7 +7598,7 @@ list-l d/{{TODAY}}
 **Expected output**
 
 ```text
-Invalid format. Use: list-l [overdue]
+Invalid format. Use: list-l [overdue|history|returned]
 ```
 
 #### Step 10
@@ -8572,7 +8572,7 @@ Start Bob
 **Expected output**
 
 ```text
-Cannot load data from {{STORAGE_PATH}}: Unsupported data version: 2.
+Cannot load data from {{STORAGE_PATH}}: Unsupported data version: 3.
 Bob has stopped; saved files were not changed.
 ```
 
@@ -9894,6 +9894,734 @@ Equipment
 ```
 
 #### Step 4
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+
+## Loan history contract
+
+Loan IDs remain permanent while action commands continue to use the latest active-list indices.
+Storage retains full ISO offset timestamps; history displays their recorded local calendar dates, with Unknown
+for imported recording dates and - for an active record's absent closure date. Returned and voided records
+are terminal. Full returns and corrections retain distinct statuses and restore stock once.
+The new list usage/help text is list-l [overdue|history|returned]. History queries never write saved files.
+
+### UI-HISTORY-MODEL-001: Keep active indices correct when closing distinct duplicate loans
+
+**Aim:** Keep active indices correct when closing distinct duplicate loans.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Meter c/Equipment q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Meter to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Meter c/Equipment q/2 b/Jamie t/01234567 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Meter c/Equipment q/1 b/Jamie t/01234567 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099. Inventory restored.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099. Inventory restored.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-STORAGE-001: Restore a version-2 ledger and return only its active loan
+
+**Aim:** Restore a version-2 ledger and return only its active loan.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Storage fixture:** `history`
+
+**Storage group:** `loan-history-restart`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 7)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099. Inventory restored.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 9)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-STORAGE-002: Keep closed loans closed after restarting
+
+**Aim:** Keep closed loans closed after restarting.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Storage group:** `loan-history-restart`
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 9)
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Loan index 1 is invalid. There are 0 active loan(s).
+```
+
+#### Step 4
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-VIEW-001: List a mixed ledger and returned-only view without writing
+
+**Aim:** List a mixed ledger and returned-only view without writing.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Storage fixture:** `history`
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: 1 January 2020 | Closed: 2 January 2020
+Loan ID 2 [VOIDED] 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: 1 January 2020 | Closed: 3 January 2020
+Loan ID 3 [ACTIVE] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: Unknown | Closed: -
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-l returned
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Returned loans
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: 1 January 2020 | Closed: 2 January 2020
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-VIEW-002: Handle empty history and strict filter syntax
+
+**Aim:** Handle empty history and strict filter syntax.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+No loan records.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-l returned
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Returned loans
+--------------------------------------------------------------------
+No returned loans.
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-l HISTORY
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue|history|returned]
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-l history extra
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: list-l [overdue|history|returned]
+```
+
+#### Step 5
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-VIEW-003: Retain new returned and voided loans with stable IDs
+
+**Aim:** Retain new returned and voided loans with stable IDs.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Storage group:** `loan-history-workflow`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Meter c/Equipment q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Meter to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Meter c/Equipment q/2 b/Jamie t/01234567 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Meter c/Equipment q/1 b/Jamie t/01234567 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099. Inventory restored.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099. Inventory restored.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan ID 2 [VOIDED] 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-HISTORY-VIEW-004: Retain history and next ID across restarts
+
+**Aim:** Retain history and next ID across restarts.
+
+**Preconditions:** Fresh process; explicit storage groups share files in listed order.
+
+**Storage group:** `loan-history-workflow`
+
+#### Step 1
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan ID 2 [VOIDED] 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Meter c/Equipment q/1 b/Jamie t/01234567 d/31 December 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan ID 2 [VOIDED] 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan ID 3 [ACTIVE] 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+   Recorded: {{TODAY}} | Closed: -
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Meter [Equipment] to Jamie (01234567), due 31 December 2099
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 4)
+--------------------------------------------------------------------
+```
+
+#### Step 6
 
 **Input**
 

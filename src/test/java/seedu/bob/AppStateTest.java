@@ -145,7 +145,7 @@ class AppStateTest {
     void restore_unsortedSessionsAndRequests_sortsWithoutMovingPreparation() throws Exception {
         AppSnapshot saved = createSnapshot();
         AppSnapshot unsorted = snapshot(saved.inventory(), saved.sessions().reversed(), saved.requests().reversed(),
-                saved.contacts(), saved.loans());
+                saved.contacts(), saved.loanRecords().stream().map(AppSnapshot.LoanRecordEntry::loan).toList());
 
         AppState state = AppState.restore(unsorted, CLOCK);
 
@@ -203,12 +203,12 @@ class AppStateTest {
 
     @Test
     void restore_invalidVersionOrNullSnapshot_rejectsWithDiagnosticCause() {
-        AppSnapshot saved = new AppSnapshot(2, List.of(), List.of(), List.of(), List.of(), List.of());
+        AppSnapshot saved = new AppSnapshot(3, List.of(), List.of(), List.of(), List.of(), List.of());
 
         InvalidSnapshotException error = assertThrows(InvalidSnapshotException.class,
                 () -> AppState.restore(saved, CLOCK));
 
-        assertTrue(error.getMessage().contains("Unsupported snapshot version: 2"));
+        assertTrue(error.getMessage().contains("Unsupported snapshot version: 3"));
         assertNotNull(error.getCause());
         assertThrows(InvalidSnapshotException.class, () -> AppState.restore(null, CLOCK));
     }
@@ -297,7 +297,8 @@ class AppStateTest {
             assertThrows(InvalidSnapshotException.class, () -> AppState.restore(
                     snapshot(List.of(), List.of(), List.of(), List.of(contact), List.of()), CLOCK));
         }
-        List<LoanEntry> loans = new ArrayList<>(before.loans());
+        List<LoanEntry> loans = new ArrayList<>(
+                before.loanRecords().stream().map(AppSnapshot.LoanRecordEntry::loan).toList());
         loans.add(new LoanEntry("Beaker", "Glassware", 1, "Borrower", "bad phone", "2020-01-15"));
         assertThrows(InvalidSnapshotException.class, () -> AppState.restore(
                 snapshot(before.inventory(), before.sessions(), before.requests(), before.contacts(), loans), CLOCK));

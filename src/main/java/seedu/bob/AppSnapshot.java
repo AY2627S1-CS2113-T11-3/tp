@@ -1,22 +1,31 @@
 //@@author DaynaG3
 package seedu.bob;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Immutable version-1 storage data, independent of managers and their mutable domain objects.
+ * Immutable version-2 storage data, independent of managers and their mutable domain objects.
  * List constructors make defensive copies; domain validation takes place during restoration.
  */
 public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, List<SessionEntry> sessions,
-        List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans,
-        List<BrokenItemEntry> brokenItems) {
+        List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanRecordEntry> loanRecords,
+        List<BrokenItemEntry> brokenItems, long nextLoanId) {
 
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
-    /** Builds the original version-1 shape, before broken-item reports were available. */
+    /** Builds a current snapshot from active-loan values with unknown recording timestamps. */
     public AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, List<SessionEntry> sessions,
             List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans) {
         this(schemaVersion, inventory, sessions, requests, contacts, loans, List.of());
+    }
+
+    /** Builds a snapshot from active-loan values while preserving broken-item reports. */
+    public AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, List<SessionEntry> sessions,
+            List<RequestEntry> requests, List<ContactEntry> contacts, List<LoanEntry> loans,
+            List<BrokenItemEntry> brokenItems) {
+        this(schemaVersion, inventory, sessions, requests, contacts, importActiveLoans(loans), brokenItems,
+                (long) loans.size() + 1);
     }
 
     /** Copies every root collection, rejecting null collections and entries. */
@@ -25,8 +34,17 @@ public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, 
         sessions = List.copyOf(sessions);
         requests = List.copyOf(requests);
         contacts = List.copyOf(contacts);
-        loans = List.copyOf(loans);
+        loanRecords = List.copyOf(loanRecords);
         brokenItems = List.copyOf(brokenItems);
+    }
+
+    /** Assigns deterministic IDs to active-only values supplied by legacy fixtures or migration callers. */
+    private static List<LoanRecordEntry> importActiveLoans(List<LoanEntry> loans) {
+        ArrayList<LoanRecordEntry> records = new ArrayList<>();
+        for (LoanEntry loan : loans) {
+            records.add(new LoanRecordEntry((long) records.size() + 1, loan, "ACTIVE", null, null));
+        }
+        return List.copyOf(records);
     }
 
     /** An ordered inventory category with its available items. */
@@ -70,7 +88,11 @@ public record AppSnapshot(int schemaVersion, List<InventoryCategory> inventory, 
             String reportedDate, Integer contactIndex, ContactEntry deletedContact) {
     }
 
-    /** An active loan independent of available inventory and the contact list. */
+    /** Complete immutable loan history entry, with nullable imported recording time and active closure time. */
+    public record LoanRecordEntry(long loanId, LoanEntry loan, String status, String recordedAt, String closedAt) {
+    }
+
+    /** Captured loan details independent of available inventory and the contact list. */
     public record LoanEntry(String name, String category, int quantity, String borrowerName,
             String borrowerPhone, String dueDate) {
     }

@@ -67,14 +67,14 @@ class BobStartupTest {
 
     @Test
     void run_newerMainAndValidBackup_refusesToDowngrade() throws Exception {
-        String newer = "{\"schemaVersion\":2}";
+        String newer = "{\"schemaVersion\":3}";
         Files.writeString(directory.resolve("bob.json"), newer);
         Files.writeString(directory.resolve("bob.json.bak"), Files.readString(Path.of("docs/examples/bob-v1.json")));
 
         SessionResult result = run("Alex\nBye\n");
 
         assertEquals(1, result.exitCode());
-        assertTrue(result.output().contains("Unsupported data version: 2."));
+        assertTrue(result.output().contains("Unsupported data version: 3."));
         assertFalse(result.output().contains("Recovered data"));
         assertEquals(newer, Files.readString(directory.resolve("bob.json")));
     }

@@ -78,7 +78,7 @@ public class Parser {
     //@@author DaynaG3
     private static final String ADD_LOAN_USAGE =
             "Invalid format. Use: add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE";
-    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue]";
+    private static final String LIST_LOAN_USAGE = "Invalid format. Use: list-l [overdue|history|returned]";
     private static final String DELETE_LOAN_USAGE = "Invalid format. Use: delete-l INDEX";
     private static final String RETURN_LOAN_USAGE = "Invalid format. Use: return INDEX";
     //@@author gavinlimsh
@@ -377,6 +377,10 @@ public class Parser {
                 Ui.showLoans(loanManager.getLoanEntries(), false);
             } else if (arguments.trim().equals("overdue")) {
                 Ui.showLoans(loanManager.getOverdueLoanEntries(), true);
+            } else if (arguments.trim().equals("history")) {
+                Ui.showLoanHistory(loanManager.getLoanHistory(), false);
+            } else if (arguments.trim().equals("returned")) {
+                Ui.showLoanHistory(loanManager.getReturnedLoans(), true);
             } else {
                 throw new CommandFormatException(LIST_LOAN_USAGE);
             }

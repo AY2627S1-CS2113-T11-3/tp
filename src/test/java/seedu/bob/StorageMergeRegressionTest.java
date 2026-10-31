@@ -116,8 +116,9 @@ class StorageMergeRegressionTest {
     void restore_outOfRangeReportContact_rejectsSnapshot() throws Exception {
         AppSnapshot original = createReportedState(5, null).toSnapshot();
         AppSnapshot invalid = new AppSnapshot(original.schemaVersion(), original.inventory(), original.sessions(),
-                original.requests(), original.contacts(), original.loans(), List.of(new AppSnapshot.BrokenItemEntry(
-                        "Meter", "Equipment", 2, "Cracked screen", "2020-01-01", 1, null)));
+                original.requests(), original.contacts(), original.loanRecords(),
+                List.of(new AppSnapshot.BrokenItemEntry("Meter", "Equipment", 2,
+                        "Cracked screen", "2020-01-01", 1, null)), original.nextLoanId());
 
         assertThrows(StorageException.class, () -> SnapshotCodec.encode(invalid));
     }

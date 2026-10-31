@@ -3,16 +3,20 @@ package seedu.bob;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.InvalidLoanIndexException;
+import seedu.bob.exception.LoanException;
 
 /**
- * Owns active loans in insertion order and coordinates inventory deductions, corrections, and full returns.
+ * Retains every loan record in creation order and coordinates inventory deductions, corrections, and full returns.
  */
 public class LoanManager {
 
@@ -24,7 +28,9 @@ public class LoanManager {
     /** Supplies the local date at each operation so overdue state is never cached across days. */
     private final Clock clock;
     /** Each addition is a separate loan, even when the item and borrower match an existing entry. */
-    private final ArrayList<Loan> loans = new ArrayList<>();
+    private final ArrayList<LoanRecord> records = new ArrayList<>();
+    /** Next permanent ID; consumed only after a successful stock deduction. */
+    private long nextLoanId = 1;
 
     /**
      * Creates an empty loan list backed by the application's inventory.
@@ -50,28 +56,36 @@ public class LoanManager {
         //@@author DaynaG3
     }
 
-    /** Exports independent active-loan records without storing their derived overdue flags. */
-    List<AppSnapshot.LoanEntry> toSnapshot() {
-        List<AppSnapshot.LoanEntry> entries = new ArrayList<>();
-        for (Loan loan : loans) {
-            entries.add(new AppSnapshot.LoanEntry(loan.getName(), loan.getCategory(), loan.getQuantity(),
-                    loan.getBorrowerName(), loan.getBorrowerPhone(), loan.getDueDate().toString()));
-        }
-        return List.copyOf(entries);
+    /** Exports all records, including closed ones, without storing derived overdue flags. */
+    List<AppSnapshot.LoanRecordEntry> toSnapshot() {
+        return records.stream().map(LoanRecord::toSnapshot).toList();
     }
 
-    /** Restores records into a new manager without lending inventory a second time. */
-    void restoreLoans(List<AppSnapshot.LoanEntry> entries) throws CommandException {
-        if (!loans.isEmpty()) {
+    /** Returns the persisted next ID independently of active-list positions. */
+    long getNextLoanId() {
+        return nextLoanId;
+    }
+
+    /** Restores all lifecycle states and the counter without replaying lending or return operations. */
+    void restoreRecords(List<AppSnapshot.LoanRecordEntry> entries, long savedNextId) throws CommandException {
+        if (!records.isEmpty()) {
             throw new IllegalStateException("Loans can only be restored into an empty manager");
         }
-        for (AppSnapshot.LoanEntry entry : entries) {
-            Contact borrower = new Contact(entry.borrowerName(), entry.borrowerPhone(), null, null);
-            loans.add(new Loan(entry.name(), entry.category(), entry.quantity(), borrower,
-                    SnapshotFormat.toCommandDate(entry.dueDate())));
+        Set<Long> ids = new HashSet<>();
+        ArrayList<LoanRecord> restored = new ArrayList<>();
+        for (AppSnapshot.LoanRecordEntry entry : entries) {
+            LoanRecord record = LoanRecord.restore(entry);
+            if (!ids.add(record.loanId()) || record.loanId() >= savedNextId) {
+                throw new LoanException("Saved loan IDs must be unique and below the next loan ID.");
+            }
+            restored.add(record);
         }
-        assert hasValidState() : "Restored loans must retain valid independent records";
-        //@@author
+        if (savedNextId <= 0) {
+            throw new LoanException("The next loan ID must be positive.");
+        }
+        records.addAll(restored);
+        nextLoanId = savedNextId;
+        assert hasValidState() : "Restored history and counter must remain valid without changing stock";
     }
 
     /**
@@ -86,91 +100,99 @@ public class LoanManager {
     public LoanAdditionResult addLoan(Loan loan) throws CommandException {
         Objects.requireNonNull(loan, "Loan to add must not be null");
         assert hasValidState() && loan.hasValidState() : "Adding a loan requires valid records";
-        LocalDate today = LocalDate.now(clock);
-        LoanAdditionResult result = new LoanAdditionResult(loan, loan.isOverdue(today));
-        int previousCount = loans.size();
+        if (nextLoanId == Long.MAX_VALUE) {
+            throw new LoanException("No more loan IDs are available.");
+        }
+        OffsetDateTime recordedAt = OffsetDateTime.now(clock);
+        LoanRecord record = new LoanRecord(nextLoanId, loan, LoanRecord.Status.ACTIVE, recordedAt, null);
+        LoanAdditionResult result = new LoanAdditionResult(loan, loan.isOverdue(recordedAt.toLocalDate()));
+        int previousCount = records.size();
         int previousStock = inventory.getAvailableQuantity(loan.getName(), loan.getCategory());
         inventory.lendItem(loan.getName(), loan.getCategory(), loan.getQuantity());
         assert inventory.getAvailableQuantity(loan.getName(), loan.getCategory())
                 == (long) previousStock - loan.getQuantity() : "Lending must deduct the exact loan quantity";
-        loans.add(loan);
-        assert loans.size() == previousCount + 1 && loans.get(previousCount) == loan
+        records.add(record);
+        nextLoanId++;
+        assert records.size() == previousCount + 1 && records.get(previousCount).loan() == loan
                 : "Lending must append exactly one loan";
         assert hasValidState() : "Loan records must remain valid after addition";
         LOGGER.fine(() -> "Recorded loan: " + loan.getName() + " in category " + loan.getCategory()
                 + ", quantity=" + loan.getQuantity() + ", due=" + loan.getDueDate()
-                + ", overdue=" + result.isOverdue() + ", active=" + loans.size());
+                + ", overdue=" + result.isOverdue() + ", active=" + getLoans().size());
         return result;
     }
 
     /**
-     * Removes an incorrect loan and restores all of its units to available inventory.
-     * Restores stock before removing the record so a failed restoration preserves the loan.
+     * Voids an incorrect loan while retaining its details and restoring all units to available inventory.
+     * Restores stock before closing the record so a failed restoration preserves the active loan.
      *
      * @param userIndex One-based loan position from the latest loan list.
-     * @return Incorrect loan removed after successful stock restoration.
+     * @return Original details of the voided loan after successful stock restoration.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
     public Loan deleteLoan(int userIndex) throws CommandException {
-        Loan loan = removeLoanAndRestoreStock(userIndex);
+        Loan loan = closeLoanAndRestoreStock(userIndex, LoanRecord.Status.VOIDED);
         LOGGER.fine(() -> "Deleted incorrect loan: index=" + userIndex + ", item=" + loan.getName()
                 + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
-                + ", active=" + loans.size());
+                + ", active=" + getLoans().size());
         return loan;
     }
 
     /**
-     * Records a full return by restoring all units and removing the active loan without retaining history.
+     * Records a full return by restoring all units and retaining the closed record in history.
      *
      * @param userIndex One-based loan position from the latest loan list.
-     * @return Fully returned loan removed after successful stock restoration.
+     * @return Original details of the fully returned loan after successful stock restoration.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
     public Loan returnLoan(int userIndex) throws CommandException {
-        Loan loan = removeLoanAndRestoreStock(userIndex);
+        Loan loan = closeLoanAndRestoreStock(userIndex, LoanRecord.Status.RETURNED);
         LOGGER.fine(() -> "Returned loan: index=" + userIndex + ", item=" + loan.getName()
                 + ", category=" + loan.getCategory() + ", quantity=" + loan.getQuantity()
-                + ", active=" + loans.size());
+                + ", active=" + getLoans().size());
         return loan;
     }
 
     /**
-     * Restores stock before removing a loan so failed returns and corrections preserve both lists.
+     * Restores stock before closing a record so failed returns and corrections preserve the active loan.
      *
      * @param userIndex One-based position in the full active-loan list, including non-overdue loans.
-     * @return Removed loan, for the operation-specific confirmation.
+     * @return Captured loan details, for the operation-specific confirmation.
      * @throws CommandException If the index is invalid or stock restoration would overflow.
      */
-    private Loan removeLoanAndRestoreStock(int userIndex) throws CommandException {
-        assert hasValidState() : "Removing a loan requires valid manager state";
-        if (userIndex <= 0 || userIndex > loans.size()) {
-            LOGGER.fine(() -> "Rejected loan removal: index=" + userIndex + ", active=" + loans.size());
-            throw new InvalidLoanIndexException(userIndex, loans.size());
+    private Loan closeLoanAndRestoreStock(int userIndex, LoanRecord.Status status) throws CommandException {
+        assert hasValidState() : "Closing a loan requires valid manager state";
+        List<LoanRecord> active = records.stream()
+                .filter(record -> record.status() == LoanRecord.Status.ACTIVE).toList();
+        if (userIndex <= 0 || userIndex > active.size()) {
+            LOGGER.fine(() -> "Rejected loan removal: index=" + userIndex + ", active=" + active.size());
+            throw new InvalidLoanIndexException(userIndex, active.size());
         }
-        int index = userIndex - 1;
-        Loan loan = loans.get(index);
-        int previousCount = loans.size();
+        LoanRecord selected = active.get(userIndex - 1);
+        LoanRecord closed = selected.close(status, OffsetDateTime.now(clock));
+        Loan loan = selected.loan();
         int previousStock = inventory.getAvailableQuantity(loan.getName(), loan.getCategory());
         inventory.restoreStock(loan.getName(), loan.getCategory(), loan.getQuantity());
         assert inventory.getAvailableQuantity(loan.getName(), loan.getCategory())
-                == (long) previousStock + loan.getQuantity() : "Removal must restore the exact loan quantity";
-        Loan removedLoan = loans.remove(index);
-        assert removedLoan == loan && loans.size() == previousCount - 1
-                : "Removal must delete exactly the selected loan";
-        assert hasValidState() : "Loan records must remain valid after removal";
+                == (long) previousStock + loan.getQuantity() : "Closure must restore the exact loan quantity";
+        records.set(records.indexOf(selected), closed);
+        assert getLoans().size() == active.size() - 1 : "Closure must remove exactly one loan from the active view";
+        assert hasValidState() : "Loan records must remain valid after closure";
         return loan;
     }
 
     /**
-     * Returns whether dependencies and active records satisfy the manager's invariants.
+     * Returns whether dependencies and all lifecycle records satisfy the manager's invariants.
      * Duplicate records and past due dates remain valid.
      */
     private boolean hasValidState() {
-        if (inventory == null || clock == null) {
+        if (inventory == null || clock == null || nextLoanId <= 0) {
             return false;
         }
-        for (Loan loan : loans) {
-            if (loan == null || !loan.hasValidState()) {
+        Set<Long> ids = new HashSet<>();
+        for (LoanRecord record : records) {
+            if (record == null || !record.loan().hasValidState() || record.loanId() >= nextLoanId
+                    || !ids.add(record.loanId())) {
                 return false;
             }
         }
@@ -184,7 +206,19 @@ public class LoanManager {
      */
     public List<Loan> getLoans() {
         assert hasValidState() : "Loan snapshots require valid manager state";
-        return List.copyOf(loans);
+        return records.stream().filter(record -> record.status() == LoanRecord.Status.ACTIVE)
+                .map(LoanRecord::loan).toList();
+    }
+
+    /** Returns an immutable view of every active, returned, and voided record in creation order. */
+    public List<LoanRecord> getLoanHistory() {
+        assert hasValidState() : "History queries require valid records";
+        return List.copyOf(records);
+    }
+
+    /** Returns returned records only, preserving their original creation order. */
+    public List<LoanRecord> getReturnedLoans() {
+        return records.stream().filter(record -> record.status() == LoanRecord.Status.RETURNED).toList();
     }
 
     /**
@@ -214,7 +248,8 @@ public class LoanManager {
     private List<LoanListEntry> buildLoanEntries(boolean isOverdueOnly) {
         assert hasValidState() : "Listing requires valid loan records";
         LocalDate today = LocalDate.now(clock);
-        LOGGER.fine(() -> "Listing loans: overdueOnly=" + isOverdueOnly + ", active=" + loans.size()
+        List<Loan> loans = getLoans();
+        LOGGER.fine(() -> "Listing loans: overdueOnly=" + isOverdueOnly + ", active=" + getLoans().size()
                 + ", date=" + today);
         List<LoanListEntry> entries = new ArrayList<>();
         for (int i = 0; i < loans.size(); i++) {

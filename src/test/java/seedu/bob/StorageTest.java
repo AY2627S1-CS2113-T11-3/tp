@@ -83,14 +83,14 @@ class StorageTest {
     @Test
     void decode_newVersion_protectsItEvenWithDifferentFields() {
         StorageException failure = assertThrows(StorageException.class,
-                () -> SnapshotCodec.decode("{\"schemaVersion\":2,\"newFormat\":99999999999999999999.5}"));
+                () -> SnapshotCodec.decode("{\"schemaVersion\":3,\"newFormat\":99999999999999999999.5}"));
 
         assertEquals(StorageException.Kind.UNSUPPORTED_VERSION, failure.getKind());
     }
 
     @Test
     void encode_escapedUnicodeTextAndPhones_preservesExactValues() throws Exception {
-        AppSnapshot snapshot = new AppSnapshot(1, List.of(), List.of(), List.of(),
+        AppSnapshot snapshot = new AppSnapshot(AppSnapshot.CURRENT_VERSION, List.of(), List.of(), List.of(),
                 List.of(new AppSnapshot.ContactEntry("Example \"Lab\" \\ supplies \u65b0", "01234567", null,
                         "First line\nSecond line")), List.of());
 
@@ -152,7 +152,7 @@ class StorageTest {
     @Test
     void loadAndSave_newerMain_neverFallsBackOrOverwritesIt() throws Exception {
         Path main = directory.resolve("bob.json");
-        String newer = "{\"schemaVersion\":2,\"newFormat\":true}";
+        String newer = "{\"schemaVersion\":3,\"newFormat\":true}";
         Files.writeString(main, newer);
         Files.writeString(directory.resolve("bob.json.bak"), example("bob-v1-empty.json"));
         Storage storage = new Storage(main);
@@ -199,7 +199,7 @@ class StorageTest {
     void save_invalidSnapshotOrBlockedDirectory_neverCreatesPartialMain() throws Exception {
         Path main = directory.resolve("data/bob.json");
         Storage storage = new Storage(main);
-        AppSnapshot invalid = new AppSnapshot(1, List.of(), List.of(), List.of(),
+        AppSnapshot invalid = new AppSnapshot(AppSnapshot.CURRENT_VERSION, List.of(), List.of(), List.of(),
                 List.of(new AppSnapshot.ContactEntry("Contact", "bad phone", null, null)), List.of());
 
         assertThrows(StorageException.class, () -> storage.save(invalid));
