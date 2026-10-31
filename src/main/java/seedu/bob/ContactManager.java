@@ -1,9 +1,11 @@
 package seedu.bob;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import seedu.bob.exception.CommandException;
 import seedu.bob.exception.InvalidContactIndexException;
 
 /**
@@ -23,6 +25,25 @@ public class ContactManager {
      * Creates an empty supplier and maintenance contact list.
      */
     public ContactManager() {
+    }
+
+    /** Copies contacts without losing optional fields or leading zeros in phone numbers. */
+    List<AppSnapshot.ContactEntry> toSnapshot() {
+        List<AppSnapshot.ContactEntry> entries = new ArrayList<>();
+        for (Contact contact : contacts) {
+            entries.add(new AppSnapshot.ContactEntry(contact.getName(), contact.getPhone(),
+                    contact.getEmail(), contact.getRole()));
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Validates and restores contacts silently, preserving duplicates and insertion order. */
+    static ContactManager restore(List<AppSnapshot.ContactEntry> entries) throws CommandException {
+        ContactManager manager = new ContactManager();
+        for (AppSnapshot.ContactEntry entry : entries) {
+            manager.contacts.add(new Contact(entry.name(), entry.phone(), entry.email(), entry.role()));
+        }
+        return manager;
     }
 
     /**

@@ -88,6 +88,21 @@ public class Parser {
     }
 
     /**
+     * Executes one command and reports actual model changes for automatic saving.
+     * Comparing independent snapshots also detects unchanged status commands without guessing from command words.
+     *
+     * @param input Command text entered by the user.
+     * @param state Shared application models to query or modify.
+     * @return Whether execution changed any persisted value or its display order.
+     */
+    public boolean handleCommand(String input, AppState state) {
+        AppSnapshot before = state.toSnapshot();
+        handleCommand(input, state.getInventory(), state.getSessionManager(), state.getContactManager(),
+                state.getRequestManager(), state.getLoanManager());
+        return !before.equals(state.toSnapshot());
+    }
+
+    /**
      * Executes an inventory, scheduling, preparation, contact, student request, or loan command,
      * or prints a message for an unknown command. Expected user errors are displayed without ending
      * the application. Unexpected runtime failures are logged and replaced with a safe user-facing message.

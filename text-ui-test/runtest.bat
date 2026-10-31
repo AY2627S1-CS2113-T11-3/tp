@@ -1,12 +1,20 @@
 @echo off
 setlocal
-cd /d "%~dp0"
-if not exist "..\build\text-ui-test" mkdir "..\build\text-ui-test"
+for %%I in ("%~dp0..") do set "PROJECT_ROOT=%%~fI"
+if not exist "%PROJECT_ROOT%\build\text-ui-test" mkdir "%PROJECT_ROOT%\build\text-ui-test"
 
-java -jar "..\build\libs\bob.jar" < input.txt > "..\build\text-ui-test\ACTUAL.txt"
+:chooseWorkspace
+set "TEST_WORKSPACE=%PROJECT_ROOT%\build\text-ui-test\run-%RANDOM%-%RANDOM%-%RANDOM%"
+if exist "%TEST_WORKSPACE%" goto chooseWorkspace
+mkdir "%TEST_WORKSPACE%"
 if errorlevel 1 exit /b 1
+pushd "%TEST_WORKSPACE%"
+java -jar "%PROJECT_ROOT%\build\libs\bob.jar" < "%PROJECT_ROOT%\text-ui-test\input.txt" > "%PROJECT_ROOT%\build\text-ui-test\ACTUAL.txt"
+set "TEST_EXIT=%ERRORLEVEL%"
+popd
+if not "%TEST_EXIT%" == "0" exit /b 1
 
-fc /L /T EXPECTED.txt "..\build\text-ui-test\ACTUAL.txt"
+fc /L /T "%PROJECT_ROOT%\text-ui-test\EXPECTED.txt" "%PROJECT_ROOT%\build\text-ui-test\ACTUAL.txt"
 if errorlevel 1 exit /b 1
 echo Console regression test passed.
 exit /b 0

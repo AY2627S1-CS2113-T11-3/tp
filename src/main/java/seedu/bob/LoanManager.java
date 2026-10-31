@@ -48,6 +48,29 @@ public class LoanManager {
         assert hasValidState() : "A new loan manager must have valid dependencies and an empty loan list";
     }
 
+    /** Exports independent active-loan records without storing their derived overdue flags. */
+    List<AppSnapshot.LoanEntry> toSnapshot() {
+        List<AppSnapshot.LoanEntry> entries = new ArrayList<>();
+        for (Loan loan : loans) {
+            entries.add(new AppSnapshot.LoanEntry(loan.getName(), loan.getCategory(), loan.getQuantity(),
+                    loan.getBorrowerName(), loan.getBorrowerPhone(), loan.getDueDate().toString()));
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Restores records into a new manager without lending inventory a second time. */
+    void restoreLoans(List<AppSnapshot.LoanEntry> entries) throws CommandException {
+        if (!loans.isEmpty()) {
+            throw new IllegalStateException("Loans can only be restored into an empty manager");
+        }
+        for (AppSnapshot.LoanEntry entry : entries) {
+            Contact borrower = new Contact(entry.borrowerName(), entry.borrowerPhone(), null, null);
+            loans.add(new Loan(entry.name(), entry.category(), entry.quantity(), borrower,
+                    SnapshotFormat.toCommandDate(entry.dueDate())));
+        }
+        assert hasValidState() : "Restored loans must retain valid independent records";
+    }
+
     /**
      * Deducts stock and records a validated loan without printing a confirmation.
      * Captures whether the accepted loan is already overdue. Rejected requests do not change state.

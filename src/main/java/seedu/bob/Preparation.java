@@ -23,6 +23,31 @@ public class Preparation {
     public Preparation() {
     }
 
+    /** Restores a validated total without multiplying by headcount or accumulating duplicate records. */
+    void restoreItem(AppSnapshot.PreparationEntry entry) throws CommandException {
+        if (entry.name() == null || entry.name().isBlank()
+                || entry.category() == null || entry.category().isBlank()) {
+            throw new CommandFormatException("Saved preparation name and category must not be blank.");
+        }
+        if (entry.quantity() <= 0) {
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        if (findItemIndex(entry.name(), entry.category()) >= 0) {
+            throw new PreparationException("Duplicate saved preparation item: " + entry.name());
+        }
+        items.add(new PreparationItem(entry.name(), entry.category(), entry.quantity()));
+        assert hasValidState() : "Restored preparation must contain valid unique totals";
+    }
+
+    /** Copies each requirement into independent storage data in displayed order. */
+    List<AppSnapshot.PreparationEntry> toSnapshot() {
+        List<AppSnapshot.PreparationEntry> entries = new ArrayList<>();
+        for (PreparationItem item : items) {
+            entries.add(new AppSnapshot.PreparationEntry(item.getName(), item.getCategory(), item.getQuantity()));
+        }
+        return List.copyOf(entries);
+    }
+
     /**
      * Adds a per-attendee requirement, accumulating repeated name/category pairs without regard to case.
      *

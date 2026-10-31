@@ -9,13 +9,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Scanner;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Verifies that the application handles closed standard input without crashing.
  */
 class BobTest {
+
+    @TempDir
+    private Path directory;
 
     @Test
     void main_endOfInputBeforeName_exitsCleanly() {
@@ -46,7 +52,7 @@ class BobTest {
         try (PrintStream capturedOutput = new PrintStream(output, true, StandardCharsets.UTF_8)) {
             System.setIn(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
             System.setOut(capturedOutput);
-            Bob.main(new String[0]);
+            Bob.run(new Scanner(System.in), new Storage(directory.resolve("bob.json")));
         } finally {
             System.setIn(originalInput);
             System.setOut(originalOutput);

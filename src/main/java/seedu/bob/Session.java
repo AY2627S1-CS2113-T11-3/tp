@@ -49,6 +49,12 @@ public class Session implements Comparable<Session> {
      */
     public Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount) throws CommandException {
+        this(name, dateText, location, startTimeText, endTimeText, headcount, false);
+    }
+
+    /** Shares structural validation while allowing historical dates only for saved records. */
+    private Session(String name, String dateText, String location,
+            String startTimeText, String endTimeText, int headcount, boolean isRestoring) throws CommandException {
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -70,7 +76,7 @@ public class Session implements Comparable<Session> {
                     "Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
                             + "Ensure the month is capitalized.");
         }
-        if (date.isBefore(LocalDate.now())) {
+        if (!isRestoring && date.isBefore(LocalDate.now())) {
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
 
@@ -89,6 +95,23 @@ public class Session implements Comparable<Session> {
         if (!startTime.isBefore(endTime)) {
             throw new InvalidSessionTimeException("Start time must be earlier than end time.");
         }
+    }
+
+    /** Restores a session and its total requirements without replaying preparation commands. */
+    static Session restore(AppSnapshot.SessionEntry entry) throws CommandException {
+        Session session = new Session(entry.name(), SnapshotFormat.toCommandDate(entry.date()), entry.location(),
+                SnapshotFormat.toCommandTime(entry.startTime()), SnapshotFormat.toCommandTime(entry.endTime()),
+                entry.headcount(), true);
+        for (AppSnapshot.PreparationEntry item : entry.preparation()) {
+            session.preparation.restoreItem(item);
+        }
+        return session;
+    }
+
+    /** Exports the owning session together with its independent preparation totals. */
+    AppSnapshot.SessionEntry toSnapshot() {
+        return new AppSnapshot.SessionEntry(name, date.toString(), location, SnapshotFormat.formatTime(startTime),
+                SnapshotFormat.formatTime(endTime), headcount, preparation.toSnapshot());
     }
 
     /**
