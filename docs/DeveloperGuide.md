@@ -1082,7 +1082,7 @@ Export PNGs into `docs/images/` after changing a source so the guide's images re
 #### Loan history
 
 **Status: implemented.** Active, returned, and voided records persist in schema version 2. The following design
-record explains the lifecycle, migration rules, and alternatives considered. Existing action commands
+record retains the original considerations, alternatives, and phased verification plan. Existing action commands
 still use active-list indices; the additional views expose permanent identities for bookkeeping.
 
 ##### Objective and lifecycle
@@ -1212,6 +1212,24 @@ Exact output, empty states, and argument validation were recorded in the UI plan
 Permanent IDs do not require changing the available-stock inventory model or adding permanent item identifiers.
 The earlier total-stock alternative remains a separate design choice. Partial returns would require additional
 quantity invariants and return-event data, so they should not be included implicitly in this history extension.
+
+##### Implementation phases and verification record
+
+| Phase | Work and completion criteria | Verification |
+| --- | --- | --- |
+| 1: Contract | Finalize lifecycle rules, IDs, timestamps, ordering, schema examples, and exact command outputs. Record phase-specific cases in `test/ui-test-plan.md`. | Reviewed behavior, sample data, and expected UI responses exist before implementation. |
+| 2: Model and lifecycle | Add `LoanRecord`, retain all records, derive active views, and implement stock-safe return and void transitions. Preserve existing loan APIs where practical. | Unit tests cover duplicate details, stable IDs, renumbering, immutable queries, repeated closure, rejected additions, and stock-restoration failure. Existing loan UI cases pass. |
+| 3: Durable history | Implement version-2 snapshots, strict validation, version-1 conversion, counter restoration, and autosave integration. | Active, returned, and voided records round-trip; migration, backup recovery, and failed-save retry tests pass without duplicate stock changes. Restart UI cases pass. |
+| 4: History UI | Add history and returned-only views, clearly labeled IDs and timestamps, help text, empty states, and strict syntax handling. | Exact UI comparisons pass for mixed statuses, imported dates, duplicate details, and history after restart. Read-only cases prove saved files are unchanged. |
+| 5: Regression and documentation | Update the User Guide, Developer Guide, storage contract, examples, and UML to reflect the implemented behavior. | Java 25 `check` and the complete UI suite pass, including a create/return/void/restart workflow with exact inventory quantities. |
+
+Phases 2 and 3 were kept on the feature branch until durable round trips passed, avoiding a released intermediate
+implementation that could lose closed records on exit. At each implementation phase,
+follow the SE-EDU Java coding standard, run Java 25 unit tests and Checkstyle through `check`, and use the `test-ui`
+skill for the relevant recorded console cases before proceeding. Stop UI execution at the first mismatch, preserve
+expected outputs, and record the chronological result. Use fixed clocks for timestamps and temporary directories
+for file-writing tests. The [UI test plan](../test/ui-test-plan.md) contains the reusable loan-history cases
+and expected outputs for these verification steps.
 
 ### Student request tracking
 
