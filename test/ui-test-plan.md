@@ -2,6 +2,9 @@
 
 This file is the source of truth for repeatable console UI test cases run with the `test-ui` skill.
 
+For the phased loan-history verification criteria, see the
+[Developer Guide](../docs/DeveloperGuide.md#implementation-phases-and-verification-record).
+
 The course-style I/O redirection test in `text-ui-test/input.txt` and `text-ui-test/EXPECTED.txt`
 reuses preparation, loan, lookup, broken-item, request-fulfillment, and help scenarios.
 It substitutes the fixed future date `31 December 2099` for `{{TOMORROW}}`.
@@ -9908,8 +9911,11 @@ Bye
 ```
 
 
-## Loan history contract
+## Loan history implementation contract
 
+History implementation is phased. Phase 1 verifies the existing UI-LOAN-RETURN-002 baseline; phase 2 runs
+UI-HISTORY-MODEL cases, phase 3 runs UI-HISTORY-STORAGE cases plus existing persistence cases, phase 4 runs
+UI-HISTORY-VIEW cases, and phase 5 runs the entire plan. Each phase must pass before the next implementation.
 Loan IDs remain permanent while action commands continue to use the latest active-list indices.
 Storage retains full ISO offset timestamps; history displays their recorded local calendar dates, with Unknown
 for imported recording dates and - for an active record's absent closure date. Returned and voided records
