@@ -1,11 +1,11 @@
-# Bob persistence contract (version 1)
+# Bob persistence contract (version 2; version-1 compatibility)
 
-Status: Implemented through phases 1-6, including model snapshots, strict JSON storage, startup loading,
-backup recovery, automatic saving, and restart/error-handling verification.
+Status: Implemented, including permanent loan history, version-1 migration, strict JSON storage, backup recovery,
+automatic saving, and restart/error-handling verification.
 
 ## Scope and location
 
-Persist inventory, sessions and their preparation lists, student requests, contacts, active loans, and broken-item reports as one
+Persist inventory, sessions and their preparation lists, student requests, contacts, complete loan history, and broken-item reports as one
 complete snapshot. The default file is `data/bob.json`, resolved against the process working directory, rather
 than the JAR location. Starting Bob from a different directory selects a different data directory. Storage must
 accept an explicit path for tests so tests never access a user's records.
@@ -19,25 +19,28 @@ Companion files are `data/bob.json.bak` (the previous valid snapshot) and tempor
 replacement. The default runtime directory is excluded from Git. Examples under
 `docs/examples/` are fictional, tracked documentation, not live storage files.
 
-Version 1 supports one running Bob process per data directory. Concurrent writers, cloud synchronization,
-encryption, import/export commands, and automatic migration from other schema versions are outside this scope.
+The application supports one running Bob process per data directory. Version-1 snapshots migrate in memory.
+Concurrent writers, cloud synchronization, encryption, import/export commands, and migration from other versions
+are outside this scope.
 
 ## JSON structure
 
 The root is an object with the fields below. Field names are case-sensitive. JSON object field order is
 irrelevant; array order is significant. A valid empty snapshot is shown in
-[`bob-v1-empty.json`](examples/bob-v1-empty.json). A populated example covering the original feature set is
-[`bob-v1.json`](examples/bob-v1.json).
+[`bob-v2-empty.json`](examples/bob-v2-empty.json). A populated loan-ledger example is
+[`bob-v2.json`](examples/bob-v2.json). The original full-feature [version-1 example](examples/bob-v1.json) and
+[empty version-1 example](examples/bob-v1-empty.json) remain compatibility fixtures.
 
 | Root field | Type | Meaning |
 | --- | --- | --- |
-| `schemaVersion` | Integer | Must be `1`; identifies this file format, not Bob's release version. |
+| `schemaVersion` | Integer | Writers use `2`; readers also accept version `1` through the conversion below. |
 | `inventory` | Array | Ordered category objects containing ordered available-stock items. |
 | `sessions` | Array | Sessions, each containing its own preparation array. |
 | `requests` | Array | Student requests with their current statuses. |
 | `contacts` | Array | Contacts in insertion order. |
-| `loans` | Array | Active loans in insertion order, including separate duplicate loans. |
-| `brokenItems` | Array | Broken-item reports in insertion order. Optional only when reading earlier version-1 files; absent means `[]`. |
+| `loanRecords` | Array | All active, returned, and voided loans in creation order; duplicate details remain separate. |
+| `nextLoanId` | Integer | Positive signed 64-bit next ID, greater than every stored loan ID. |
+| `brokenItems` | Array | Broken reports in insertion order. Required in version 2; optional only for earlier version-1 files. |
 
 ### Inventory
 
@@ -87,15 +90,44 @@ Each contact contains `name` (nonblank string), `phone` (nonempty digits-only st
 satisfy the existing non-whitespace text on both sides of `@` rule; a supplied role must be nonblank.
 Keep phone numbers as strings to preserve leading zeros. Separate duplicate contacts are allowed.
 
-### Active loans
+### Loan history
 
-Each loan contains `name`, `category`, `borrowerName` (nonblank strings), `quantity` (positive integer),
-`borrowerPhone` (nonempty digits-only string), and `dueDate` (calendar date in `yyyy-MM-dd` format).
-Borrower details are independent snapshots, not contact indices. A matching saved contact or available
-inventory item is not required: every unit of that item may currently be on loan.
+Each `loanRecords` entry has exactly these fields:
 
-Preserve each loan separately and in order. Returned or corrected/deleted loans are absent; version 1 does
-not introduce return history or partial returns.
+| Field | Type | Rule |
+| --- | --- | --- |
+| `loanId` | Integer | Positive signed 64-bit value, unique within the snapshot and less than `nextLoanId`. |
+| `loan` | Object | Captured item and borrower details described below. |
+| `status` | String | Exactly `ACTIVE`, `RETURNED`, or `VOIDED`. |
+| `recordedAt` | String or null | ISO offset timestamp when Bob recorded the entry; null represents an unknown imported recording time. |
+| `closedAt` | String or null | ISO offset timestamp when a return or correction was recorded. Null exactly when status is `ACTIVE`. |
+
+The `loan` object contains `name`, `category`, `borrowerName` (nonblank strings), `quantity` (positive integer),
+`borrowerPhone` (nonempty digits-only string), and `dueDate` (ISO calendar date). These immutable details are
+independent of contact-list membership and available stock. Returned or voided records retain the original values.
+
+A timestamp example is `2026-10-31T09:30:00+08:00`. Full timestamps are stored even though history listings show
+calendar dates in their recorded offsets. Recording time is not necessarily the physical borrowing date; backlog
+entries remain supported. Never replace an unknown imported timestamp with migration time.
+
+IDs are allocated only after a successful stock deduction and are not recycled when records close.
+Backup recovery restores the saved ledger and counter together; newer lost IDs are not reserved. The counter may equal
+`9223372036854775807`; in that exhausted state, additions are rejected before inventory changes.
+Returned and voided states are terminal. Restoring any record never deducts or restores stock; available inventory
+already includes the effects of lending, returns, and corrections. Partial returns are not supported.
+
+### Reading version-1 snapshots
+
+Version 1 uses the original `loans` array with the captured detail fields above and no history metadata or counter.
+Validate its exact original shape first, then convert each entry to an `ACTIVE` record in the same order with IDs
+starting at 1, null timestamps, and `nextLoanId` equal to the number of entries plus 1. Retain all other feature data.
+An absent version-1 `brokenItems` array defaults to empty. Version 2 does not allow this omission.
+
+Normal loading, read-only commands, and ordinary exit do not rewrite a valid version-1 main file. The next
+successful data-changing command writes version 2 and preserves the original version-1 text as the backup.
+Backup recovery retains its existing pending-repair behavior, including repair on a successful exit save.
+Previously returned or deleted records are not reconstructable from active-only snapshots or their backups.
+Older Bob builds that support version 1 only reject a version-2 main file as unsupported.
 
 ### Broken-item reports
 
@@ -112,9 +144,11 @@ include this array. Use this updated Bob build to read files containing broken-i
 
 ## Validation and restoration
 
-- Require every documented field, except the legacy omission of `brokenItems`, including nullable contact fields. Empty lists are `[]`,
+- Require every documented field for its schema, including nullable fields. Empty lists are `[]`,
   never `null`. Reject unknown fields, duplicate JSON object keys, wrong types, and malformed JSON.
-- Require `schemaVersion` to be the integer `1`. Reject other versions instead of guessing their meaning.
+- Accept integer schema versions `1` and `2` only. Reject unsupported versions instead of guessing their meaning.
+- Loan IDs and their counter are exact signed 64-bit integers; reject strings, fractions, exponents, and overflow.
+  Validate positive, unique IDs, the next-ID bound, supported statuses, and closure-field consistency.
 - All quantities and headcounts must be integers from `1` through `2147483647`. Reject fractions, numeric
   strings, and out-of-range values. Phone numbers must remain strings.
 - Validate nonblank names, valid dates/times, uniqueness, and session conflicts before installing any state.
@@ -122,8 +156,8 @@ include this array. Use this updated Bob build to read files containing broken-i
 - ISO date/time formats are storage formats only. Console commands and displayed dates keep their current formats.
 - Accept past session dates, request deadlines, and loan due dates during restoration. New session/request
   commands must continue to reject past dates. Passing time must not invalidate a previously valid snapshot.
-- Restore inventory and loan records independently. Never call the normal loan-add operation while loading,
-  because it would deduct stock a second time. Reconnect the loan manager to the single restored inventory.
+- Restore inventory and all loan records independently. Never replay lending, return, or correction commands
+  while loading. Reconnect the loan manager to the single restored inventory without any stock changes.
 - Restore preparation totals directly, without multiplying them by headcount. Do not replay console commands
   or print addition confirmations during loading.
 - Recalculate stock availability, shortages, displayed indices, and overdue flags when queried. These are not
@@ -160,7 +194,7 @@ backup files participate in recovery.
 ### Saving
 
 1. Validate and serialize the complete snapshot into a temporary sibling file; finish writing and close it.
-2. If the current main file is validated version-1 data, preserve it as the backup using a temporary file and
+2. If the current main file is validated supported data, preserve it as the backup using a temporary file and
    replacement. If that backup update fails, abort the save and keep the main file intact. If the main file is
    corrupt after recovery, leave the valid backup intact instead of copying the corrupt main file over it.
 3. Replace the main file with the completed temporary file using an atomic move. If atomic replacement is
@@ -169,7 +203,7 @@ backup files participate in recovery.
 4. Report success and clear the pending-change flag only after replacement succeeds. Clean up temporary files
    where possible without deleting the main or backup files.
 
-One file replacement commits inventory and loans together. This protects against partially written snapshots;
+One file replacement commits inventory, all loan records, and the next-ID counter together. This protects against partially written snapshots;
 it does not promise survival of every hardware or power failure. The backup contains the previous valid main
 snapshot, so recovery can lose the most recent change.
 
@@ -194,7 +228,8 @@ snapshot, so recovery can lose the most recent change.
 1. Exporting and restoring a state preserves every stored value and the documented order, including optional
    fields, leading-zero phone numbers, duplicate loans, and all three request statuses.
 2. Old sessions/requests still load, while new past-dated session/request commands remain rejected.
-3. Loan restoration does not deduct inventory again, and a later full return restores exactly the loan quantity,
+3. Loan restoration does not change inventory; returned/voided records remain closed. A later full return of an
+   active record restores exactly its quantity, retains its history, and preserves its ID,
    including when its inventory item was absent at startup.
 4. Preparation totals survive restoration unchanged, even when not divisible by headcount, and remain attached
    to their session after sorting or deletion of another session.
@@ -204,6 +239,14 @@ snapshot, so recovery can lose the most recent change.
 7. Restart-based tests cover every feature using temporary directories. Java changes pass the Gradle wrapper's
    `check` task with Java 25, and user/developer guides are updated when persistence becomes available.
 
-The populated example deliberately includes a past session and request, a preparation total of 13 for 10
+The original version-1 populated example deliberately includes a past session and request, a preparation total of 13 for 10
 attendees, an inventory quantity of 7 with a separate loan of 3, and a loan whose item is absent from available
 inventory. These cases guard against rejecting historical data, multiplying totals, or deducting stock twice.
+
+## Loan history verification
+
+`LoanHistoryTest` covers immutable lifecycle transitions, active indices, rejected additions, ID reuse prevention,
+and restoration overflow. `LoanHistoryStorageTest` covers strict ledger validation, exact large IDs, legacy
+migration without writes, history round trips, exhausted counters, and backup recovery. `BobPersistenceTest`
+verifies that a failed return save and exit retry retain the same identity and timestamps without another stock
+restoration. `UI-HISTORY-*` cases exercise exact console output and fresh-process restart behavior.

@@ -7,7 +7,7 @@ session's headcount to calculate required quantities and compare them with the i
 deadline and show whether the requested quantity is currently in inventory.
 
 **Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
-from that same directory restores inventory, sessions, preparations, requests, contacts, active loans, and
+from that same directory restores inventory, sessions, preparations, requests, contacts, active and closed loan records, and
 broken-item reports.
 
 ## Contents
@@ -21,6 +21,7 @@ broken-item reports.
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
+  - [View loan history](#view-loan-history-list-l-history)
 - [Saving and restoring data](#saving-and-restoring-data)
 - [Broken-item tracking](#broken-item-tracking)
 - [Exiting Bob](#exiting-bob)
@@ -143,7 +144,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items
@@ -936,7 +937,7 @@ An empty list displays `No active loans.` between the heading and closing divide
 
 **Format:** `delete-l INDEX`
 
-Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
+Marks an incorrect active loan as `VOIDED`, retains it in history, and restores its entire quantity to inventory. Use the index
 from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
 This command corrects an entry. Use `return` when the borrower has actually returned the items.
 Partial deletion is not supported.
@@ -992,7 +993,7 @@ change supplier contacts, sessions, or other loans.
 - Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
 - A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
   always check `list-l` before the next operation.
-- Returned records are removed immediately; return history is not retained in this version.
+- Returned records leave the active list immediately and remain in history as `RETURNED`.
 
 ### Track overdue loans: `list-l overdue`
 
@@ -1030,7 +1031,46 @@ Loans due today or in the future do not produce this warning. Invalid or insuffi
 are rejected without adding a loan or printing an overdue warning. Returned and corrected records
 are removed from both active and overdue lists.
 
-Active loans persist between launches. Return history and partial returns remain unsupported.
+Active, returned, and voided loans persist between launches. Partial returns remain unsupported.
+
+### View loan history: `list-l history`
+
+**Format:** `list-l history`
+
+Displays every recorded loan in creation order, including active loans, completed returns, and incorrect entries
+that were voided using `delete-l`. Use `list-l returned` to show genuine returns only; voided entries are excluded.
+Both filters are lowercase and accept no additional arguments.
+
+Each history row shows a permanent loan ID, status, original item/borrower details, due date, and recording/closure
+dates. The console shows calendar dates in the timestamp's original timezone offset; the save file retains the full
+offset timestamps. These dates describe when the commands were recorded, which may differ from a backlog loan's
+physical borrowing or return date. An active record has `Closed: -`.
+
+For example, a returned record may appear as:
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: 31 October 2026 | Closed: 1 November 2026
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+**A loan ID is not an active-list index.** Continue using the latest `list-l` or `list-l overdue` indices for
+`return INDEX` and `delete-l INDEX`. IDs are not recycled when records close, even after the active list becomes empty. Repeated loans
+with identical details remain separate records. Closed records cannot be returned or voided again.
+
+An empty history displays `No loan records.`. An empty returned-only view displays `No returned loans.`.
+Backup recovery restores an earlier ledger and its ID counter; changes lost after that backup may include loan IDs.
+Viewing history changes no stock and does not rewrite saved files. There is no command to permanently erase history,
+edit a historical entry, or record a partial return.
+
+When loading older version-1 data, existing active loans receive IDs and show `Recorded: Unknown` because their
+original recording times were not saved. Their original item, borrower, due date, and available stock are preserved.
+Earlier returned/deleted loans cannot be recovered automatically. The next successful change saves the upgraded
+format; keep using the updated Bob build after that upgrade.
 
 ## Saving and restoring data
 
@@ -1038,8 +1078,8 @@ Bob saves automatically after each command that changes data. There is no separa
 viewing help, rejected commands, and marking a request with its existing status do not rewrite saved files.
 An ordinary command's response is complete when its following blank line appears.
 
-The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, active
-loans, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
+The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, complete
+loan history and its next-ID counter, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
 shortages are recalculated when displayed. Preparation and pending/prepared requests do not reserve stock.
 Fulfilling a request deducts stock once;
 loading a fulfilled request does not deduct it again.
@@ -1356,7 +1396,9 @@ version that supports the same saved format. There is no interactive import comm
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans with overdue markers | `list-l` |
 | List overdue loans only | `list-l overdue` |
-| Delete an incorrect loan and restore stock | `delete-l INDEX` |
+| List all active, returned, and voided loan records | `list-l history` |
+| List genuine returned loans only | `list-l returned` |
+| Void an incorrect loan and restore stock | `delete-l INDEX` |
 | Record a full return and restore stock | `return INDEX` |
 | Report broken inventory units | `add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]` |
 | List broken-item reports and contacts | `list-b` |
