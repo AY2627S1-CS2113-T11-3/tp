@@ -2,6 +2,10 @@
 
 This is a project template for a greenfield Java project. It's named after _Bob The Builder_. Given below are instructions on how to use it.
 
+Bob saves lab records automatically to `data/bob.json` and restores them when launched from the same working
+directory. See the [User Guide](docs/UserGuide.md#saving-and-restoring-data) for backups, recovery, and failed-save
+exit choices, and the [storage contract](docs/StorageFormat.md) for the version-1 file format.
+
 ## Setting up in Intellij
 
 Prerequisites: JDK 25 (use the exact version), update Intellij to the most recent version.

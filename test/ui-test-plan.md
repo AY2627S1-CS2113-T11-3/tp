@@ -7,15 +7,22 @@ reuses UI-PREP-001, substituting the fixed future date `31 December 2099` for `{
 Its shell/batch script compares the full session after execution. The remaining cases below
 are retained for manual command-by-command testing.
 
+For a demonstration of the current implementation, run `UI-PERSIST-FINAL-001` and `UI-PERSIST-FINAL-002`
+with `-CasePrefix UI-PERSIST-FINAL-`. These cases create records for all six features, exit, restart using
+the same isolated storage directory, and return the saved loan. The latest demonstration transcript is
+[`ui-current-implementation-session.md`](ui-current-implementation-session.md). Expected outputs below are unchanged.
+
 ## Test environment
 
 - Java: 25
 - Build command: `gradlew.bat shadowJar` on Windows or `./gradlew shadowJar` on macOS/Linux
 - Run command: `java -jar build/libs/bob.jar`
 - Comparison: exact after newline normalization, ANSI-sequence removal, and ignoring one final newline
-- Isolation: each test case starts a fresh application process
+- Isolation: each test case starts a fresh application process in a new directory under `build/ui-tests-*`;
+  only cases with the same explicit `Storage group` reuse that run's files
 - Command response terminator: each ordinary command emits exactly one additional blank line after its expected output; EOF and `Bye` exit without a response terminator
-- Diagnostics: stderr is captured separately from exact stdout comparisons; normal INFO/WARNING logs are allowed, while nonzero exits and SEVERE failures fail the case
+- Diagnostics: stderr is captured separately from exact stdout comparisons; normal INFO/WARNING logs are allowed;
+  exits must match the recorded `Exit code` (default 0), and SEVERE failures always fail the case
 - Timeout: 10 seconds per output line or process exit; missing output and unexpected extra output fail the case
 - Whitespace notation: each `␠` in the startup fixture or an input block represents one literal space and is decoded before comparison or sending input
 - Startup prompt:
@@ -7933,3 +7940,1298 @@ command
 exact output
 ```
 -->
+
+## Persistence phases 3-6
+
+Persistence cases use an isolated working directory. Expected output is specified before implementing each
+phase. Phase 3 exercises the storage boundary through unit tests and verifies the unchanged packaged console
+workflow; Phase 4 verifies fixture loading, Phase 5 verifies saving and restarts, and Phase 6 runs the complete
+plan plus a new-data workflow normally and with assertions enabled.
+
+The runner recognizes these recorded setup fields:
+
+- `Storage fixture`: `populated`, `recovery` (corrupt main plus populated backup), `backup-only`, `corrupt`,
+  `newer` (version 2 main plus valid empty backup), or `blocked-backup` (empty main plus nonempty backup directory).
+- `Storage group`: cases in the same group share one isolated directory and must run in plan order.
+- `Startup failure`: its single `Start Bob` step compares output and the expected process exit without a greeting.
+- `Startup warning`: output compared after the normal greeting and before commands.
+- `Exit code`: expected status, default 0; `Exit input` identifies a prompt choice that terminates the process.
+- `Disk unchanged`: compare saved-file fingerprints before startup and after normal exit.
+- `Repair storage before step`: remove only the known backup blocker fixture before that step to test retry.
+
+`{{STORAGE_PATH}}` resolves to the isolated main file's absolute path. Date placeholders use the once-resolved
+computer-local date recorded at session start. Fixtures are set up before startup; recovery cases can repair
+their main save on exit. Every failure terminates its process and stops later steps and cases.
+
+### UI-PERSIST-LOAD-001: Restore all six feature areas
+
+**Aim:** Restore all six feature areas using a fresh packaged application process.
+
+**Preconditions:** Isolated storage initialized from the recorded fixture before startup.
+
+**Storage fixture:** `populated`
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 7)
+Safety
+1: Gloves (Qty: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Completed chemistry lab on 15 January 2020 at Lab 1 from 0900 to 1100 for 10 attendees
+2. Introduction to chemistry on 5 November 2099 at Lab 1 from 0900 to 1100 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-p s/2
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Introduction to chemistry on 5 November 2099 at Lab 1 from 0900 to 1100 for 10 attendees
+--------------------------------------------------------------------
+1. Beaker [Glassware] (Required: 13, Available: 7) !! Insufficient items (Shortfall: 6)
+2. Gloves [Safety] (Required: 20, Available: 20)
+3. Test tube [Glassware] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alex Tan - 2x Gloves by 15 January 2020 (Available: 20)
+2. [Pending] Jamie Lim - 8x Beaker by 4 November 2099 (Available: 7) !! Insufficient stock (Shortfall: 1)
+3. [Prepared] Morgan Lee - 4x Gloves by 5 November 2099 (Available: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Example Lab Supplies (01234567, orders@example.com) - Supplier
+2. Example Maintenance (07654321)
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 3x Beaker [Glassware] to Taylor Wong (02345678), due 16 January 2020 [OVERDUE]
+2. 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099
+3. 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099
+--------------------------------------------------------------------
+```
+
+### UI-PERSIST-LOAD-002: Recover a valid backup
+
+**Aim:** Recover a valid backup using a fresh packaged application process.
+
+**Preconditions:** Isolated storage initialized from the recorded fixture before startup.
+
+**Storage fixture:** `recovery`
+
+**Startup warning**
+
+```text
+Recovered data from backup. It may not include the latest changes.
+```
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 7)
+Safety
+1: Gloves (Qty: 20)
+--------------------------------------------------------------------
+```
+
+### UI-PERSIST-LOAD-003: Reject corrupt data without overwriting it
+
+**Aim:** Reject corrupt data without overwriting it using a fresh packaged application process.
+
+**Preconditions:** Isolated storage initialized from the recorded fixture before startup.
+
+**Storage fixture:** `corrupt`
+
+**Disk unchanged:** `true`
+
+**Startup failure:** `true`
+
+**Exit code:** `1`
+
+#### Step 1
+
+**Input**
+
+```text
+Start Bob
+```
+
+**Expected output**
+
+```text
+Cannot load data from {{STORAGE_PATH}}: The saved data is invalid.
+Bob has stopped; saved files were not changed.
+```
+
+### UI-PERSIST-LOAD-004: Protect a newer-format file despite a valid backup
+
+**Aim:** Protect a newer-format file despite a valid backup using a fresh packaged application process.
+
+**Preconditions:** Isolated storage initialized from the recorded fixture before startup.
+
+**Storage fixture:** `newer`
+
+**Disk unchanged:** `true`
+
+**Startup failure:** `true`
+
+**Exit code:** `1`
+
+#### Step 1
+
+**Input**
+
+```text
+Start Bob
+```
+
+**Expected output**
+
+```text
+Cannot load data from {{STORAGE_PATH}}: Unsupported data version: 2.
+Bob has stopped; saved files were not changed.
+```
+
+### UI-PERSIST-LOAD-005: Recover when only a backup remains
+
+**Aim:** Recover when only a backup remains using a fresh packaged application process.
+
+**Preconditions:** Isolated storage initialized from the recorded fixture before startup.
+
+**Storage fixture:** `backup-only`
+
+**Startup warning**
+
+```text
+Recovered data from backup. It may not include the latest changes.
+```
+
+#### Step 1
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Example Lab Supplies (01234567, orders@example.com) - Supplier
+2. Example Maintenance (07654321)
+--------------------------------------------------------------------
+```
+
+### UI-PERSIST-SAVE-001: Save changes to every feature before exit
+
+**Aim:** Save changes to every feature before exit with exact console comparisons and isolated storage.
+
+**Preconditions:** Cases sharing the recorded storage group run in order with a fresh process each time.
+
+**Storage fixture:** `populated`
+
+**Storage group:** `restart`
+
+#### Step 1
+
+**Input**
+
+```text
+delete-i c/Glassware i/1 q/2
+```
+
+**Expected output**
+
+```text
+Successfully removed: 2x Beaker from the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: Completed chemistry lab
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/1
+```
+
+**Expected output**
+
+```text
+Successfully removed: 1x Beaker [Glassware] from preparation
+--------------------------------------------------------------------
+Lab preparation: Introduction to chemistry on 5 November 2099 at Lab 1 from 0900 to 1100 for 10 attendees
+--------------------------------------------------------------------
+1. Beaker [Glassware] (Required: 12, Available: 5) !! Insufficient items (Shortfall: 7)
+2. Gloves [Safety] (Required: 20, Available: 20)
+3. Test tube [Glassware] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+mark-r 2 prepared
+```
+
+**Expected output**
+
+```text
+Successfully marked request 2 as prepared: Jamie Lim - 8x Beaker by 4 November 2099
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 2
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Example Maintenance
+```
+
+#### Step 6
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 3x Beaker [Glassware] to Taylor Wong (02345678), due 16 January 2020. Inventory restored.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-SAVE-002: Restart with every changed value preserved
+
+**Aim:** Restart with every changed value preserved with exact console comparisons and isolated storage.
+
+**Preconditions:** Cases sharing the recorded storage group run in order with a fresh process each time.
+
+**Storage group:** `restart`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 8)
+Safety
+1: Gloves (Qty: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Introduction to chemistry on 5 November 2099 at Lab 1 from 0900 to 1100 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Introduction to chemistry on 5 November 2099 at Lab 1 from 0900 to 1100 for 10 attendees
+--------------------------------------------------------------------
+1. Beaker [Glassware] (Required: 12, Available: 8) !! Insufficient items (Shortfall: 4)
+2. Gloves [Safety] (Required: 20, Available: 20)
+3. Test tube [Glassware] (Required: 10, Available: 0) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alex Tan - 2x Gloves by 15 January 2020 (Available: 20)
+2. [Prepared] Jamie Lim - 8x Beaker by 4 November 2099 (Available: 8)
+3. [Prepared] Morgan Lee - 4x Gloves by 5 November 2099 (Available: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Example Lab Supplies (01234567, orders@example.com) - Supplier
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099
+2. 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099. Inventory restored.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+Close standard input (EOF)
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-SAVE-003: Restart after EOF and correct the remaining loan
+
+**Aim:** Restart after EOF and correct the remaining loan with exact console comparisons and isolated storage.
+
+**Preconditions:** Cases sharing the recorded storage group run in order with a fresh process each time.
+
+**Storage group:** `restart`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 8)
+Safety
+1: Gloves (Qty: 20)
+Equipment
+1: Microscope (Qty: 1)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 1x Microscope [Equipment] to Casey Ng (03456789), due 6 November 2099. Inventory restored.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 8)
+Safety
+1: Gloves (Qty: 20)
+Equipment
+1: Microscope (Qty: 2)
+--------------------------------------------------------------------
+```
+
+### UI-PERSIST-SAVE-READONLY-001: Read-only rejected and unchanged commands do not write
+
+**Aim:** Read-only rejected and unchanged commands do not write with exact console comparisons and isolated storage.
+
+**Preconditions:** Fresh process with the recorded storage fixture.
+
+**Storage fixture:** `populated`
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 7)
+Safety
+1: Gloves (Qty: 20)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Beaker c/Glassware q/1
+```
+
+**Expected output**
+
+```text
+Item "Beaker" already exists in category "Glassware".
+```
+
+#### Step 3
+
+**Input**
+
+```text
+mark-r 3 prepared
+```
+
+**Expected output**
+
+```text
+Successfully marked request 3 as prepared: Morgan Lee - 4x Gloves by 5 November 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-SAVE-FAIL-001: Keep unsaved data visible and allow cancel or explicit exit
+
+**Aim:** Keep unsaved data visible and allow cancel or explicit exit with exact console comparisons and isolated storage.
+
+**Preconditions:** Fresh process with the recorded storage fixture.
+
+**Storage fixture:** `blocked-backup`
+
+**Disk unchanged:** `true`
+
+**Exit input:** `exit`
+
+**Exit code:** `1`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Beaker c/Glassware q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Beaker to the inventory
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output**
+
+```text
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+#### Step 3
+
+**Input**
+
+```text
+cancel
+```
+
+**Expected output**
+
+```text
+Exit canceled. Unsaved changes remain in memory.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output**
+
+```text
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+#### Step 6
+
+**Input**
+
+```text
+exit
+```
+
+**Expected output**
+
+```text
+Exiting with unsaved changes.
+```
+
+### UI-PERSIST-SAVE-FAIL-002: Retry saving after storage becomes writable
+
+**Aim:** Retry saving after storage becomes writable with exact console comparisons and isolated storage.
+
+**Preconditions:** Cases sharing the recorded storage group run in order with a fresh process each time.
+
+**Storage fixture:** `blocked-backup`
+
+**Storage group:** `retry`
+
+**Exit input:** `retry`
+
+**Repair storage before step:** `3`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Beaker c/Glassware q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Beaker to the inventory
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output**
+
+```text
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+#### Step 3
+
+**Input**
+
+```text
+retry
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-SAVE-FAIL-003: Reload data committed by exit retry
+
+**Aim:** Reload data committed by exit retry with exact console comparisons and isolated storage.
+
+**Preconditions:** Cases sharing the recorded storage group run in order with a fresh process each time.
+
+**Storage group:** `retry`
+
+**Disk unchanged:** `true`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-PERSIST-SAVE-FAIL-004: Failed save at EOF exits without waiting for input
+
+**Aim:** Failed save at EOF exits without waiting for input with exact console comparisons and isolated storage.
+
+**Preconditions:** Fresh process with the recorded storage fixture.
+
+**Storage fixture:** `blocked-backup`
+
+**Disk unchanged:** `true`
+
+**Exit code:** `1`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Beaker c/Glassware q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Beaker to the inventory
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+```
+
+#### Step 2
+
+**Input**
+
+```text
+Close standard input (EOF)
+```
+
+**Expected output**
+
+```text
+Warning: changes are only in memory. Could not save to {{STORAGE_PATH}}: The snapshot could not be saved.
+Input ended with unsaved changes. The last saved data was kept.
+```
+
+### UI-PERSIST-FINAL-001: Create a new persisted lab workflow
+
+**Aim:** Create a new persisted lab workflow using all six features and a fresh Java process per case.
+
+**Preconditions:** Run FINAL-001 then FINAL-002 using their shared storage group. Start without saved files.
+
+**Storage group:** `release-workflow`
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/15
+```
+
+**Expected output**
+
+```text
+Successfully added: 15x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Practice Lab d/{{TOMORROW}} l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Practice Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Practice Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 15) !! Insufficient items (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+add-r n/Jamie i/Wire q/5 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added request: Jamie - 5x Wire by {{TOMORROW}}
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as fulfilled: Jamie - 5x Wire by {{TOMORROW}}
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-c n/Supplier t/01234567 e/orders@example.com r/Supplies
+```
+
+**Expected output**
+
+```text
+Successfully added: Supplier (01234567) to contacts
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/Wire c/Components q/5 b/Taylor t/02345678 d/{{TOMORROW}}
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 5x Wire [Components] to Taylor (02345678), due {{TOMORROW}}
+```
+
+#### Step 8
+
+**Input**
+
+```text
+Bye
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-FINAL-002: Restart the new workflow and return its loan
+
+**Aim:** Restart the new workflow and return its loan using all six features and a fresh Java process per case.
+
+**Preconditions:** Run FINAL-001 then FINAL-002 using their shared storage group. Start without saved files.
+
+**Storage group:** `release-workflow`
+
+#### Step 1
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Practice Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Practice Lab on {{TOMORROW}} at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 10) !! Insufficient items (Shortfall: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Jamie - 5x Wire by {{TOMORROW}} (Available: 10)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Supplier (01234567, orders@example.com) - Supplies
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 5x Wire [Components] to Taylor (02345678), due {{TOMORROW}}
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 5x Wire [Components] to Taylor (02345678), due {{TOMORROW}}. Inventory restored.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 15)
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+Close standard input (EOF)
+```
+
+**Expected output (no output)**
+
+```text
+
+```
+
+### UI-PERSIST-STORAGE-001: Console regression after adding storage
+
+**Aim:** Verify inventory and loan commands retain their exact output after adding the JSON storage component.
+
+**Preconditions:** Fresh process and an empty isolated working directory; no saved data.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Beaker c/Glassware q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Beaker to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Beaker c/Glassware q/3 b/Taylor t/02345678 d/5 November 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 3x Beaker [Glassware] to Taylor (02345678), due 5 November 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 3x Beaker [Glassware] to Taylor (02345678), due 5 November 2099. Inventory restored.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Glassware
+1: Beaker (Qty: 10)
+--------------------------------------------------------------------
+```

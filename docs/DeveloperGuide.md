@@ -29,6 +29,7 @@
 - [Address Book Level 3](https://se-education.org/addressbook-level3/) — used as the structure and documentation style reference.
 - [Gradle](https://gradle.org/) — used for build automation, dependency management, and test execution.
 - [JUnit 5](https://junit.org/junit5/) — used for automated unit and integration tests.
+- [Gson](https://google.github.io/gson/UserGuide.html) — converts dedicated snapshot records to and from JSON.
 - [Java logging API](https://docs.oracle.com/en/java/javase/25/docs/api/java.logging/module-summary.html) — used for diagnostic logging.
 
 ## Setting up and getting started
@@ -98,12 +99,12 @@ The application uses a lightweight layered architecture:
 - **UI** — reads command-line input and displays output.
 - **Logic** — parses commands, validates their formats, and dispatches operations.
 - **Model** — stores inventory, sessions, preparations, contacts, and loans.
-- **Storage** — not implemented; all data is intentionally in memory for the current version.
+- **Storage** — validates and loads local JSON snapshots, retains a backup, and saves complete state atomically.
 - **Common classes** — shared domain objects, exceptions, and display constants.
 
-`Bob.main` creates one `Parser`, one instance of each model manager, and a shared `Inventory` for the duration of the
-process. The parser receives these objects when handling each command. This keeps the managers independent while allowing
-loans and preparations to query or update inventory.
+`Bob.main` creates one `Parser` and an `AppState` that owns one instance of each model manager and a shared
+`Inventory` for the duration of the process. The parser receives these objects when handling each command. This keeps
+the managers independent while allowing loans and preparations to query or update inventory.
 
 ### UI component
 
@@ -146,6 +147,8 @@ The model is composed of domain objects and managers:
 - [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) stores active loans and shares the inventory with loans.
 - [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
+- `AppState` groups the managers, exports snapshots, and restores complete independent model state.
+- `AppSnapshot` and its nested records describe version-1 storage values without retaining mutable model references.
 
 Managers expose operations rather than their mutable internal collections. Where a collection is returned for querying,
 the implementation returns an immutable snapshot. Domain classes maintain invariants such as positive quantities,
@@ -153,12 +156,55 @@ nonblank names, and conflict-free sessions.
 
 ### Storage component
 
-There is no storage component in the current version. Inventory, sessions, preparations, contacts, and loans are created
-when Bob starts and are discarded when the process exits. Persistence and data migration are future work.
+The [version-1 storage format and behavior contract](StorageFormat.md) defines the persisted fields and recovery
+rules, with [populated](examples/bob-v1.json) and [empty](examples/bob-v1-empty.json) examples.
 
-Phase 1 of persistence defines the [version-1 storage format and behavior contract](StorageFormat.md), with
-[populated](examples/bob-v1.json) and [empty](examples/bob-v1-empty.json) example snapshots. This is a design
-contract for subsequent implementation phases; startup loading and automatic saving are not available yet.
+The model boundary consists of `AppState.toSnapshot()` and `AppState.restore(snapshot)`.
+Snapshots use Java records (data classes with generated accessors and value equality) and defensive list copies,
+so a later inventory deduction, request status change, or preparation edit cannot alter an earlier snapshot.
+`AppState.restore(snapshot, clock)` also accepts an explicit clock for deterministic overdue tests.
+
+Restoration constructs new managers and returns them only after every record passes domain validation. An invalid
+snapshot raises `InvalidSnapshotException` with the underlying cause; existing state is never modified. Saved
+sessions and requests may have past dates, while normal creation commands retain their today-or-later checks.
+Preparation quantities are restored as totals. Loans are restored independently of available stock, then attached
+to the shared inventory so subsequent returns restore the correct quantities. Loading does not replay commands or
+print addition confirmations. `SnapshotFormat` converts ISO storage dates/times to the existing domain formats.
+
+`Storage` resolves an explicit path, normally `data/bob.json` relative to the working directory. Its `load()`
+returns a validated snapshot and `LoadResult.Source` (`MAIN`, `BACKUP`, or `NEW`), without writing files. A
+corrupt/missing main can recover from a valid backup. Unsupported main versions stop loading without falling
+back, protecting newer-format records. Neither unusable files nor unreadable directories are treated as empty state.
+
+`SnapshotCodec` uses Gson with strict parsing and a bounded reader that detects duplicate object keys. It checks
+exact field sets and primitive types before deserialization, including explicit nullable contact fields and integer
+ranges. Domain restoration then checks values, duplicates, and session conflicts. JSON errors, unsupported versions,
+and I/O failures are distinguished by `StorageException.Kind`. The default `data` directory is ignored by Git.
+
+`Storage.save(snapshot)` validates the complete state, closes a temporary sibling file after writing, preserves
+the previous valid main as a backup, then replaces the main with an atomic move. A failed backup update aborts
+the save. A corrupt main is never copied over a valid backup. Unsupported atomic moves fail explicitly rather
+than falling back to an in-place write. Temporary cleanup never removes the main or backup. This protects complete
+snapshots across process interruption; it is not a guarantee against all disk or power failures. Concurrent writers
+to the same directory and automatic schema migration are unsupported.
+
+`Bob.run(scanner, storage)` loads before accepting commands and returns an exit code for isolated integration tests.
+`main` uses that code as the process status on failure. Normal loads are silent; backup recovery is reported after
+the greeting. `Parser.handleCommand(input, state)` compares independent snapshots before and after execution to
+report actual changes, including whether a repeated status command changed anything. This keeps the existing
+command handlers and their output intact; the extra in-memory copying is sufficient for the expected small dataset.
+
+Bob saves synchronously after changes and tracks failed saves as pending. A confirmation describes the in-memory
+operation; a following warning explicitly identifies an unsaved change. The next changed command or exit retries
+the full latest state. Recovered backup state is also pending until saved. Failed `Bye` saves offer `retry`, `cancel`,
+or `exit`; cancellation preserves live state. EOF never waits for another answer. Unsaved exit and failed EOF saves
+return a nonzero code. Read-only, rejected, and unchanged commands do not write files.
+
+`AppStateTest`, `StorageTest`, `BobStartupTest`, and `BobPersistenceTest` cover complete round trips, historical
+dates, statuses, ordering, independence, strict JSON, stock restoration, backup recovery, failed atomic moves,
+unchanged-file checks, every mutation type, and failed-save exit choices. File-writing tests use JUnit temporary
+directories. The `UI-PERSIST-*` cases in the [UI test plan](../test/ui-test-plan.md) test the packaged executable,
+including fresh-process restarts and injected filesystem failures, with chronological phase transcripts.
 
 ### Common classes
 
@@ -351,7 +397,7 @@ level, and conflicts or invalid indices at `WARNING` level.
 - Sessions cannot span midnight. Date checks occur during construction; sessions are not automatically removed afterward,
   and today's start time is not compared with the current clock time.
 - There is no command to edit a session. Deleting and recreating one produces a new session with empty preparation.
-- The schedule exists only in memory and is not preserved after the application exits.
+- Historical sessions remain in saved state; storage restoration omits only the new-command past-date restriction.
 
 ### Session preparation
 
@@ -564,8 +610,8 @@ This prevents expected stock errors from leaving an accepted record without a ma
 duplicating inventory rules in the parser.
 
 **Alternative:** Change the loan list first and roll back on a stock error. That adds rollback paths and another source
-of state inconsistency. A database transaction would offer stronger guarantees if persistence or concurrent access is
-introduced, but the application currently processes commands sequentially in memory.
+of state inconsistency. A database transaction could support stronger concurrent-update guarantees. Bob processes
+commands sequentially and commits inventory and loans together as one file snapshot.
 
 **Aspect 3: Identifying loans in filtered views**
 
@@ -654,7 +700,7 @@ checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../t
 - Loan indices are list positions, so previously captured indices can become stale after removal.
 - Stock is matched by case-insensitive name/category, without a permanent item identifier.
 - Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
-- Loans, like all application data, exist only in memory and are discarded on exit.
+- Active loans persist with available inventory; completed returns and corrections leave no history.
 
 #### Diagram sources
 
@@ -738,7 +784,7 @@ Use `java -ea -jar build/libs/bob.jar` for debugging; Gradle tests enable assert
 
 The project uses Gradle and the Gradle wrapper for reproducible builds. Java code follows the SE-EDU Java coding standard,
 and `check` runs compilation, automated tests, and Checkstyle. Changes should be developed on a feature branch and
-verified with `check` before review. The repository currently has no persistence or release automation beyond the Gradle
+verified with `check` before review. Local persistence is implemented; release automation is limited to the Gradle
 build and the project's CI configuration.
 
 Logging is intended for diagnostics rather than user interaction. `Bob`, `Parser`, `Inventory`, `SessionManager`, and
@@ -852,7 +898,8 @@ Use case ends.
 3. Invalid user input should produce a clear error message and should not partially modify application state.
 4. Collections exposed for querying should not allow callers to mutate manager state accidentally.
 5. The code should remain maintainable through JavaDoc, Checkstyle, unit tests, and feature-level UI tests.
-6. The current version does not promise persistence, multi-user access, encryption, or recovery after process termination.
+6. Completed snapshots must survive restarting from the same working directory. Multi-user access, encryption,
+   unsaved-change recovery, and guarantees against every power or disk failure are outside the storage contract.
 
 ### Glossary
 
@@ -866,8 +913,9 @@ Use case ends.
 
 ## Appendix: Instructions for manual testing
 
-These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each scenario
-with a fresh Bob process because application data is not persisted.
+These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each
+independent scenario with a fresh process and an empty temporary working directory. For restart scenarios, keep
+that scenario's directory between processes. Never run destructive fixture setup against a user's data directory.
 
 ### Launch and shutdown
 

@@ -1,7 +1,7 @@
 # Bob persistence contract (version 1)
 
-Status: Phase 1 design contract. Bob does not yet read or write this format. Model restoration, file storage,
-startup loading, and automatic saving will be implemented in subsequent phases.
+Status: Implemented through phases 1-6, including model snapshots, strict JSON storage, startup loading,
+backup recovery, automatic saving, and restart/error-handling verification.
 
 ## Scope and location
 
@@ -11,12 +11,12 @@ than the JAR location. Starting Bob from a different directory selects a differe
 accept an explicit path for tests so tests never access a user's records.
 
 Use UTF-8 JSON with readable indentation. A JSON library such as Gson will handle escaping and parsing;
-do not construct JSON by joining strings. Gson will be added in the storage implementation phase, not Phase 1.
+do not construct JSON by joining strings. The implementation uses Gson for this conversion.
 Configure the writer to include explicit `null` contact fields and the reader to enforce the validation rules below.
 Use dedicated snapshot data classes instead of serializing managers or domain objects directly.
 
 Companion files are `data/bob.json.bak` (the previous valid snapshot) and temporary sibling files used during
-replacement. These runtime files must be excluded from Git when storage is implemented. Examples under
+replacement. The default runtime directory is excluded from Git. Examples under
 `docs/examples/` are fictional, tracked documentation, not live storage files.
 
 Version 1 supports one running Bob process per data directory. Concurrent writers, cloud synchronization,
@@ -118,7 +118,7 @@ not introduce return history or partial returns.
 
 ## Storage operations
 
-The future storage boundary has two operations, independent of console output:
+The storage boundary has two operations, independent of console output:
 
 | Operation | Contract |
 | --- | --- |
@@ -169,10 +169,12 @@ snapshot, so recovery can lose the most recent change.
 - On `Bye` or end of input, retry pending state. With no pending state, exit without rewriting the snapshot.
 - If a `Bye` save fails, offer retry, cancel exit, or explicit exit with unsaved changes. If input has ended,
   report the failure and exit with nonzero status; do not wait for an answer that cannot arrive.
+- An explicit unsaved exit also returns a nonzero process exit code. Failed exit saves offer `retry`, `cancel`,
+  and `exit`, ignoring capitalization. A canceled exit leaves the pending state available to later commands.
 - Completed saves survive restarting Bob from the same working directory. Unsaved changes can be lost if the
   process is terminated. Do not rely on a shutdown hook as the normal saving mechanism.
 
-## Acceptance criteria for subsequent phases
+## Acceptance criteria
 
 1. Exporting and restoring a state preserves every stored value and the documented order, including optional
    fields, leading-zero phone numbers, duplicate loans, and all three request statuses.
