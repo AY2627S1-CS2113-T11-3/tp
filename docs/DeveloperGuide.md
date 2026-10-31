@@ -108,7 +108,8 @@ The application uses a lightweight layered architecture:
 
 `Bob.main` creates one `Parser` and an `AppState` that owns one instance of each model manager and a shared
 `Inventory` for the duration of the process. The parser receives these objects when handling each command. This keeps
-the managers independent while allowing loans and preparations to query or update inventory.
+the managers independent while allowing loans, fulfilled requests, broken-item reports, and preparations to
+query or update inventory. Broken-item tracking shares the contact manager to preserve selected contacts.
 
 ### UI component
 
@@ -187,7 +188,8 @@ back, protecting newer-format records. Neither unusable files nor unreadable dir
 
 `SnapshotCodec` uses Gson with strict parsing and a bounded reader that detects duplicate object keys. It checks
 exact field sets and primitive types before deserialization, including explicit nullable contact fields and integer
-ranges. Domain restoration then checks values, duplicates, and session conflicts. JSON errors, unsupported versions,
+ranges. Earlier version-1 files without `brokenItems` load with an empty report list.
+Domain restoration then checks values, duplicates, and session conflicts. JSON errors, unsupported versions,
 and I/O failures are distinguished by `StorageException.Kind`. The default `data` directory is ignored by Git.
 
 `Storage.save(snapshot)` validates the complete state, closes a temporary sibling file after writing, preserves
@@ -196,6 +198,10 @@ the save. A corrupt main is never copied over a valid backup. Unsupported atomic
 than falling back to an in-place write. Temporary cleanup never removes the main or backup. This protects complete
 snapshots across process interruption; it is not a guarantee against all disk or power failures. Concurrent writers
 to the same directory and automatic schema migration are unsupported.
+
+Broken reports are restored separately from available inventory, without deducting their units again.
+Active contact positions reconnect reports to the exact restored contact; deleted-contact details restore a
+separate object so an identical replacement contact cannot reconnect an old report.
 
 `Bob.run(scanner, storage)` loads before accepting commands and returns an exit code for isolated integration tests.
 `main` uses that code as the process status on failure. Normal loads are silent; backup recovery is reported after
@@ -330,7 +336,7 @@ rejection, and identical names in different categories. `InventoryItemTest` cove
 blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
 the implementation rather than assuming the documentation proves correctness.
 
-Inventory exists only in memory and is lost when Bob exits. Addition does not rename entries or restock existing
+Available inventory is saved automatically and restored when Bob restarts. Addition does not rename entries or restock existing
 ones. Categories and names are free text; case-insensitive matching does not correct spelling differences.
 Matching scans categories and then the selected list. With assertions enabled, the additional invariant check also
 compares pairs of items within each category, which is suitable for the expected small data set.
@@ -701,7 +707,7 @@ scenarios are recorded as `UI-PREP-*` in the [UI test plan](../test/ui-test-plan
 - Item indices are list positions, so they shift after an item is fully removed.
 - `listPreparation()` prints directly from `Parser`, rather than through `Ui` as loan tracking does. Moving it into
   `Ui` would make the output easier to test and keep display code in one place.
-- Preparation, like all application data, exists only in memory and is discarded on exit.
+- Preparation totals persist with their owning sessions across application restarts.
 
 #### Preparation diagram sources
 
@@ -1192,7 +1198,7 @@ availability display, fulfillment deductions, insufficient stock, and one-way st
 covers command formats, rejected inputs, confirmations, ordering, live stock checks, and failed fulfillment.
 `RequestLoggingTest` verifies request diagnostics; the [UI test plan](../test/ui-test-plan.md) records console cases.
 
-Requests exist only in memory. They have no persistent identifiers: adding or deleting a request can change the
+Requests persist across application restarts. They have no persistent identifiers: adding or deleting a request can change the
 indices used by `delete-r` and `mark-r`, so users must refresh `list-r`. Requests cannot be edited in place and are
 not removed automatically after their deadline. Marking prepared records status only. Marking fulfilled deducts stock
 and is final; deleting a fulfilled request does not restore stock, and there is no unfulfill command. Fulfillment also
@@ -1269,11 +1275,11 @@ reported date, and optional contact even if deduction removes the last usable in
 would not represent multiple faults or batches with different contacts.
 
 **Store a contact reference rather than its displayed index.** This prevents accidental reassignment after
-deletion or renumbering. Persistent contact IDs would be preferable if storage is introduced; object identity
-is sufficient for the current in-memory application.
+deletion or renumbering. Each complete snapshot preserves object identity using active contact positions
+or separate deleted-contact details. Durable contact IDs would support future cross-file imports.
 
 Reports cannot be edited, partially repaired, disposed of, or reassigned to another contact. Deletion restores
-all units and keeps no repair history. Data is lost when the application exits. Future persistence or concurrent
+all units and keeps no repair history. Reports persist across restarts without repeating stock deductions. Concurrent
 commands would require coordinated storage of reports and inventory changes.
 
 #### Verification and diagram sources

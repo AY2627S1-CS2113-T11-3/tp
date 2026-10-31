@@ -5,7 +5,7 @@ backup recovery, automatic saving, and restart/error-handling verification.
 
 ## Scope and location
 
-Persist inventory, sessions and their preparation lists, student requests, contacts, and active loans as one
+Persist inventory, sessions and their preparation lists, student requests, contacts, active loans, and broken-item reports as one
 complete snapshot. The default file is `data/bob.json`, resolved against the process working directory, rather
 than the JAR location. Starting Bob from a different directory selects a different data directory. Storage must
 accept an explicit path for tests so tests never access a user's records.
@@ -24,9 +24,9 @@ encryption, import/export commands, and automatic migration from other schema ve
 
 ## JSON structure
 
-The root is an object with all six fields below. Field names are case-sensitive. JSON object field order is
+The root is an object with the fields below. Field names are case-sensitive. JSON object field order is
 irrelevant; array order is significant. A valid empty snapshot is shown in
-[`bob-v1-empty.json`](examples/bob-v1-empty.json). A populated example covering every feature is
+[`bob-v1-empty.json`](examples/bob-v1-empty.json). A populated example covering the original feature set is
 [`bob-v1.json`](examples/bob-v1.json).
 
 | Root field | Type | Meaning |
@@ -37,6 +37,7 @@ irrelevant; array order is significant. A valid empty snapshot is shown in
 | `requests` | Array | Student requests with their current statuses. |
 | `contacts` | Array | Contacts in insertion order. |
 | `loans` | Array | Active loans in insertion order, including separate duplicate loans. |
+| `brokenItems` | Array | Broken-item reports in insertion order. Optional only when reading earlier version-1 files; absent means `[]`. |
 
 ### Inventory
 
@@ -45,7 +46,7 @@ Each item contains `name` (string) and `quantity` (positive integer).
 
 Category names are unique ignoring case. Item names are unique ignoring case within their category; the same
 item name may appear in different categories. Preserve category and item spelling and order. Depleted items
-and empty categories are absent. Quantities represent stock currently available, after loan deductions.
+and empty categories are absent. Quantities represent stock currently available, after loan, fulfilled-request, and broken-item deductions.
 
 ### Sessions and preparations
 
@@ -76,7 +77,8 @@ Each request contains `studentName`, `itemName` (nonblank strings), `quantity` (
 (calendar date in `yyyy-MM-dd` format), and `status` (exactly `pending`, `prepared`, or `fulfilled`).
 Restore the saved status and sort requests using the existing deadline, student-name, and item-name rules.
 Separate duplicate requests are allowed. Inventory matches are not required. Requests do not specify a category;
-availability continues to be calculated across categories.
+availability continues to be calculated across categories. Restoring a fulfilled request does not deduct stock
+again; its saved available inventory already includes the deduction.
 
 ### Contacts
 
@@ -95,9 +97,22 @@ inventory item is not required: every unit of that item may currently be on loan
 Preserve each loan separately and in order. Returned or corrected/deleted loans are absent; version 1 does
 not introduce return history or partial returns.
 
+### Broken-item reports
+
+Each report contains `name`, `category`, `faultDescription` (nonblank strings), `quantity` (positive integer),
+`reportedDate` (ISO calendar date, today or earlier), `contactIndex`, and `deletedContact`.
+The last two fields are required but nullable. A nonnull `contactIndex` is a valid one-based position in the
+saved contacts array. A nonnull `deletedContact` uses the contact object shape above and restores an unavailable
+contact independently of registered contacts. Both cannot be nonnull; both null means unassigned.
+This distinguishes identical contacts and prevents a replacement contact reconnecting a deleted link.
+
+Restore reports without replaying `add-b`: saved inventory already excludes their units. Deleting a restored
+report restores its quantity once. Original version-1 files without `brokenItems` remain readable; new saves
+include this array. Use this updated Bob build to read files containing broken-item reports.
+
 ## Validation and restoration
 
-- Require every documented field, including collection fields and nullable contact fields. Empty lists are `[]`,
+- Require every documented field, except the legacy omission of `brokenItems`, including nullable contact fields. Empty lists are `[]`,
   never `null`. Reject unknown fields, duplicate JSON object keys, wrong types, and malformed JSON.
 - Require `schemaVersion` to be the integer `1`. Reject other versions instead of guessing their meaning.
 - All quantities and headcounts must be integers from `1` through `2147483647`. Reject fractions, numeric

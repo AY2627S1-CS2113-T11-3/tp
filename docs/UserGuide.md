@@ -7,7 +7,8 @@ session's headcount to calculate required quantities and compare them with the i
 deadline and show whether the requested quantity is currently in inventory.
 
 **Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
-from that same directory restores inventory, sessions, preparations, requests, contacts, and active loans.
+from that same directory restores inventory, sessions, preparations, requests, contacts, active loans, and
+broken-item reports.
 
 ## Contents
 
@@ -20,8 +21,8 @@ from that same directory restores inventory, sessions, preparations, requests, c
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
-- [Broken-item tracking](#broken-item-tracking)
 - [Saving and restoring data](#saving-and-restoring-data)
+- [Broken-item tracking](#broken-item-tracking)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
 - [Current limitations](#current-limitations)
@@ -1037,9 +1038,11 @@ Bob saves automatically after each command that changes data. There is no separa
 viewing help, rejected commands, and marking a request with its existing status do not rewrite saved files.
 An ordinary command's response is complete when its following blank line appears.
 
-The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, and active
-loans. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
-shortages are recalculated when displayed. Preparation and requests still do not reserve or deduct stock.
+The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, active
+loans, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
+shortages are recalculated when displayed. Preparation and pending/prepared requests do not reserve stock.
+Fulfilling a request deducts stock once;
+loading a fulfilled request does not deduct it again.
 
 The files are relative to your terminal's working directory, not the location of `bob.jar`:
 
