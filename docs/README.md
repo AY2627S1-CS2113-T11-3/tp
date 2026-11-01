@@ -4,7 +4,7 @@
 
 ## Key Features
 
-* **Inventory Management & Quick Lookup (`add-i`, `list-i`, `find-i`, `delete-i`):** Track usable equipment by category and search across both in-stock and loaned items.
+* **Inventory Management & Quick Lookup (`add-i`, `restock-i`, `list-i`, `find-i`, `delete-i`):** Track usable equipment by category, restock existing entries, and search across both in-stock and loaned items.
 * **Lab Session Scheduling (`add-s`, `list-s`, `delete-s`):** Maintain a chronological lab schedule with automatic location and time-overlap conflict detection.
 * **Lab Session Preparation (`add-p`, `list-p`, `delete-p`):** Calculate total required quantities from per-attendee requirements and flag stock shortfalls against live inventory.
 * **Student Request Tracking (`add-r`, `list-r`, `mark-r`, `delete-r`):** Organize student equipment requests by deadline and monitor fulfillment status (`PENDING`, `PREPARED`, `fulfilled`).

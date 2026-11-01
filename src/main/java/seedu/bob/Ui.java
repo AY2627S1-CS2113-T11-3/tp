@@ -25,6 +25,9 @@ public class Ui {
             DIVIDER,
             "Inventory",
             "  add-i n/NAME c/CATEGORY [q/QUANTITY]",
+            //@@author Lokwx
+            "  restock-i n/NAME c/CATEGORY q/QUANTITY",
+            //@@author
             "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY",
             "  list-i",
             "  find-i KEYWORD",

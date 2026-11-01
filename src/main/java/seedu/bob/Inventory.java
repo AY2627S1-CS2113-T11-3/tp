@@ -16,7 +16,9 @@ import seedu.bob.exception.DuplicateItemException;
 import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidItemIndexException;
 import seedu.bob.exception.InvalidQuantityException;
+import seedu.bob.exception.InventoryItemNotFoundException;
 import seedu.bob.exception.LoanException;
+import seedu.bob.exception.StockOverflowException;
 
 //@@author Lokwx
 /**
@@ -126,6 +128,51 @@ public class Inventory {
 
         System.out.printf("Successfully added: %dx %s to the inventory\n", item.getQuantity(), item.getName());
     }
+
+    /**
+     * Increases the quantity of an existing item and prints a confirmation.
+     * A missing item or category is rejected; {@code add-i} creates new inventory entries.
+     *
+     * @param name Item name, matched without regard to case.
+     * @param category Existing category containing the item, matched without regard to case.
+     * @param quantity Positive number of units to add.
+     * @throws CommandException If the name, category, or quantity is invalid, the item is missing,
+     *     or the new total would exceed {@link Integer#MAX_VALUE}.
+     */
+    public void restockItem(String name, String category, int quantity) throws CommandException {
+        validateStockItemDetails(name, category, "restock");
+        if (quantity <= 0) {
+            LOGGER.fine(() -> "Rejected restock: quantity must be positive, requested=" + quantity);
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        String storedCategory = findCategory(category);
+        if (storedCategory == null) {
+            LOGGER.fine(() -> "Rejected restock: missing category=" + category + ", item=" + name);
+            throw new CategoryNotFoundException(category);
+        }
+        for (InventoryItem item : items.get(storedCategory)) {
+            if (!item.getName().equalsIgnoreCase(name)) {
+                continue;
+            }
+            if (quantity > Integer.MAX_VALUE - item.getQuantity()) {
+                LOGGER.fine(() -> "Rejected restock: " + item.getName() + " in category " + storedCategory
+                        + ", requested=" + quantity + ", available=" + item.getQuantity()
+                        + ", maximum=" + Integer.MAX_VALUE);
+                throw new StockOverflowException(item.getName(), quantity, Integer.MAX_VALUE);
+            }
+            item.addQuantity(quantity);
+            assert hasValidState() : "Inventory state must remain valid after restocking";
+            LOGGER.fine(() -> "Restocked inventory item: " + item.getName() + " in category "
+                    + storedCategory + ", added=" + quantity + ", available=" + item.getQuantity());
+            System.out.printf("Item \"%s\" found in inventory.%n", item.getName());
+            System.out.printf("Successfully added: %dx %s to the inventory (Available: %d)%n",
+                    quantity, item.getName(), item.getQuantity());
+            return;
+        }
+        LOGGER.fine(() -> "Rejected restock: missing item=" + name + " in category=" + storedCategory);
+        throw new InventoryItemNotFoundException(name, storedCategory);
+    }
+    //@@author
 
     //@@author DaynaG3
     /**
@@ -290,7 +337,7 @@ public class Inventory {
      * @throws CommandException If the quantity is invalid, the item is absent, or stock is insufficient.
      */
     void lendItem(String name, String category, int quantity) throws CommandException {
-        validateStockItemDetails(name, category, false);
+        validateStockItemDetails(name, category, "loan stock");
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected lending: quantity must be positive, requested=" + quantity);
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
@@ -376,7 +423,7 @@ public class Inventory {
      *     or usable stock is insufficient.
      */
     void removeBrokenStock(String name, String category, int quantity) throws CommandException {
-        validateStockItemDetails(name, category, true);
+        validateStockItemDetails(name, category, "broken-item stock");
         if (quantity <= 0) {
             throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
         }
@@ -431,8 +478,8 @@ public class Inventory {
      */
     private void restoreStock(String name, String category, int quantity, boolean isBrokenStock)
             throws CommandException {
-        validateStockItemDetails(name, category, isBrokenStock);
         String stockDescription = isBrokenStock ? "broken-item stock" : "loan stock";
+        validateStockItemDetails(name, category, stockDescription);
         if (quantity <= 0) {
             LOGGER.fine(() -> "Rejected " + stockDescription
                     + " restoration: quantity must be positive, requested=" + quantity);
@@ -490,16 +537,15 @@ public class Inventory {
     }
 
     /**
-     * Validates stock identifiers before either feature can modify inventory.
+     * Validates stock identifiers before an operation can modify inventory.
      *
      * @param name Item name.
      * @param category Item category.
-     * @param isBrokenStock Whether the operation belongs to broken-item tracking.
+     * @param stockDescription Short feature name used in diagnostics, such as {@code loan stock}.
      * @throws CommandFormatException If the name or category is null or blank.
      */
-    private void validateStockItemDetails(String name, String category, boolean isBrokenStock)
+    private void validateStockItemDetails(String name, String category, String stockDescription)
             throws CommandFormatException {
-        String stockDescription = isBrokenStock ? "broken-item stock" : "loan stock";
         if (name == null || name.isBlank()) {
             LOGGER.fine("Rejected " + stockDescription + " operation: item name is blank");
             throw new CommandFormatException("Item name cannot be blank.");
@@ -570,11 +616,14 @@ public class Inventory {
      */
     public List<InventoryItem> getItemSnapshots() {
         List<InventoryItem> snapshots = new ArrayList<>();
-        for (ArrayList<InventoryItem> itemsInCategory : items.values()) {
-            for (InventoryItem item : itemsInCategory) {
-                snapshots.add(new InventoryItem(item.getName(), item.getCategory(), item.getQuantity()));
+        //@@author Lokwx
+        // Use each category's stored spelling so displayed labels match list-i and survive saving.
+        for (String category : items.keySet()) {
+            for (InventoryItem item : items.get(category)) {
+                snapshots.add(new InventoryItem(item.getName(), category, item.getQuantity()));
             }
         }
+        //@@author J-unn-y
         return List.copyOf(snapshots);
     }
     //@@author

@@ -78,6 +78,18 @@ class InventoryTest {
     }
 
     @Test
+    void getItemSnapshots_categoryCaseVaries_reportsStoredSpellingBeforeAndAfterReload() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 5));
+        inventory.addItem(new InventoryItem("Cable", "COMPONENTS", 1));
+
+        assertEquals("Components", inventory.getItemSnapshots().get(1).getCategory());
+        Inventory reloaded = Inventory.restore(inventory.toSnapshot());
+        assertEquals(inventory.toSnapshot(), reloaded.toSnapshot());
+        assertEquals("Components", reloaded.getItemSnapshots().get(1).getCategory());
+    }
+
+    @Test
     void removeItem_validPartialQuantity_decrementsStock() throws Exception {
         Inventory inventory = new Inventory();
         inventory.addItem(new InventoryItem("Hammer", "Tools", 10));

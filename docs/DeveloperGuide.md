@@ -282,8 +282,9 @@ stock, and session conflicts. `Ui.DIVIDER` and `Ui.HELP_MESSAGE` are shared disp
 ### Inventory management
 
 `Inventory` stores items in insertion-ordered categories. Item names are unique within a category, ignoring case, while
-the same name may occur in different categories. `add-i` creates a category when needed, and `delete-i` removes a
-positive quantity. Removing all units removes the item and then removes an empty category.
+the same name may occur in different categories. `add-i` creates a category when needed, `restock-i` increases the
+quantity of an existing item, and `delete-i` removes a positive quantity. Removing all units removes the item and then
+removes an empty category.
 
 Inventory operations validate all inputs before changing state. Loan deductions use the same private quantity-deduction
 path as `delete-i`, ensuring depleted items and categories are handled consistently. Inventory listing uses one-based item
@@ -340,7 +341,7 @@ Successfully added: 100x Screws to the inventory
 ```
 
 Repeating the command with `n/screws c/FASTENERS q/20` raises `DuplicateItemException`. The original quantity stays
-at 100; `add-i` does not replenish an existing entry. Adding `n/Screws c/Spares q/20` creates a separate entry instead.
+at 100; restocking is a separate, explicit command. Adding `n/Screws c/Spares q/20` creates a separate entry instead.
 
 ![Successful inventory addition](images/inventory-add-sequence.png)
 
@@ -374,20 +375,50 @@ errors; input validation still operates when assertions are disabled. Addition a
 | Group items by category | A map of lists directly supports category-based listing and indices. A flat list would require regrouping for display. |
 | Preserve insertion order | `LinkedHashMap` keeps category order predictable; `HashMap` would not guarantee it. Items remain in list insertion order. |
 | Match names ignoring case | Capitalization differences do not accidentally create duplicate stock. Linear scans keep the implementation simple; normalized lookup keys could improve lookup for a larger inventory. |
-| Reject duplicates rather than merge quantities | Accidental repeated commands cannot silently increase existing stock. A dedicated restocking command could make intentional increases explicit. |
+| Reject duplicates rather than merge quantities | Accidental repeated commands cannot silently increase existing stock. The separate `restock-i` command makes intentional increases explicit. |
 | Create categories automatically | Adding the first item requires no separate category-management command. A category typo can consequently create a new category. |
 | Validate at parser and domain boundaries | The parser gives command-specific feedback; constructor checks also protect direct callers such as tests. |
+
+#### Restocking an existing item
+
+`restock-i n/NAME c/CATEGORY q/QUANTITY` adds units to an entry that already exists, so intentional increases do not
+require deleting and re-adding the entry. Quantity is mandatory because changing stock is the command's whole purpose.
+See the [User Guide](UserGuide.md#restock-an-item-restock-i) for syntax and user-facing examples.
+
+Restocking shares the prefix, trimming, and blank-field rules of addition, then delegates the stock change:
+
+| Component | Responsibility in restocking |
+| --- | --- |
+| `Parser` | Accepts only `n/ c/ q/` in that order, extracts and trims values, and validates the quantity. |
+| `Inventory` | Resolves the category, locates the item ignoring case, rejects a missing entry, checks for overflow, and updates the stored quantity. |
+| `InventoryItem#addQuantity` | Adds a positive quantity that still fits in an `int` while preserving the positive-stock invariant. |
+
+A missing category raises `CategoryNotFoundException`. A missing item raises `InventoryItemNotFoundException`, whose
+message points to `add-i` because restocking never creates entries. A new total above `Integer.MAX_VALUE` raises
+`StockOverflowException` before any quantity changes. A successful restock prints the stored spelling and the new
+available total:
+
+```text
+Item "Wire" found in inventory.
+Successfully added: 5x Wire to the inventory (Available: 20)
+```
+
+`Parser#handleCommand` compares inventory snapshots before and after each command, so the automatic save that persists
+the new quantity needs no restock-specific code.
 
 #### Verification and limitations
 
 `InventoryTest` covers successful addition, null input, case-insensitive duplicates, unchanged stock after duplicate
 rejection, and identical names in different categories. `InventoryItemTest` covers constructor validation, while
-`InventoryLoggingTest` checks diagnostic records. The [UI test plan](../test/ui-test-plan.md) records malformed-prefix,
-blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
-the implementation rather than assuming the documentation proves correctness.
+`InventoryLoggingTest` checks diagnostic records. `InventoryRestockTest` covers case-insensitive matching, missing
+items and categories, blank fields, overflow, and unchanged stock after rejection; `ParserRestockTest` covers the
+command, its messages, and the change report that triggers saving. The [UI test plan](../test/ui-test-plan.md) records
+malformed-prefix, blank-field, and invalid-quantity cases. These references describe existing checks; run the tests
+after changing the implementation rather than assuming the documentation proves correctness.
 
-Available inventory is saved automatically and restored when Bob restarts. Addition does not rename entries or restock existing
-ones. Categories and names are free text; case-insensitive matching does not correct spelling differences.
+Available inventory is saved automatically and restored when Bob restarts. Addition does not rename entries;
+restocking changes quantities only, not names or categories. Categories and names are free text; case-insensitive
+matching does not correct spelling differences.
 Matching scans categories and then the selected list. With assertions enabled, the additional invariant check also
 compares pairs of items within each category, which is suitable for the expected small data set.
 
@@ -658,7 +689,8 @@ list-p s/1
 Assuming there are no existing loans, this creates loan 1 and reduces usable stock from 15 to 10 Wire.
 `list-p` queries inventory again, so the shortfall increases from 3 to 8 without changing the preparation.
 Returning the loan with `return 1` restores stock to 15 and the shortfall to 3.
-Adding the same inventory entry with `add-i` would be rejected as a duplicate; it does not top up stock.
+Adding the same inventory entry with `add-i` would be rejected as a duplicate; `restock-i` is the command that tops up
+stock.
 
 | After operation | Required Wire | Available Wire | Displayed warning |
 | --- | --- | --- | --- |
@@ -1678,7 +1710,7 @@ that scenario's directory between processes. Never run destructive fixture setup
 
 ### Inventory and preparation
 
-1. Add an item with `add-i` and confirm it with `list-i`.
+1. Add an item with `add-i`, increase it with `restock-i`, and confirm the new quantity with `list-i`.
 2. Add a session with a future date using `add-s`, then add a requirement using `add-p`.
 3. Use `list-p` to verify required quantity, available quantity, and shortage markers.
 4. Use `delete-p` and verify that only the preparation changes, not inventory.

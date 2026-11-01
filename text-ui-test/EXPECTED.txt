@@ -255,6 +255,7 @@ Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
+  restock-i n/NAME c/CATEGORY q/QUANTITY
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
   find-i KEYWORD

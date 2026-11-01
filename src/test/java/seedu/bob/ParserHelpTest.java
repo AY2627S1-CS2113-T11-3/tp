@@ -22,6 +22,9 @@ class ParserHelpTest {
             + "--------------------------------------------------------------------\n"
             + "Inventory\n"
             + "  add-i n/NAME c/CATEGORY [q/QUANTITY]\n"
+            //@@author Lokwx
+            + "  restock-i n/NAME c/CATEGORY q/QUANTITY\n"
+            //@@author
             + "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY\n"
             + "  list-i\n"
             + "  find-i KEYWORD\n"

@@ -122,6 +122,7 @@ Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
+  restock-i n/NAME c/CATEGORY q/QUANTITY
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
   find-i KEYWORD
@@ -178,7 +179,7 @@ Adds a new item to a category. A category is created automatically when it does 
 - Quantity defaults to 1 when `q/` is omitted. If supplied, it must be a whole number from 1 to 2,147,483,647,
   entered without commas. An empty `q/` does not use the default.
 - An item with the same name cannot be added twice within the same category, even with different capitalization.
-  This command does not increase the stock of an existing item.
+  This command creates entries only; use `restock-i` to increase the stock of an existing item.
 - The same item name may exist in different categories. Such entries are separate inventory items.
 
 Example in an empty inventory:
@@ -218,7 +219,7 @@ Item "Wire" already exists in category "Components".
 ```
 
 There are still 15 Wire in Components. Changing the capitalization does not create another category.
-Use `add-i` for a new item/category combination; there is no command to top up an existing entry.
+Use `restock-i n/Wire c/Components q/5` to add stock to that existing entry.
 If five Wire belong in a separate category, `add-i n/Wire c/Spares q/5` creates that separate entry.
 
 Common rejected additions:
@@ -231,6 +232,48 @@ Common rejected additions:
 | `add-i n/Wire c/Components q/1.5` | `Quantity must be a positive integer.` | Enter a whole number. |
 
 Rejected additions leave the inventory unchanged. See [Command format](#command-format) for prefix rules.
+
+### Restock an item: `restock-i`
+
+Increases the available quantity of an item that already exists in a category. Use `add-i` instead when the
+item and category combination is new.
+
+**Format:** `restock-i n/NAME c/CATEGORY q/QUANTITY`
+
+- Supply `n/`, `c/`, and `q/` in that order. All three are required, and the quantity must be a whole number
+  from 1 to 2,147,483,647.
+- Name and category matching ignores capitalization, so `n/wire c/COMPONENTS` adds to the stored `Wire` entry in
+  `Components`. The stored spelling is kept and shown in the confirmation.
+- The item must already exist in the named category. Restocking a missing item is rejected with a hint to use
+  `add-i`; this command never creates a new entry or category.
+- The same item name in another category is a separate entry. Restocking one category leaves the other unchanged.
+- The new total must not exceed 2,147,483,647. A rejected request leaves the quantity unchanged.
+
+After adding 15 Wire to Components, this command restocks five more:
+
+```text
+restock-i n/Wire c/Components q/5
+```
+
+Expected output:
+
+```text
+Item "Wire" found in inventory.
+Successfully added: 5x Wire to the inventory (Available: 20)
+```
+
+Common rejected restocks:
+
+| Input | Message | Correction |
+| --- | --- | --- |
+| `restock-i n/Cable c/Components q/5` | `Item "Cable" does not exist in category "Components". Use add-i to add a new item.` | Add it with `add-i` first, or check the name with `find-i`. |
+| `restock-i n/Wire c/Tools q/5` | `Category "Tools" does not exist.` | Check the category with `list-i`. |
+| `restock-i n/Wire c/Components` | `Invalid format. Use: restock-i n/NAME c/CATEGORY q/QUANTITY` | Supply all three prefixes, including `q/`. |
+| `restock-i n/Wire c/Components q/0` | `Quantity must be greater than zero.` | Enter at least 1. |
+| `restock-i n/Battery c/Components q/1` when the entry already holds 2,147,483,647 | `Cannot add 1 Battery. Inventory quantity must not exceed 2147483647.` | Remove some units with `delete-i` before restocking. |
+
+Restocked quantities appear in `list-i`, `find-i`, preparation availability, and request availability.
+See [Command format](#command-format) for prefix rules.
 
 ### List inventory: `list-i`
 
@@ -1272,9 +1315,11 @@ These are examples of the current messages:
 | Unknown loan index | `Loan index 3 is invalid. There are 2 active loan(s).` | Use the latest `list-l` to check the index. |
 | Stock restoration exceeds the limit | `Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.` | Check the available stock and correct any inaccurate quantities before retrying; the loan or broken-item report remains unchanged. |
 | Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
-| Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
+| Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Use `restock-i` to add stock to the existing entry. |
 | `find-i` without a keyword | `Invalid format. Use: find-i KEYWORD` | Add the text to search for, such as `find-i wire`. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
+| Restocking a missing item | `Item "Cable" does not exist in category "Components". Use add-i to add a new item.` | Add the item with `add-i`, then restock it. |
+| Restocking above the maximum quantity | `Cannot add 1 Battery. Inventory quantity must not exceed 2147483647.` | Remove units with `delete-i` first; the quantity is unchanged. |
 | Removal exceeds stock | `Cannot remove 20 Wire. Only 15 are available.` | Remove no more than the available quantity. |
 | No session exists for preparation | `Session index 1 is invalid. There are 0 scheduled session(s).` | Create a session with `add-s` first. |
 | Unknown preparation item index | `Preparation item index 1 is invalid. There are 0 item(s) in this preparation.` | Use `list-p` to check the selected session's preparation. |
@@ -1304,7 +1349,8 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 - Storage is local to one working directory and one running process. There is no cloud sync, automatic format
   migration, or import/export command. Unsaved changes and the newest change after backup recovery can be lost.
 - `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
-- Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
+- Inventory items and sessions cannot be edited or renamed in place. `restock-i` changes quantities only; delete
+  an entry and add it again to change its name or category.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
   have sufficient stock even if there is not enough to supply both at once.
 - Requests do not reserve inventory when added. Two requests can each show enough stock for the same units, but the
@@ -1338,7 +1384,8 @@ yes: the item must exist in the selected category with enough available units.
 **Why can I repeat `add-p` but not `add-i` for the same item?**
 
 `add-p` accumulates required quantities for a session. `add-i` creates a new inventory entry and rejects duplicates
-within the same category.
+within the same category, so a repeated command cannot silently change stock. Use `restock-i` to increase an
+existing entry deliberately.
 
 **Why does `october` fail while `October` works?**
 
@@ -1377,6 +1424,7 @@ version that supports the same saved format. There is no interactive import comm
 | --- | --- |
 | View all commands | `help` |
 | Add an inventory item | `add-i n/NAME c/CATEGORY [q/QUANTITY]` |
+| Restock an existing inventory item | `restock-i n/NAME c/CATEGORY q/QUANTITY` |
 | Remove inventory units | `delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY` |
 | List inventory | `list-i` |
 | Find items by name or category | `find-i KEYWORD` |

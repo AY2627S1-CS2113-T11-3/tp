@@ -417,6 +417,214 @@ add-i n/oscilloscope c/equipment q/2
 Item "oscilloscope" already exists in category "Equipment".
 ```
 
+### UI-RESTOCK-001: Restock an existing item
+
+**Aim:** Verify that `restock-i` increases only an existing entry, matches case-insensitively, and reports the new total.
+
+**Preconditions:** Empty inventory.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+restock-i n/Wire c/Components q/5
+```
+
+**Expected output**
+
+```text
+Item "Wire" found in inventory.
+Successfully added: 5x Wire to the inventory (Available: 15)
+```
+
+#### Step 3
+
+**Input**
+
+```text
+restock-i n/wire c/COMPONENTS q/2
+```
+
+**Expected output**
+
+```text
+Item "Wire" found in inventory.
+Successfully added: 2x Wire to the inventory (Available: 17)
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 17)
+--------------------------------------------------------------------
+```
+
+### UI-RESTOCK-002: Reject invalid restocks without changing stock
+
+**Aim:** Verify that missing items, unknown categories, malformed arguments, invalid quantities, and overflow are
+rejected without changing existing quantities.
+
+**Preconditions:** Empty inventory.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Battery c/Components q/2147483647
+```
+
+**Expected output**
+
+```text
+Successfully added: 2147483647x Battery to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+restock-i n/Cable c/Components q/5
+```
+
+**Expected output**
+
+```text
+Item "Cable" does not exist in category "Components". Use add-i to add a new item.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+restock-i n/Wire c/Tools q/5
+```
+
+**Expected output**
+
+```text
+Category "Tools" does not exist.
+```
+
+#### Step 5
+
+**Input**
+
+```text
+restock-i n/Wire c/Components
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: restock-i n/NAME c/CATEGORY q/QUANTITY
+```
+
+#### Step 6
+
+**Input**
+
+```text
+restock-i n/Wire c/Components q/0
+```
+
+**Expected output**
+
+```text
+Quantity must be greater than zero.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+restock-i n/Wire c/Components q/abc
+```
+
+**Expected output**
+
+```text
+Quantity must be a positive integer.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+restock-i n/Battery c/Components q/1
+```
+
+**Expected output**
+
+```text
+Cannot add 1 Battery. Inventory quantity must not exceed 2147483647.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 10)
+2: Battery (Qty: 2147483647)
+--------------------------------------------------------------------
+```
+
 ### UI-DELETE-001: Reject malformed delete commands
 
 **Aim:** Verify that `delete-i` requires one line with exactly one category, index, and quantity prefix.
@@ -2433,6 +2641,7 @@ Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
+  restock-i n/NAME c/CATEGORY q/QUANTITY
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
   find-i KEYWORD
@@ -2485,6 +2694,7 @@ Available commands
 --------------------------------------------------------------------
 Inventory
   add-i n/NAME c/CATEGORY [q/QUANTITY]
+  restock-i n/NAME c/CATEGORY q/QUANTITY
   delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
   list-i
   find-i KEYWORD

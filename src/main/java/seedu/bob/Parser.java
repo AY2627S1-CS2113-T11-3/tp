@@ -44,6 +44,10 @@ public class Parser {
     private static final String DELETE_ITEM_USAGE =
             "Invalid format. Use: delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY";
     private static final String LIST_ITEM_USAGE = "Invalid format. Use: list-i";
+    //@@author Lokwx
+    private static final String RESTOCK_ITEM_USAGE =
+            "Invalid format. Use: restock-i n/NAME c/CATEGORY q/QUANTITY";
+    //@@author
     //@@author J-unn-y
     private static final String FIND_ITEM_USAGE = "Invalid format. Use: find-i KEYWORD";
     //@@author
@@ -199,6 +203,16 @@ public class Parser {
                     //@@author
                 }
             }
+            //@@author Lokwx
+            case "restock-i" -> {
+                try {
+                    String arguments = parts.length == 2 ? parts[1] : "";
+                    restockItem(arguments, inventory);
+                } catch (CommandException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+            //@@author
             case "delete-i" -> {
                 try {
                     //@@author DaynaG3
@@ -434,6 +448,26 @@ public class Parser {
                 : parseQuantity(values.get(2));
         inventory.addItem(new InventoryItem(name, category, quantity));
     }
+
+    //@@author Lokwx
+    /**
+     * Parses and executes a restock-item command.
+     *
+     * @param arguments Text following the {@code restock-i} command word.
+     * @param inventory Inventory to update.
+     * @throws CommandException If the arguments are malformed or the item cannot be restocked.
+     */
+    private void restockItem(String arguments, Inventory inventory) throws CommandException {
+        List<String> expectedPrefixes = List.of("n", "c", "q");
+        if (!findPrefixes(arguments).equals(expectedPrefixes)) {
+            throw new CommandFormatException(RESTOCK_ITEM_USAGE);
+        }
+
+        List<String> values = extractValues(arguments, expectedPrefixes, RESTOCK_ITEM_USAGE);
+        int quantity = parseQuantity(values.get(2));
+        inventory.restockItem(values.get(0), values.get(1), quantity);
+    }
+    //@@author DaynaG3
 
     /**
      * Parses and executes a delete-item command.
