@@ -1,0 +1,44 @@
+@startuml
+!include loan-style.puml
+hide circle
+class Parser {
+    --
+    {field} -addSession(arguments: String, sessionManager: SessionManager)
+}
+class SessionManager {
+    --
+    {field} +addSession(session: Session)
+    {field} +deleteSession(userIndex: int)
+    {field} +getSession(userIndex: int): Session
+    {field} +listSessions()
+}
+class Session {
+    {field} -name: String
+    {field} -date: LocalDate
+    {field} -location: String
+    {field} -startTime: LocalTime
+    {field} -endTime: LocalTime
+    {field} -headcount: int
+    --
+    {field} +conflictsWith(other: Session): boolean
+    {field} +compareTo(other: Session): int
+    {field} +getPreparation(): Preparation
+}
+interface Comparable {
+    --
+    {field} +compareTo(other: Session): int
+}
+class Preparation {
+    --
+}
+Parser ..> SessionManager : invokes >
+Parser ..> Session : creates >
+SessionManager --> "0..*" Session : sessions {ordered} >
+Session ..|> Comparable
+Session "1" *--> "1" Preparation : preparation >
+note bottom of SessionManager
+  ArrayList sorted by date, start time,
+  then name ignoring case.
+end note
+note bottom of Comparable : Session implements Comparable<Session>.
+@enduml

@@ -991,7 +991,7 @@ change supplier contacts, sessions, or other loans.
 - Restoration merges matching stock without regard to capitalization, or recreates missing items/categories,
   following the same inventory rules as correcting a loan.
 - Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
-- A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
+- A closed loan cannot be returned or voided again. Positions can refer to different loans after renumbering;
   always check `list-l` before the next operation.
 - Returned records leave the active list immediately and remain in history as `RETURNED`.
 
