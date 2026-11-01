@@ -1,4 +1,5 @@
 @startuml
+!pragma layout smetana
 !include loan-style.puml
 hide circle
 hide empty members
@@ -7,11 +8,22 @@ skinparam nodesep 45
 skinparam ranksep 55
 
 class LoanManager {
+    -nextLoanId: long
     +addLoan(loan: Loan): LoanAdditionResult
     +returnLoan(userIndex: int): Loan
     +deleteLoan(userIndex: int): Loan
     +getLoanEntries(): List<LoanListEntry>
     +getOverdueLoanEntries(): List<LoanListEntry>
+    +getLoanHistory(): List<LoanRecord>
+    +getReturnedLoans(): List<LoanRecord>
+}
+
+class LoanRecord <<record>> {
+    -loanId: long {readOnly}
+    -status: Status {readOnly}
+    -recordedAt: OffsetDateTime {readOnly}
+    -closedAt: OffsetDateTime {readOnly}
+    +close(status: Status, timestamp: OffsetDateTime): LoanRecord
 }
 
 class Inventory
@@ -34,10 +46,17 @@ class Contact
 
 LoanManager -left-> "1" Inventory : -inventory
 LoanManager -right-> "1" Clock : -clock
-LoanManager -down-> "0..*" Loan : -loans\n{ordered}
+LoanManager -down-> "0..*" LoanRecord : -records\n{creation order}
+LoanRecord --> "1" Loan : immutable details
 Loan *-left-> "1" InventoryItem : -item\n{private snapshot}
 Inventory -down-> "0..*" InventoryItem : available stock\n(grouped by category)
 Loan .right.> Contact : <<use>>\nvalidate copied values
+
+note bottom of LoanRecord
+  ACTIVE -> RETURNED or VOIDED.
+  IDs survive closure and restart.
+  Active indices are filtered positions.
+end note
 
 note bottom of InventoryItem
   Loan snapshots and live stock

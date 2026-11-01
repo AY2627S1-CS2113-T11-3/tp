@@ -2,6 +2,10 @@
 
 **Bob** is a command-line application that helps university lab technicians manage inventory, schedule lab sessions, calculate session preparation requirements, maintain supplier and maintenance contacts, and track student requests, equipment loans, and broken items. It is written in Java and optimized for users who prefer typing fast, single-line commands.
 
+Bob saves lab records automatically to `data/bob.json` and restores them when launched from the same working
+directory. See the [User Guide](docs/UserGuide.md#saving-and-restoring-data) for backups, recovery, and failed-save
+exit choices, and the [storage contract](docs/StorageFormat.md) for the version-2 file format and version-1 compatibility.
+
 ## Setting up in IntelliJ
 
 Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recent version.
@@ -15,12 +19,12 @@ Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recen
    > Task :classes
 
    > Task :seedu.bob.Bob.main()
-     ____        _     
-    |  _ \      | |    
-    | |_) | ___ | |__  
-    |  _ < / _ \| '_ \ 
+     ____        _
+    |  _ \      | |
+    | |_) | ___ | |__
+    |  _ < / _ \| '_ \
     | |_) | (_) | |_) |
-    |____/ \___/|_.__/ 
+    |____/ \___/|_.__/
 
    What is your name?
    ```

@@ -3,8 +3,9 @@
 skinparam conditionStyle diamond
 
 start
-:Receive a listing query\n(all loans or overdue only);
+:Receive a listing query\n(active loans or overdue only);
 :Read today's local date once\nfrom the manager's Clock;
+:Filter ACTIVE records in creation order;
 :Create an empty result list;
 while (Another\nactive loan?) is ([yes])
     :Take the next loan and its\nfull-list position i + 1;

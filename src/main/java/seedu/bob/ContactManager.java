@@ -1,9 +1,15 @@
 package seedu.bob;
 
 import java.util.ArrayList;
+//@@author DaynaG3
+import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
+//@@author DaynaG3
+import seedu.bob.exception.CommandException;
+//@@author
 import seedu.bob.exception.InvalidContactIndexException;
 
 /**
@@ -23,6 +29,27 @@ public class ContactManager {
      * Creates an empty supplier and maintenance contact list.
      */
     public ContactManager() {
+        //@@author DaynaG3
+    }
+
+    /** Copies contacts without losing optional fields or leading zeros in phone numbers. */
+    List<AppSnapshot.ContactEntry> toSnapshot() {
+        List<AppSnapshot.ContactEntry> entries = new ArrayList<>();
+        for (Contact contact : contacts) {
+            entries.add(new AppSnapshot.ContactEntry(contact.getName(), contact.getPhone(),
+                    contact.getEmail(), contact.getRole()));
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Validates and restores contacts silently, preserving duplicates and insertion order. */
+    static ContactManager restore(List<AppSnapshot.ContactEntry> entries) throws CommandException {
+        ContactManager manager = new ContactManager();
+        for (AppSnapshot.ContactEntry entry : entries) {
+            manager.contacts.add(new Contact(entry.name(), entry.phone(), entry.email(), entry.role()));
+        }
+        return manager;
+        //@@author
     }
 
     /**
@@ -67,6 +94,18 @@ public class ContactManager {
         }
         return contacts.get(userIndex - INDEX_OFFSET);
     }
+
+    //@@author DaynaG3
+    /** Returns the selected contact's one-based snapshot position, or zero if absent or unassigned. */
+    int getContactIndex(Contact selectedContact) {
+        for (int i = 0; i < contacts.size(); i++) {
+            if (contacts.get(i) == selectedContact) {
+                return i + INDEX_OFFSET;
+            }
+        }
+        return 0;
+    }
+    //@@author
 
     //@@author gavinlimsh
     /**

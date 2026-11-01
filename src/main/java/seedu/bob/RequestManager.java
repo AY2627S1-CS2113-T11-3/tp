@@ -3,6 +3,9 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.Collections;
+//@@author DaynaG3
+import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -22,6 +25,28 @@ public class RequestManager {
 
     /** Kept sorted by deadline so displayed positions can be used by {@code delete-r} and {@code mark-r}. */
     private final ArrayList<Request> requests = new ArrayList<>();
+
+    //@@author DaynaG3
+    /** Exports requests in their current deadline order with their saved statuses. */
+    List<AppSnapshot.RequestEntry> toSnapshot() {
+        List<AppSnapshot.RequestEntry> entries = new ArrayList<>();
+        for (Request request : requests) {
+            entries.add(request.toSnapshot());
+        }
+        return List.copyOf(entries);
+    }
+
+    /** Restores historical requests without command confirmations, then applies normal ordering. */
+    static RequestManager restore(List<AppSnapshot.RequestEntry> entries) throws CommandException {
+        RequestManager manager = new RequestManager();
+        for (AppSnapshot.RequestEntry entry : entries) {
+            manager.requests.add(Request.restore(entry));
+        }
+        manager.sortRequests();
+        assert manager.hasValidState() : "Restored requests must be valid and sorted";
+        return manager;
+    }
+    //@@author
 
     /**
      * Adds a request, sorts the list by deadline, and prints a confirmation.

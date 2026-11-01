@@ -19,6 +19,26 @@ the expected console output. The script feeds the input into Bob, saves output
 to `build/text-ui-test/ACTUAL.txt`, and compares the files. Differences or an
 application error make the test fail. Java diagnostic logs remain on stderr.
 
+Each run uses a new working directory under `build/text-ui-test` so automatic saving cannot load or overwrite
+real records, or leak state into the next test run. These temporary directories are retained for inspection.
+
+On Windows, the command-by-command runner in `scripts/run-ui-tests.ps1` reads the full plan, starts a fresh
+process per case, compares startup/greeting and each response exactly, and stops at the first mismatch:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-ui-tests.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-ui-tests.ps1 -EnableAssertions
+```
+
+The execution-policy option applies only to that test process. Use `-CasePrefix UI-PERSIST-` for the persistence
+cases. Cases share storage only when their recorded `Storage group` matches; run grouped cases together and in
+plan order. Fixtures and writes are confined to a fresh directory under `build/ui-tests-*`. The persistence phase
+transcripts are saved in `test/ui-persistence-phase3-session.md` through `test/ui-persistence-phase6-session.md`.
+
+Use `-CasePrefix UI-HISTORY-` for the loan-history model, restart, and history-view cases. These cases verify
+permanent IDs, returned/voided records, active-list indices, and read-only file fingerprints. See the
+[Developer Guide](../docs/DeveloperGuide.md#implementation-phases-and-verification-record) for phase criteria.
+
 The first 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
 session, add stock, calculate preparation quantities, report shortages, remove
 a preparation item, and refresh shortages after stock changes. The next four commands
@@ -43,7 +63,7 @@ that date is no longer valid.
 To run the complete Markdown plan command by command with Java assertions enabled on Windows:
 
 ```powershell
-powershell -File scripts/run-ui-tests.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-ui-tests.ps1 -EnableAssertions
 ```
 
 The runner starts a fresh process per case, checks startup and every response, and stops on the

@@ -277,7 +277,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items

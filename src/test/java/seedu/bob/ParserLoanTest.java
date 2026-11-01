@@ -93,7 +93,7 @@ class ParserLoanTest {
 
     @Test
     void listLoans_argumentsOrUnknownCommand_rejectsWithoutMutation() {
-        assertEquals("Invalid format. Use: list-l [overdue]\n", execute("list-l extra"));
+        assertEquals("Invalid format. Use: list-l [overdue|history|returned]\n", execute("list-l extra"));
         assertEquals("Invalid command\n", execute("LIST-L"));
         assertEquals(Ui.DIVIDER + "\nLoans\n" + Ui.DIVIDER + "\nNo active loans.\n" + Ui.DIVIDER + "\n",
                 execute("list-l"));
@@ -173,7 +173,7 @@ class ParserLoanTest {
     @Test
     void listOverdueLoans_unsupportedFilters_rejectsWithoutMutation() {
         for (String command : new String[] {"list-l OVERDUE", "list-l overdue extra", "list-l overdue overdue"}) {
-            assertEquals("Invalid format. Use: list-l [overdue]\n", execute(command));
+            assertEquals("Invalid format. Use: list-l [overdue|history|returned]\n", execute(command));
         }
         assertTrue(loans.getLoans().isEmpty());
         assertEquals(10, inventory.getAvailableQuantity("Red LED", "Lab Components"));

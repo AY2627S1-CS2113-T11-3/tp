@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "inventory": [
+    {
+      "category": "Equipment",
+      "items": [
+        {
+          "name": "Meter",
+          "quantity": 7
+        }
+      ]
+    }
+  ],
+  "sessions": [],
+  "requests": [],
+  "contacts": [],
+  "loanRecords": [
+    {
+      "loanId": 1,
+      "loan": {
+        "name": "Meter",
+        "category": "Equipment",
+        "quantity": 2,
+        "borrowerName": "Jamie",
+        "borrowerPhone": "01234567",
+        "dueDate": "2099-12-31"
+      },
+      "status": "RETURNED",
+      "recordedAt": "2020-01-01T09:00:00+08:00",
+      "closedAt": "2020-01-02T10:00:00+08:00"
+    },
+    {
+      "loanId": 2,
+      "loan": {
+        "name": "Meter",
+        "category": "Equipment",
+        "quantity": 1,
+        "borrowerName": "Jamie",
+        "borrowerPhone": "01234567",
+        "dueDate": "2099-12-31"
+      },
+      "status": "VOIDED",
+      "recordedAt": "2020-01-01T09:00:00+08:00",
+      "closedAt": "2020-01-03T10:00:00+08:00"
+    },
+    {
+      "loanId": 3,
+      "loan": {
+        "name": "Meter",
+        "category": "Equipment",
+        "quantity": 2,
+        "borrowerName": "Jamie",
+        "borrowerPhone": "01234567",
+        "dueDate": "2099-12-31"
+      },
+      "status": "ACTIVE",
+      "recordedAt": null,
+      "closedAt": null
+    }
+  ],
+  "brokenItems": [],
+  "nextLoanId": 4
+}

@@ -1,0 +1,52 @@
+@startuml
+!pragma layout smetana
+!include loan-style.puml
+hide circle
+hide empty members
+top to bottom direction
+
+class Storage {
+    -path: Path
+    -backupPath: Path
+    +load(): LoadResult
+    +save(snapshot: AppSnapshot)
+    #moveAtomically(source: Path, target: Path)
+}
+class SnapshotCodec {
+    {static} ~decode(json: String): AppSnapshot
+    {static} ~encode(snapshot: AppSnapshot): String
+}
+class AppState {
+    +toSnapshot(): AppSnapshot
+    {static} +restore(snapshot: AppSnapshot): AppState
+}
+class AppSnapshot <<record>> {
+    -schemaVersion: int {readOnly}
+    -inventory: List<InventoryCategory> {readOnly}
+    -sessions: List<SessionEntry> {readOnly}
+    -requests: List<RequestEntry> {readOnly}
+    -contacts: List<ContactEntry> {readOnly}
+    -loanRecords: List<LoanRecordEntry> {readOnly}
+    -nextLoanId: long {readOnly}
+    -brokenItems: List<BrokenItemEntry> {readOnly}
+}
+class LoadResult <<record>> {
+    -source: LoadResult.Source {readOnly}
+}
+
+Storage ..> SnapshotCodec : converts and validates
+Storage ..> LoadResult : creates
+LoadResult --> "1" AppSnapshot : snapshot
+SnapshotCodec ..> AppSnapshot : serializes / deserializes
+SnapshotCodec ..> AppState : restore() validates domain state
+AppState ..> AppSnapshot : exports / restores
+
+note bottom of AppSnapshot
+  Nested records contain storage values only.
+  Defensive list copies keep snapshots independent.
+  No managers or mutable domain objects are serialized.
+end note
+note bottom of LoadResult
+  Source is MAIN, BACKUP, or NEW.
+end note
+@enduml

@@ -2,7 +2,9 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+//@@author DaynaG3
 import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -37,6 +39,47 @@ public class Inventory {
      * Creates an empty inventory with categories and items kept in insertion order.
      */
     public Inventory() {
+        //@@author DaynaG3
+    }
+
+    /** Copies available stock while retaining category and item display order. */
+    List<AppSnapshot.InventoryCategory> toSnapshot() {
+        List<AppSnapshot.InventoryCategory> categories = new ArrayList<>();
+        for (String category : items.keySet()) {
+            List<AppSnapshot.InventoryEntry> entries = new ArrayList<>();
+            for (InventoryItem item : items.get(category)) {
+                entries.add(new AppSnapshot.InventoryEntry(item.getName(), item.getQuantity()));
+            }
+            categories.add(new AppSnapshot.InventoryCategory(category, entries));
+        }
+        return List.copyOf(categories);
+    }
+
+    /** Restores available stock silently, rejecting duplicate categories and item names. */
+    static Inventory restore(List<AppSnapshot.InventoryCategory> categories) throws CommandException {
+        Inventory inventory = new Inventory();
+        for (AppSnapshot.InventoryCategory category : categories) {
+            if (category.category() == null || category.category().isBlank() || category.items().isEmpty()) {
+                throw new CommandFormatException("Saved inventory categories must be named and nonempty.");
+            }
+            if (inventory.findCategory(category.category()) != null) {
+                throw new CommandFormatException("Duplicate saved inventory category: " + category.category());
+            }
+            ArrayList<InventoryItem> entries = new ArrayList<>();
+            for (AppSnapshot.InventoryEntry entry : category.items()) {
+                InventoryItem item = new InventoryItem(entry.name(), category.category(), entry.quantity());
+                for (InventoryItem existing : entries) {
+                    if (existing.getName().equalsIgnoreCase(item.getName())) {
+                        throw new DuplicateItemException(item.getName(), category.category());
+                    }
+                }
+                entries.add(item);
+            }
+            inventory.items.put(category.category(), entries);
+        }
+        assert inventory.hasValidState() : "Restored inventory must contain valid unique items";
+        return inventory;
+        //@@author
     }
 
     //@@author Lokwx
