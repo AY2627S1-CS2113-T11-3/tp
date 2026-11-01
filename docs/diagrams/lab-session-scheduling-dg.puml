@@ -24,7 +24,7 @@ class Session {
     {field} +compareTo(other: Session): int
     {field} +getPreparation(): Preparation
 }
-interface Comparable {
+interface Comparable <<interface>> {
     --
     {field} +compareTo(other: Session): int
 }

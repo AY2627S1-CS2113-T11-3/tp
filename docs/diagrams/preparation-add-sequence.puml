@@ -12,20 +12,20 @@ participant ":Inventory" as Inventory
 [-> Parser : handleCommand("add-p s/1 i/Wire c/Components q/2", ...)
 activate Parser
 ref over Parser
-    Validate prefixes and parse the
-    session index and quantity per person
+    Validate prefixes and parse the session index
 end ref
 Parser -> Manager : getSession(1)
 activate Manager
 Manager --> Parser : session
 deactivate Manager
-Parser -> Session : getHeadcount()
-activate Session
-Session --> Parser : 10
-deactivate Session
+Parser -> Parser : parse quantity per person (default 1 if omitted)
 Parser -> Session : getPreparation()
 activate Session
 Session --> Parser : preparation
+deactivate Session
+Parser -> Session : getHeadcount()
+activate Session
+Session --> Parser : 10
 deactivate Session
 Parser -> Preparation : addItem("Wire", "Components", 2, 10)
 activate Preparation

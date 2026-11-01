@@ -38,7 +38,7 @@ class Inventory {
 }
 
 SessionManager -down-> "0..*" Session : -sessions\n{ordered} >
-Session *-down-> Preparation : -preparation >
+Session "1" *-down-> "1" Preparation : -preparation >
 Preparation -down-> "0..*" PreparationItem : -items\n{ordered} >
 Parser ..> Inventory : queries availability >
 Parser ..> Preparation : reads requirements >

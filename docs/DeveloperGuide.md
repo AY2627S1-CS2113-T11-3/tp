@@ -162,9 +162,11 @@ The model is composed of domain objects and managers:
 - `AppState` groups the managers, exports snapshots, and restores complete independent model state.
 - `AppSnapshot` and its nested records describe version-2 storage values without retaining mutable model references.
 
-Managers expose operations rather than their mutable internal collections. Where a collection is returned for querying,
-the implementation returns an immutable snapshot. Domain classes maintain invariants such as positive quantities,
-nonblank names, and conflict-free sessions.
+Managers expose operations rather than their mutable internal collections. Query collections are unmodifiable
+list snapshots, so callers cannot add, remove, or reorder the manager's entries through those lists. This does
+not make every contained object immutable: retrieved sessions and requests still expose domain operations.
+Inventory queries copy mutable stock entries, and storage snapshots copy values independently. Domain classes
+maintain invariants such as positive quantities, nonblank names, and conflict-free sessions.
 
 ### 3.5. Storage component
 
@@ -680,16 +682,18 @@ Adding the same inventory entry with `add-i` would be rejected as a duplicate; i
 
 #### 4.3.4. Interactions during preparation addition
 
-The sequence below shows a successful `add-p` command after `Bob` passes the input to `Parser`. The reference frame
-summarises prefix validation and number parsing. Print statements, assertions, and logging are omitted.
+The sequence below shows a successful `add-p` command after `Bob` passes the input to `Parser`. Prefix validation
+and session-index parsing precede session lookup; per-person quantity parsing follows that lookup.
+Print statements, assertions, and logging are omitted.
 
 ![Successful preparation addition sequence diagram](images/preparation-add-sequence.png)
 
 *Figure 5: The headcount is read from the session before `addItem()` is called. After the change, `listPreparation()`
 queries inventory once per required item.*
 
-If the session index is invalid, `getSession()` throws before the preparation is touched. If the quantity is invalid
-or the new total would exceed `Integer.MAX_VALUE`, `addItem()` throws before changing its list. The overflow check uses
+If the session index is invalid, `getSession()` throws before the preparation is touched. The parser rejects invalid
+quantities before calling `addItem()`, which independently validates its inputs and rejects totals above
+`Integer.MAX_VALUE` before changing its list. The overflow check uses
 `Math.multiplyExact()` and `Math.addExact()`, so an oversized request cannot silently wrap around to a negative total.
 
 #### 4.3.5. Calculating availability and shortfalls
@@ -782,13 +786,13 @@ so all implementation diagrams share one style.
 `ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
 single index on the command line, like `delete-s`.
 
-The user guide did not specify the rules below. They are design decisions made when implementing the feature and
-can be changed in `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
+The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules. Their implementation belongs in
+`Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
 
 | Decision | Rule | Rationale |
 | --- | --- | --- |
 | Phone format | Digits only, no length check | Accepts local and international numbers. Rejecting separators keeps one canonical form. A length check would wrongly reject some valid numbers. |
-| Email format | Contains `@`, no whitespace | Catches obvious typos without a full email grammar. |
+| Email format | Non-whitespace text on both sides of an `@`, with no whitespace anywhere | Catches obvious typos without a full email grammar or checking address existence. |
 | Duplicate contacts | Allowed | Two suppliers can share a name or switchboard number. Unlike `add-i`, a contact has no natural unique key. |
 | Optional fields | `e/` before `r/`; a supplied value must not be blank | Matches the fixed prefix order used by every other command. |
 | Empty list | `list-c` shows `No contacts saved.` | Matches `list-s`, which shows `No sessions scheduled.` |
@@ -1284,7 +1288,7 @@ marking `fulfilled` deducts the requested quantity.
 | Item category | Not recorded | The requirement lists only student, item, quantity, and deadline. Availability and fulfillment both work across categories with the same item name. |
 | Duplicate requests | Allowed | The same student may request the same item again for a different deadline or quantity. |
 | Status changes | `mark-r` sets `prepared` or `fulfilled`; `fulfilled` is final | A fulfilled request has already changed stock, so allowing it to return to `prepared` would leave status and inventory inconsistent. |
-| Inventory effect | `fulfilled` deducts; other request commands are read-only | Recording a request stays flexible, while handover is explicit and checked against current stock. `delete-r` never restores stock. |
+| Inventory effect | `fulfilled` deducts; other request commands leave stock unchanged | Adding, deleting, and marking prepared still change request state and trigger autosaving. `delete-r` never restores stock. |
 
 #### 4.6.1. Detailed request addition design
 
@@ -1534,7 +1538,7 @@ their original parsing causes for debugging while preserving the existing user-f
 also validate item names, categories, and positive quantities before modifying inventory, even when called directly.
 
 Loan assertions check valid stored records and the exact inventory quantity and active-list size changes for successful
-operations. Stock restoration is checked before removing a loan. Assertions identify internal programming errors;
+operations. Stock restoration is checked before installing a closed loan record. Assertions identify internal programming errors;
 expected invalid commands are always handled by exceptions. Assertion failures are not caught as recoverable user errors.
 Use `java -ea -jar build/libs/bob.jar` for debugging; Gradle tests enable assertions, while normal launch is unchanged.
 

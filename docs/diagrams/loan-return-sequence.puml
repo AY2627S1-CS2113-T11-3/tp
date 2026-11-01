@@ -17,13 +17,10 @@ Manager -> Manager : closeLoanAndRestoreStock(1, RETURNED)
 activate Manager
 note over Manager
     Filter ACTIVE records; validate index.
-    Resolve its permanent record position.
+    Select active.get(userIndex - 1).
 end note
-Manager -> Loans : get(recordIndex)
-activate Loans
-Loans --> Manager : record
-deactivate Loans
-Manager -> Manager : closed = record.close(RETURNED, now)
+Manager -> Manager : closed = selected.close(RETURNED, now)
+Manager -> Manager : loan = selected.loan()
 Manager -> Inventory : restoreStock(name, category, quantity)
 activate Inventory
 note right of Inventory
@@ -35,14 +32,18 @@ Inventory --> Manager : completed
 deactivate Inventory
 note over Manager, Loans
     If overflow rejects restoration,
-    closure is skipped; the active loan
+    replacement is skipped; the active loan
     and stock remain unchanged.
 end note
+Manager -> Loans : indexOf(selected)
+activate Loans
+Loans --> Manager : recordIndex
+deactivate Loans
 Manager -> Loans : set(recordIndex, closed)
 activate Loans
 Loans --> Manager : record
 deactivate Loans
-Manager --> Manager : record.loan()
+Manager --> Manager : loan
 deactivate Manager
 Manager --> Parser : loan
 deactivate Manager
