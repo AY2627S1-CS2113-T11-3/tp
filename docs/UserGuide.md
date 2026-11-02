@@ -32,27 +32,17 @@ records, and broken-item reports.
 
 ## Quick start
 
-1. Install a Java 25 JDK and open a terminal in the project root, the folder containing `build.gradle`.
-2. Run `java --version` and check that it reports Java 25. On macOS with SDKMAN and the project's JDK installed,
-   select it with `sdk use java 25.0.3.fx-zulu`.
-3. Build and launch Bob using the commands for your platform below. The first build needs an internet connection
-   to download build dependencies.
+1. Install a Java 25 JDK.
+2. Download the JAR from the team's [latest release](https://github.com/AY2627S1-CS2113-T11-3/tp/releases/latest).
+   Put it in a folder where you want to keep Bob's records. Rename the downloaded file to `bob.jar` so that the
+   commands below work exactly as written. You do not need the source code or Gradle to run this JAR.
+3. Open a terminal in that folder. Run `java --version` and check that it reports Java 25, then launch Bob:
 
-   **macOS / Linux**
-
-   ```bash
-   ./gradlew shadowJar
-   java -jar build/libs/bob.jar
+   ```text
+   java -jar bob.jar
    ```
 
-   **Windows PowerShell**
-
-   ```powershell
-   .\gradlew.bat shadowJar
-   java -jar build/libs/bob.jar
-   ```
-
-   The application is named Bob, and the build produces a file named `bob.jar`.
+   Use this command on Windows, macOS, or Linux. Keep using the same working directory to restore saved records.
 
 4. Bob displays a banner and asks `What is your name?`. Enter your name, for example `Alex`, and press Enter.
    Bob responds:
@@ -77,8 +67,13 @@ records, and broken-item reports.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
 6. Enter `Bye` to exit. To start again, use the same `java -jar` command and launch from the same working directory
-   to restore your saved records. Rebuild with `shadowJar` after changing the source code. The first launch in a
-   directory with no saved files starts empty.
+   to restore your saved records. The first launch in a directory with no saved files starts empty.
+
+**Building from source (optional):** Clone or download the
+[repository](https://github.com/AY2627S1-CS2113-T11-3/tp), open a terminal in its root folder, and use Java 25.
+Run `./gradlew shadowJar` on macOS/Linux or `.\gradlew.bat shadowJar` in Windows PowerShell, then launch with
+`java -jar build/libs/bob.jar`. The first build needs internet access to download dependencies. Rebuild after
+changing source code. See the [Developer Guide](DeveloperGuide.md#2-setting-up-and-getting-started) for setup details.
 
 ## Command format
 
@@ -1346,8 +1341,9 @@ These are examples of the current messages:
 | Unknown broken-item index | `Broken-item index 2 is invalid. There are 1 broken-item report(s).` | Run `list-b` and use its current index. |
 | Missing index or extra deletion arguments | `Invalid format. Use: delete-b INDEX` | Supply exactly one index, for example `delete-b 1`. |
 
-If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
-`build/libs/bob.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
+If the JAR cannot be found, check the terminal's working directory and the downloaded filename. The quick-start
+command assumes you renamed the download to `bob.jar`. For a source build, run `shadowJar` from the project root
+and use `build/libs/bob.jar`. If you changed source code but still see old behavior, rebuild and restart Bob.
 
 ## Current limitations
 

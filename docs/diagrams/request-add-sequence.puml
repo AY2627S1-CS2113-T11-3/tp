@@ -1,0 +1,29 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant "parser:Parser" as parser
+participant "requestManager:RequestManager" as manager
+
+[-> parser : addRequest(arguments, requestManager)
+activate parser
+parser -> parser : validate prefixes and values\nparse positive quantity
+create participant "request:Request" as request
+parser -> request : Request(student, item, quantity, deadline)
+activate request
+request -> request : validate fields and deadline against clock
+request --> parser : validated request with pending status
+deactivate request
+parser -> manager : addRequest(request)
+activate manager
+manager -> manager : append request and sort by\ndeadline, student, then item
+manager --> parser
+deactivate manager
+[<-- parser
+deactivate parser
+
+note over manager, request
+  Successful path after command dispatch.
+  The manager retains the request.
+  Getters, assertions, logging, and output are omitted.
+end note
+@enduml
