@@ -1,11 +1,13 @@
 package seedu.bob;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Locale;
+import java.util.Objects;
 
 import seedu.bob.exception.CommandException;
 import seedu.bob.exception.CommandFormatException;
@@ -19,12 +21,14 @@ import seedu.bob.exception.InvalidSessionTimeException;
  */
 public class Session implements Comparable<Session> {
 
+    //@@author DaynaG3
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
             .ofPattern("d MMMM uuuu", Locale.ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
             .ofPattern("HHmm")
             .withResolverStyle(ResolverStyle.STRICT);
+    //@@author
 
     private String name;
     private LocalDate date;
@@ -36,6 +40,7 @@ public class Session implements Comparable<Session> {
     /** Belongs to the session itself so schedule renumbering cannot change its preparation. */
     private final Preparation preparation = new Preparation();
 
+    //@@author DaynaG3
     /**
      * Creates a validated lab session.
      *
@@ -49,6 +54,26 @@ public class Session implements Comparable<Session> {
      */
     public Session(String name, String dateText, String location,
             String startTimeText, String endTimeText, int headcount) throws CommandException {
+        this(name, dateText, location, startTimeText, endTimeText, headcount, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Creates a session using the supplied clock's local date for repeatable date validation.
+     * Null date and time strings receive the same validation messages as empty strings.
+     *
+     * @throws CommandException If any session value is invalid.
+     * @throws NullPointerException If the clock is null.
+     */
+    Session(String name, String dateText, String location,
+            String startTimeText, String endTimeText, int headcount, Clock clock) throws CommandException {
+        this(name, dateText, location, startTimeText, endTimeText, headcount, clock, false);
+    }
+
+    /** Shares structural validation while allowing historical dates only for saved records. */
+    private Session(String name, String dateText, String location, String startTimeText, String endTimeText,
+            int headcount, Clock clock, boolean isRestoring) throws CommandException {
+        Objects.requireNonNull(clock, "Session clock must not be null");
+        //@@author
         if (name == null || name.isBlank()) {
             throw new CommandFormatException("Session name cannot be blank.");
         }
@@ -58,37 +83,68 @@ public class Session implements Comparable<Session> {
         if (headcount <= 0) {
             throw new InvalidHeadcountException();
         }
+        //@@author
 
         this.name = name;
         this.location = location;
         this.headcount = headcount;
 
         try {
-            this.date = LocalDate.parse(dateText, DATE_FORMATTER);
+            this.date = LocalDate.parse(Objects.requireNonNullElse(dateText, ""), DATE_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionDateException(
+                    //@@author
                     "Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). "
                             + "Ensure the month is capitalized.");
+            //@@author DaynaG3
         }
-        if (date.isBefore(LocalDate.now())) {
+        //@@author DaynaG3
+        if (!isRestoring && date.isBefore(LocalDate.now(clock))) {
+            //@@author
             throw new InvalidSessionDateException("Session date cannot be before today.");
         }
+        //@@author
 
         try {
-            this.startTime = LocalTime.parse(startTimeText, TIME_FORMATTER);
+            this.startTime = LocalTime.parse(Objects.requireNonNullElse(startTimeText, ""), TIME_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(
+                    //@@author
                     "Start time must be in 'HHmm' format (e.g., 0900 for 9:00 AM).");
         }
         try {
-            this.endTime = LocalTime.parse(endTimeText, TIME_FORMATTER);
+            this.endTime = LocalTime.parse(Objects.requireNonNullElse(endTimeText, ""), TIME_FORMATTER);
+        //@@author DaynaG3
         } catch (DateTimeParseException e) {
             throw new InvalidSessionTimeException(
+                    //@@author
                     "End time must be in 'HHmm' format (e.g., 1200 for 12:00 PM).");
+            //@@author DaynaG3
         }
         if (!startTime.isBefore(endTime)) {
             throw new InvalidSessionTimeException("Start time must be earlier than end time.");
         }
+        //@@author DaynaG3
+    }
+
+    /** Restores a session and its total requirements without replaying preparation commands. */
+    static Session restore(AppSnapshot.SessionEntry entry) throws CommandException {
+        Session session = new Session(entry.name(), SnapshotFormat.toCommandDate(entry.date()), entry.location(),
+                SnapshotFormat.toCommandTime(entry.startTime()), SnapshotFormat.toCommandTime(entry.endTime()),
+                entry.headcount(), Clock.systemDefaultZone(), true);
+        for (AppSnapshot.PreparationEntry item : entry.preparation()) {
+            session.preparation.restoreItem(item);
+        }
+        return session;
+    }
+
+    /** Exports the owning session together with its independent preparation totals. */
+    AppSnapshot.SessionEntry toSnapshot() {
+        return new AppSnapshot.SessionEntry(name, date.toString(), location, SnapshotFormat.formatTime(startTime),
+                SnapshotFormat.formatTime(endTime), headcount, preparation.toSnapshot());
+        //@@author
     }
 
     /**
@@ -105,36 +161,44 @@ public class Session implements Comparable<Session> {
      *
      * @return The session date as a LocalDate object.
      */
+    //@@author DaynaG3
     public LocalDate getDate() {
         return date;
     }
+    //@@author
 
     /**
      * Returns the venue or location of the session.
      *
      * @return The session location.
      */
+    //@@author DaynaG3
     public String getLocation() {
         return location;
     }
+    //@@author
 
     /**
      * Returns the starting time of the session.
      *
      * @return The start time as a LocalTime object.
      */
+    //@@author DaynaG3
     public LocalTime getStartTime() {
         return startTime;
     }
+    //@@author
 
     /**
      * Returns the ending time of the session.
      *
      * @return The end time as a LocalTime object.
      */
+    //@@author DaynaG3
     public LocalTime getEndTime() {
         return endTime;
     }
+    //@@author
 
     /**
      * Returns the expected number of attendees for the session.
@@ -212,8 +276,10 @@ public class Session implements Comparable<Session> {
      */
     @Override
     public String toString() {
+        //@@author DaynaG3
         return String.format("%s on %s at %s from %s to %s for %d attendees",
                 name, date.format(DATE_FORMATTER), location,
                 startTime.format(TIME_FORMATTER), endTime.format(TIME_FORMATTER), headcount);
+        //@@author
     }
 }

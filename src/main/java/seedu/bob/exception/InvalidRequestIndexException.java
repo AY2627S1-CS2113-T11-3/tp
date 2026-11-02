@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob.exception;
 
 /**

@@ -1,0 +1,31 @@
+@startuml
+!include loan-style.puml
+hide circle
+top to bottom direction
+
+class Parser {
+    --
+    {field} -addItem(arguments: String, inventory: Inventory)
+}
+class Inventory {
+    --
+    {field} +addItem(item: InventoryItem)
+    {field} -findCategory(requestedCategory: String): String
+    {field} -hasValidState(): boolean
+}
+class InventoryItem {
+    {field} -name: String {readOnly}
+    {field} -category: String {readOnly}
+    {field} -quantity: int
+    --
+}
+
+Parser ..> Inventory : invokes >
+Parser ..> InventoryItem : creates >
+Inventory --> "0..*" InventoryItem : items grouped by category\n{ordered} >
+note bottom of Inventory
+  LinkedHashMap of category names
+  to ArrayList<InventoryItem>.
+  Category and item matching ignores case.
+end note
+@enduml

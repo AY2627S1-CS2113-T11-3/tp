@@ -14,6 +14,7 @@ import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.PreparationException;
 
+//@@author J-unn-y
 /**
  * Verifies preparation arithmetic, item identity, and atomic rejection of invalid changes.
  */

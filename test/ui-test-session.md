@@ -1,5 +1,8 @@
 # UI Test Session
 
+Historical session from 6 October 2026. This is not evidence for the current build.
+Run `scripts/run-ui-tests.ps1` for current results in `build/ui-plan/transcript.txt`.
+
 Latest result: **PASS** - 16 test cases and 88 feature commands.
 
 ## Environment

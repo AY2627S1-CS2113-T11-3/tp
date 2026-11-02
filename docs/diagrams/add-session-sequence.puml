@@ -1,0 +1,37 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant ":Parser" as P
+participant ":SessionManager" as M
+[-> P : addSession(arguments, sessionManager)
+activate P
+P -> P : parse and validate arguments
+create participant "candidate:Session" as S
+P -> S : new Session(...)
+activate S
+note right of S
+  Initialize fields and owned Preparation;
+  validate session details.
+end note
+S --> P : candidate
+deactivate S
+P -> M : addSession(candidate)
+activate M
+M -> M : addSessionSilently(candidate)
+activate M
+loop each existing session
+    M -> S : conflictsWith(existing)
+    activate S
+    S --> M : false
+    deactivate S
+end
+M -> M : append candidate; sort sessions
+M --> M : completed
+deactivate M
+M -> M : print confirmation
+M --> P : completed
+deactivate M
+[<-- P
+deactivate P
+note over M, S : Stored session survives this command; no destruction occurs.
+@enduml

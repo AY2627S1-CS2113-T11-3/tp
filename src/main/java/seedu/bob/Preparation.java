@@ -9,6 +9,7 @@ import seedu.bob.exception.InvalidHeadcountException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.PreparationException;
 
+//@@author J-unn-y
 /**
  * Stores the total quantities required by one session without reserving inventory.
  */
@@ -17,12 +18,41 @@ public class Preparation {
     /** Keeps insertion order so displayed item positions also identify items for deletion. */
     private final ArrayList<PreparationItem> items = new ArrayList<>();
 
+    //@@author
     /**
      * Creates an empty preparation list for a session without reserving inventory.
      */
     public Preparation() {
+        //@@author DaynaG3
     }
 
+    /** Restores a validated total without multiplying by headcount or accumulating duplicate records. */
+    void restoreItem(AppSnapshot.PreparationEntry entry) throws CommandException {
+        if (entry.name() == null || entry.name().isBlank()
+                || entry.category() == null || entry.category().isBlank()) {
+            throw new CommandFormatException("Saved preparation name and category must not be blank.");
+        }
+        if (entry.quantity() <= 0) {
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        if (findItemIndex(entry.name(), entry.category()) >= 0) {
+            throw new PreparationException("Duplicate saved preparation item: " + entry.name());
+        }
+        items.add(new PreparationItem(entry.name(), entry.category(), entry.quantity()));
+        assert hasValidState() : "Restored preparation must contain valid unique totals";
+    }
+
+    /** Copies each requirement into independent storage data in displayed order. */
+    List<AppSnapshot.PreparationEntry> toSnapshot() {
+        List<AppSnapshot.PreparationEntry> entries = new ArrayList<>();
+        for (PreparationItem item : items) {
+            entries.add(new AppSnapshot.PreparationEntry(item.getName(), item.getCategory(), item.getQuantity()));
+        }
+        return List.copyOf(entries);
+        //@@author
+    }
+
+    //@@author J-unn-y
     /**
      * Adds a per-attendee requirement, accumulating repeated name/category pairs without regard to case.
      *
@@ -63,7 +93,9 @@ public class Preparation {
         } else {
             items.set(index, updated);
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after addition";
+        //@@author J-unn-y
         return updated;
     }
 
@@ -84,6 +116,7 @@ public class Preparation {
         return -1;
     }
 
+    //@@author DaynaG3
     /**
      * Returns whether all stored requirements satisfy preparation invariants.
      */
@@ -110,7 +143,9 @@ public class Preparation {
         }
         return true;
     }
+    //@@author
 
+    //@@author J-unn-y
     /**
      * Removes a total quantity, deleting the item when no units remain required.
      *
@@ -142,7 +177,9 @@ public class Preparation {
         } else {
             items.set(index, new PreparationItem(item.getName(), item.getCategory(), requiredQuantity - quantity));
         }
+        //@@author DaynaG3
         assert hasValidState() : "Preparation state must remain valid after removal";
+        //@@author J-unn-y
         return item;
     }
 

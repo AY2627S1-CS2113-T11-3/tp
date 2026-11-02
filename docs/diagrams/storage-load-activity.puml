@@ -1,0 +1,51 @@
+@startuml
+!include loan-style.puml
+
+start
+:Storage.load():\nread and validate main file;
+note right
+  Loading does not write, repair,
+  or remove any saved files.
+end note
+if (Main version\nunsupported?) then (yes)
+    :Fail startup;\npreserve files;
+    note right : Do not fall back to backup.
+    stop
+else (no)
+    if (Main is valid?) then (yes)
+        :Select main snapshot;\nsource = MAIN;
+    else (no)
+        :Read and validate backup;
+        if (Backup is valid?) then (yes)
+            :Select backup snapshot;\nsource = BACKUP;
+        else (no)
+            if (Both files absent?) then (yes)
+                :Create empty snapshot;\nsource = NEW;
+            else (no)
+                :Fail startup;\npreserve files;
+                stop
+            endif
+        endif
+    endif
+endif
+:Return LoadResult\n(snapshot, source);
+:Bob calls\nAppState.restore(snapshot);
+note right
+  Restore managers and shared dependencies.
+  Keep preparation totals and request statuses.
+  Do not repeat stock deductions.
+end note
+:Show startup prompt;\ngreet the user;
+if (source == BACKUP?) then (yes)
+    :Show recovery warning;
+    :Mark restored state as pending;
+    note right
+      The next successful change or exit
+      saves a repaired main file.
+    end note
+else (no)
+    :Start with no pending changes;
+endif
+:Accept commands;
+stop
+@enduml

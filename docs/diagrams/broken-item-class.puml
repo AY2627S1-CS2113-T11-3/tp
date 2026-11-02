@@ -1,0 +1,43 @@
+@startuml
+!include loan-style.puml
+hide circle
+top to bottom direction
+
+class BrokenItemManager {
+    --
+    {field} +addBrokenItem(report: BrokenItem): BrokenItem
+    {field} +deleteBrokenItem(userIndex: int): BrokenItem
+    {field} +getBrokenItems(): List<BrokenItem>
+    {field} +getAvailableContact(report: BrokenItem): Contact
+}
+class BrokenItem {
+    {field} -name: String
+    {field} -category: String
+    {field} -quantity: int
+    {field} -faultDescription: String
+    {field} -reportedDate: LocalDate
+    --
+}
+class Inventory {
+    --
+    {field} ~removeBrokenStock(name, category, quantity)
+    {field} ~restoreBrokenStock(name, category, quantity)
+}
+class ContactManager {
+    --
+    {field} +containsContact(contact: Contact): boolean
+}
+class Contact {
+    --
+}
+
+BrokenItemManager --> "0..*" BrokenItem : reports {ordered} >
+BrokenItemManager --> "1" Inventory : shared inventory >
+BrokenItemManager --> "1" ContactManager : shared contacts >
+BrokenItem --> "0..1" Contact : selected contact >
+ContactManager --> "0..*" Contact : registered contacts >
+note bottom of BrokenItem
+  Report fields are final.
+  Duplicate reports stay separate.
+end note
+@enduml

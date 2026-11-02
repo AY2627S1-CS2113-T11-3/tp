@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob;
 
 import java.time.Clock;
@@ -14,6 +15,7 @@ import seedu.bob.exception.CommandFormatException;
 import seedu.bob.exception.InvalidQuantityException;
 import seedu.bob.exception.InvalidRequestDeadlineException;
 import seedu.bob.exception.InvalidRequestStatusException;
+import seedu.bob.exception.RequestException;
 
 /**
  * Represents a student's request for a quantity of an item by a deadline.
@@ -68,6 +70,14 @@ public class Request implements Comparable<Request> {
      */
     Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock)
             throws CommandException {
+        //@@author DaynaG3
+        this(studentName, itemName, quantity, deadlineText, clock, false);
+    }
+
+    /** Reuses validation while retaining historical deadlines and saved display text during restoration. */
+    private Request(String studentName, String itemName, int quantity, String deadlineText, Clock clock,
+            boolean isRestoring) throws CommandException {
+        //@@author
         Objects.requireNonNull(clock, "Clock must not be null");
         String trimmedStudentName = studentName == null ? "" : studentName.trim();
         String trimmedItemName = itemName == null ? "" : itemName.trim();
@@ -97,14 +107,18 @@ public class Request implements Comparable<Request> {
                     InvalidRequestDeadlineException.INVALID_FORMAT_MESSAGE);
         }
         // A deadline is a calendar date, so requests due today are still accepted.
-        if (parsedDeadline.isBefore(LocalDate.now(clock))) {
+        //@@author DaynaG3
+        if (!isRestoring && parsedDeadline.isBefore(LocalDate.now(clock))) {
+            //@@author
             LOGGER.fine(() -> "Rejected request deadline: " + deadlineText);
             throw new InvalidRequestDeadlineException(
                     InvalidRequestDeadlineException.PAST_DATE_MESSAGE);
         }
 
-        this.studentName = trimmedStudentName;
-        this.itemName = trimmedItemName;
+        //@@author DaynaG3
+        this.studentName = isRestoring ? studentName : trimmedStudentName;
+        this.itemName = isRestoring ? itemName : trimmedItemName;
+        //@@author
         this.quantity = quantity;
         this.deadline = parsedDeadline;
 
@@ -113,6 +127,30 @@ public class Request implements Comparable<Request> {
         assert quantity > 0 : "Validated quantity must be positive";
         assert deadline != null : "Validated deadline must not be null";
         LOGGER.fine(() -> "Created request for " + this.studentName + " for " + this.itemName);
+        //@@author DaynaG3
+    }
+
+    /** Restores historical requests and exact saved statuses without applying a command status transition. */
+    static Request restore(AppSnapshot.RequestEntry entry) throws CommandException {
+        if (entry.studentName() == null || entry.studentName().isBlank()
+                || entry.itemName() == null || entry.itemName().isBlank()) {
+            throw new CommandFormatException("Saved student and item names must not be blank.");
+        }
+        String savedStatus = entry.status();
+        if (!STATUS_PENDING.equals(savedStatus) && !STATUS_PREPARED.equals(savedStatus)
+                && !STATUS_FULFILLED.equals(savedStatus)) {
+            throw new InvalidRequestStatusException();
+        }
+        Request request = new Request(entry.studentName(), entry.itemName(), entry.quantity(),
+                SnapshotFormat.toCommandDate(entry.deadline()), Clock.systemDefaultZone(), true);
+        request.status = savedStatus;
+        return request;
+    }
+
+    /** Exports the current status with the original deadline, not a derived availability value. */
+    AppSnapshot.RequestEntry toSnapshot() {
+        return new AppSnapshot.RequestEntry(studentName, itemName, quantity, deadline.toString(), status);
+        //@@author
     }
 
     public String getStudentName() {
@@ -136,6 +174,25 @@ public class Request implements Comparable<Request> {
     }
 
     /**
+     * Returns whether this request has already been fulfilled.
+     *
+     * @return {@code true} if the stored status is fulfilled.
+     */
+    public boolean isFulfilled() {
+        return STATUS_FULFILLED.equals(status);
+    }
+
+    /**
+     * Returns whether a normalized status means the request has been fulfilled.
+     *
+     * @param status Normalized status to inspect.
+     * @return {@code true} if the status is fulfilled.
+     */
+    public static boolean isFulfilledStatus(String status) {
+        return STATUS_FULFILLED.equals(status);
+    }
+
+    /**
      * Normalizes and validates a status entered by the user.
      *
      * @param newStatus Status text, ignoring case.
@@ -152,20 +209,28 @@ public class Request implements Comparable<Request> {
         return normalizedStatus;
     }
 
+    //@@author gavinlimsh
     /**
-     * Marks this request as prepared or fulfilled.
+     * Applies a validated status transition for package-level callers.
+     * Application commands must use RequestManager so fulfillment also deducts inventory.
+     * A fulfilled request cannot be changed or fulfilled again, even through a retained reference.
      *
      * @param newStatus New status, which must be {@code prepared} or {@code fulfilled}, ignoring case.
-     * @throws InvalidRequestStatusException If the status is not one of the two accepted values.
+     * @throws CommandException If the status is invalid or the request is already fulfilled.
      */
-    public void markAs(String newStatus) throws InvalidRequestStatusException {
-        this.status = normalizeStatus(newStatus);
+    void markAs(String newStatus) throws CommandException {
+        String normalizedStatus = normalizeStatus(newStatus);
+        if (isFulfilled()) {
+            throw new RequestException("A fulfilled request cannot be changed.");
+        }
+        this.status = normalizedStatus;
 
         assert STATUS_PREPARED.equals(status) || STATUS_FULFILLED.equals(status)
                 : "Validated request status must be prepared or fulfilled";
         LOGGER.fine(() -> "Marked request for " + studentName + " as " + status);
     }
 
+    //@@author Lokwx
     /**
      * Compares requests by deadline, then by student name and item name for deterministic ordering.
      *

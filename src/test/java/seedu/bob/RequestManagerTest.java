@@ -1,3 +1,4 @@
+//@@author Lokwx
 package seedu.bob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,8 +19,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CommandException;
+import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidRequestIndexException;
 import seedu.bob.exception.InvalidRequestStatusException;
+import seedu.bob.exception.RequestException;
 
 /**
  * Verifies deadline ordering, status changes, and availability display in {@link RequestManager}.
@@ -163,27 +166,31 @@ class RequestManagerTest {
         RequestManager manager = new RequestManager();
 
         assertThrows(InvalidRequestIndexException.class,
-                () -> manager.markRequest(0, "prepared"));
+                () -> manager.markRequest(0, "prepared", new Inventory()));
         assertThrows(InvalidRequestIndexException.class,
-                () -> manager.markRequest(1, "prepared"));
+                () -> manager.markRequest(1, "prepared", new Inventory()));
     }
 
     @Test
     void markRequest_preparedAndFulfilled_statusUpdated() throws CommandException {
         RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
         String deadline = date(2);
+        inventory.addItem(new InventoryItem("Wire", "Components", 5));
         Request request = new Request("Alice", "Wire", 5, deadline);
         manager.addRequest(request);
         output.reset();
 
-        manager.markRequest(1, "Prepared");
+        manager.markRequest(1, "Prepared", inventory);
 
         assertEquals("prepared", request.getStatus());
         assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by "
                 + deadline + "\n", printed());
+        assertEquals(5, inventory.getTotalAvailableQuantity("Wire"));
 
-        manager.markRequest(1, "fulfilled");
+        manager.markRequest(1, "fulfilled", inventory);
         assertEquals("fulfilled", request.getStatus());
+        assertEquals(0, inventory.getTotalAvailableQuantity("Wire"));
     }
 
     @Test
@@ -192,10 +199,73 @@ class RequestManagerTest {
         Request request = new Request("Alice", "Wire", 5, date(2));
         manager.addRequest(request);
 
-        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "pending"));
-        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, null));
-        assertThrows(InvalidRequestStatusException.class, () -> manager.markRequest(1, "   "));
+        assertThrows(InvalidRequestStatusException.class,
+                () -> manager.markRequest(1, "pending", new Inventory()));
+        assertThrows(InvalidRequestStatusException.class,
+                () -> manager.markRequest(1, null, new Inventory()));
+        assertThrows(InvalidRequestStatusException.class,
+                () -> manager.markRequest(1, "   ", new Inventory()));
         assertEquals("pending", request.getStatus());
+    }
+
+    @Test
+    void markRequest_fulfilledDeductsStockAcrossCategories() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 3));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 4));
+        Request request = new Request("Alice", "Wire", 5, date(2));
+        manager.addRequest(request);
+
+        manager.markRequest(1, "fulfilled", inventory);
+
+        assertEquals("fulfilled", request.getStatus());
+        assertEquals(0, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(2, inventory.getAvailableQuantity("Wire", "Spares"));
+        assertEquals(2, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_fulfilledWithInsufficientStock_statusAndStockUnchanged() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 4));
+        Request request = new Request("Alice", "Wire", 5, date(2));
+        manager.addRequest(request);
+
+        InsufficientStockException exception = assertThrows(InsufficientStockException.class,
+                () -> manager.markRequest(1, "fulfilled", inventory));
+
+        assertEquals("Cannot remove 5 Wire. Only 4 are available.", exception.getMessage());
+        assertEquals("pending", request.getStatus());
+        assertEquals(4, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_alreadyFulfilled_rejectsFurtherChanges() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 10));
+        Request request = new Request("Alice", "Wire", 5, date(2));
+        manager.addRequest(request);
+        manager.markRequest(1, "fulfilled", inventory);
+
+        assertThrows(RequestException.class, () -> manager.markRequest(1, "fulfilled", inventory));
+        assertThrows(RequestException.class, () -> manager.markRequest(1, "prepared", inventory));
+        assertEquals("fulfilled", request.getStatus());
+        assertEquals(5, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_nullInventory_exceptionThrown() throws CommandException {
+        RequestManager manager = new RequestManager();
+        Request request = new Request("Alice", "Wire", 5, date(2));
+        manager.addRequest(request);
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> manager.markRequest(1, "prepared", null));
+
+        assertEquals("Inventory must not be null", exception.getMessage());
     }
 
     @Test
@@ -226,7 +296,7 @@ class RequestManagerTest {
         inventory.addItem(new InventoryItem("Battery", "Components", 1));
         manager.addRequest(new Request("Bob", "Battery", 5, laterDeadline));
         manager.addRequest(new Request("Alice", "Wire", 20, earlierDeadline));
-        manager.markRequest(1, "prepared");
+        manager.markRequest(1, "prepared", inventory);
         output.reset();
 
         manager.listRequests(inventory);

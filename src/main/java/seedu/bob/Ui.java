@@ -1,16 +1,23 @@
 package seedu.bob;
 
+//@@author DaynaG3
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+//@@author
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Displays loan results and listings and provides shared constants for console output.
+ * Displays loan, item-lookup, and broken-item results and provides shared console constants.
  */
 public class Ui {
 
+    //@@author Lokwx
     /** Separates headings, command output, and list sections in the console. */
     public static final String DIVIDER = "--------------------------------------------------------------------";
 
+    //@@author
     /** Every command and its format, grouped by feature, as displayed by {@code help}. */
     public static final String HELP_MESSAGE = String.join("\n",
             DIVIDER,
@@ -20,6 +27,7 @@ public class Ui {
             "  add-i n/NAME c/CATEGORY [q/QUANTITY]",
             "  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY",
             "  list-i",
+            "  find-i KEYWORD",
             "Lab sessions",
             "  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT",
             "  delete-s INDEX",
@@ -28,24 +36,39 @@ public class Ui {
             "  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]",
             "  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY",
             "  list-p s/SESSION_INDEX",
+            //@@author Lokwx
             "Student requests",
             "  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE",
             "  delete-r INDEX",
             "  list-r",
             "  mark-r INDEX STATUS (prepared or fulfilled)",
+            //@@author
             "Contacts",
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
             "  delete-c INDEX",
             "  list-c",
+            //@@author DaynaG3
             "Loans",
             "  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE",
-            "  list-l [overdue]",
+            "  list-l [overdue|history|returned]",
             "  delete-l INDEX",
             "  return INDEX",
+            //@@author
+            "Broken items",
+            "  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]",
+            "  list-b",
+            "  delete-b INDEX",
+            "    Deletion restores all units: use only for full repairs or incorrect reports.",
             "Other",
             "  help",
             "  Bye",
             DIVIDER);
+
+    //@@author DaynaG3
+    /** Displays the recorded local date; full offset timestamps remain available in storage. */
+    private static final DateTimeFormatter HISTORY_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH);
+    //@@author
 
     /**
      * Creates an instance; display constants can also be accessed directly through the class.
@@ -53,6 +76,7 @@ public class Ui {
     public Ui() {
     }
 
+    //@@author DaynaG3
     /**
      * Prints a successful loan addition and its warning if it was already overdue when recorded.
      *
@@ -111,4 +135,110 @@ public class Ui {
         }
         System.out.println(DIVIDER);
     }
+
+    /**
+     * Displays permanent loan identities, lifecycle statuses, and recorded dates without exposing action indices.
+     *
+     * @param records Immutable history rows selected by the manager in creation order.
+     * @param isReturnedOnly Whether the heading describes the returned-only query.
+     * @throws NullPointerException If the list or a record is null.
+     */
+    public static void showLoanHistory(List<LoanRecord> records, boolean isReturnedOnly) {
+        Objects.requireNonNull(records, "Loan history must not be null");
+        System.out.println(DIVIDER);
+        System.out.println(isReturnedOnly ? "Returned loans" : "Loan history");
+        System.out.println(DIVIDER);
+        for (LoanRecord record : records) {
+            System.out.printf("Loan ID %d [%s] %s%n", record.loanId(), record.status(), record.loan());
+            System.out.printf("   Recorded: %s | Closed: %s%n",
+                    formatLoanDate(record.recordedAt(), "Unknown"), formatLoanDate(record.closedAt(), "-"));
+        }
+        if (records.isEmpty()) {
+            System.out.println(isReturnedOnly ? "No returned loans." : "No loan records.");
+        } else {
+            System.out.println("Loan IDs are permanent. Use list-l for active indices.");
+        }
+        System.out.println(DIVIDER);
+    }
+
+    /** Formats the date in its original offset instead of converting it through the viewer's current timezone. */
+    private static String formatLoanDate(OffsetDateTime timestamp, String absentText) {
+        return timestamp == null ? absentText : timestamp.format(HISTORY_DATE_FORMAT);
+    }
+
+    //@@author J-unn-y
+    /**
+     * Displays quick-lookup results with one-based positions, or a message when nothing matches.
+     *
+     * @param keyword Keyword the user searched for.
+     * @param entries Results already selected by {@link ItemFinder}.
+     * @throws NullPointerException If the keyword or entries are null.
+     */
+    public static void showLookupResults(String keyword, List<ItemLookupEntry> entries) {
+        Objects.requireNonNull(keyword, "Search keyword must not be null");
+        Objects.requireNonNull(entries, "Search results must not be null");
+        System.out.println(DIVIDER);
+        System.out.println("Search results for \"" + keyword + "\"");
+        System.out.println(DIVIDER);
+        if (entries.isEmpty()) {
+            System.out.println("No items match \"" + keyword + "\".");
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            System.out.printf("%d. %s%n", i + 1, entries.get(i));
+        }
+        System.out.println(DIVIDER);
+    }
+
+    //@@author gavinlimsh
+    /**
+     * Confirms a report after its quantity has been removed from usable inventory.
+     *
+     * @param item Successfully recorded broken item.
+     */
+    public static void showBrokenItemAdded(BrokenItem item) {
+        Objects.requireNonNull(item, "Added broken item must not be null");
+        System.out.println("Successfully recorded broken item: " + item + ". Available inventory reduced.");
+    }
+
+    /**
+     * Confirms deletion and explicitly states that all recorded units were restored.
+     *
+     * @param item Report removed after successful stock restoration.
+     */
+    public static void showBrokenItemDeleted(BrokenItem item) {
+        Objects.requireNonNull(item, "Deleted broken item must not be null");
+        System.out.println("Successfully deleted broken-item report: " + item + ". All units restored to inventory.");
+    }
+
+    /**
+     * Displays reports in deletion order and resolves contact availability at display time.
+     * Listing never removes reports or changes stock.
+     *
+     * @param manager Manager supplying current reports and contact membership checks.
+     */
+    public static void showBrokenItems(BrokenItemManager manager) {
+        Objects.requireNonNull(manager, "Broken-item manager must not be null");
+        List<BrokenItem> items = manager.getBrokenItems();
+        System.out.println(DIVIDER);
+        System.out.println("Broken items");
+        System.out.println(DIVIDER);
+        if (items.isEmpty()) {
+            System.out.println("No broken items recorded.");
+        }
+        for (int i = 0; i < items.size(); i++) {
+            BrokenItem item = items.get(i);
+            Contact contact = manager.getAvailableContact(item);
+            String contactDetails;
+            if (contact != null) {
+                contactDetails = contact.toString();
+            } else if (item.getContact() == null) {
+                contactDetails = "Not assigned";
+            } else {
+                contactDetails = "Unavailable (contact deleted)";
+            }
+            System.out.printf("%d. %s%n   Contact: %s%n", i + 1, item, contactDetails);
+        }
+        System.out.println(DIVIDER);
+    }
+    //@@author
 }

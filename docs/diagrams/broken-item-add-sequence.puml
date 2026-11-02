@@ -1,0 +1,39 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant ":Parser" as P
+participant ":BrokenItemManager" as M
+participant ":ContactManager" as C
+participant ":Inventory" as I
+participant "Ui" as U
+
+note over P
+  Prefixes and quantity parsed;
+  optional contact already resolved.
+end note
+create participant "report:BrokenItem" as B
+P -> B : new BrokenItem(...)
+activate B
+note right of B : Validate fields and report date.
+B --> P : validated report
+deactivate B
+P -> M : addBrokenItem(report)
+activate M
+opt contact assigned
+    M -> C : containsContact(contact)
+    C --> M : true
+end
+M -> I : removeBrokenStock(name, category, quantity)
+activate I
+note right of I
+  Validate stock, then deduct.
+  Rejection throws before mutation.
+end note
+I --> M : success
+deactivate I
+M -> M : brokenItems.add(report)
+M --> P : report
+deactivate M
+P -> U : showBrokenItemAdded(report)
+note over U : Print confirmation.
+@enduml
