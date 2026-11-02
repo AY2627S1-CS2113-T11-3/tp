@@ -66,5 +66,5 @@ GitHub: [Lokwx](https://github.com/Lokwx)
   diagram, live availability, and test references.
   - [Earlier inventory design documentation](https://github.com/Lokwx/tp/commit/9c8ffef)
   - [Initial student request design documentation](https://github.com/Lokwx/tp/commit/23b82a8)
-  - [Inventory management design](../DeveloperGuide.md#inventory-management)
-  - [Student request tracking design](../DeveloperGuide.md#student-request-tracking)
+  - [Inventory management design](../DeveloperGuide.md#41-inventory-management)
+  - [Student request tracking design](../DeveloperGuide.md#46-student-request-tracking)

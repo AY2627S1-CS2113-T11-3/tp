@@ -443,12 +443,14 @@ preparation internals are omitted.*
 
 ##### 4.2.1.2. Example walkthrough
 
-Assume that 5 November 2099 is a future date.
+Assume that 5 November 2099 is a future date. Run this example from a new, empty working directory so
+existing saved records do not affect the session indices.
 
 **Step 1: Initialize an empty schedule**
 
-At startup, `Bob` creates a `SessionManager` containing an empty `ArrayList<Session>`. Calling `list-s` displays the
-empty-schedule message.
+When neither `data/bob.json` nor `data/bob.json.bak` exists, Bob starts with an empty schedule.
+Calling `list-s` displays the empty-schedule message. Otherwise, Bob restores saved records according
+to the startup and recovery rules described in Section 3.5.2.
 
 **Step 2: Add an afternoon session**
 
