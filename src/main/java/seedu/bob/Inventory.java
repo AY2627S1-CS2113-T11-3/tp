@@ -2,7 +2,9 @@ package seedu.bob;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+//@@author DaynaG3
 import java.util.List;
+//@@author
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -37,6 +39,47 @@ public class Inventory {
      * Creates an empty inventory with categories and items kept in insertion order.
      */
     public Inventory() {
+        //@@author DaynaG3
+    }
+
+    /** Copies available stock while retaining category and item display order. */
+    List<AppSnapshot.InventoryCategory> toSnapshot() {
+        List<AppSnapshot.InventoryCategory> categories = new ArrayList<>();
+        for (String category : items.keySet()) {
+            List<AppSnapshot.InventoryEntry> entries = new ArrayList<>();
+            for (InventoryItem item : items.get(category)) {
+                entries.add(new AppSnapshot.InventoryEntry(item.getName(), item.getQuantity()));
+            }
+            categories.add(new AppSnapshot.InventoryCategory(category, entries));
+        }
+        return List.copyOf(categories);
+    }
+
+    /** Restores available stock silently, rejecting duplicate categories and item names. */
+    static Inventory restore(List<AppSnapshot.InventoryCategory> categories) throws CommandException {
+        Inventory inventory = new Inventory();
+        for (AppSnapshot.InventoryCategory category : categories) {
+            if (category.category() == null || category.category().isBlank() || category.items().isEmpty()) {
+                throw new CommandFormatException("Saved inventory categories must be named and nonempty.");
+            }
+            if (inventory.findCategory(category.category()) != null) {
+                throw new CommandFormatException("Duplicate saved inventory category: " + category.category());
+            }
+            ArrayList<InventoryItem> entries = new ArrayList<>();
+            for (AppSnapshot.InventoryEntry entry : category.items()) {
+                InventoryItem item = new InventoryItem(entry.name(), category.category(), entry.quantity());
+                for (InventoryItem existing : entries) {
+                    if (existing.getName().equalsIgnoreCase(item.getName())) {
+                        throw new DuplicateItemException(item.getName(), category.category());
+                    }
+                }
+                entries.add(item);
+            }
+            inventory.items.put(category.category(), entries);
+        }
+        assert inventory.hasValidState() : "Restored inventory must contain valid unique items";
+        return inventory;
+        //@@author
     }
 
     //@@author Lokwx
@@ -278,6 +321,48 @@ public class Inventory {
         LOGGER.fine(() -> "Rejected lending: missing item=" + name + " in category " + storedCategory);
         throw new LoanException(String.format("Item \"%s\" does not exist in category \"%s\".", name, storedCategory));
     }
+
+    //@@author Lokwx
+    /**
+     * Deducts units by item name across categories in inventory display order.
+     * The total is checked before any stock changes, so an insufficient request leaves inventory untouched.
+     *
+     * @param name Item name, matched without regard to case.
+     * @param quantity Positive number of units to deduct.
+     * @throws CommandException If the name or quantity is invalid, or total available stock is insufficient.
+     */
+    void deductTotalAvailableQuantity(String name, int quantity) throws CommandException {
+        Objects.requireNonNull(name, "Item name must not be null");
+        if (quantity <= 0) {
+            throw new InvalidQuantityException(InvalidQuantityException.NON_POSITIVE_MESSAGE);
+        }
+        int available = getTotalAvailableQuantity(name);
+        if (available < quantity) {
+            LOGGER.fine(() -> "Rejected total stock deduction: " + name
+                    + ", requested=" + quantity + ", available=" + available);
+            throw new InsufficientStockException(name, quantity, available);
+        }
+
+        int remaining = quantity;
+        for (String category : new ArrayList<>(items.keySet())) {
+            ArrayList<InventoryItem> itemsInCategory = items.get(category);
+            int index = 0;
+            while (index < itemsInCategory.size() && remaining > 0) {
+                InventoryItem item = itemsInCategory.get(index);
+                if (!item.getName().equalsIgnoreCase(name)) {
+                    index++;
+                    continue;
+                }
+                int deduction = Math.min(remaining, item.getQuantity());
+                deductQuantity(category, index, deduction);
+                remaining -= deduction;
+            }
+        }
+        assert remaining == 0 : "Validated total stock deduction must consume the full quantity";
+        assert hasValidState() : "Inventory state must remain valid after total stock deduction";
+        LOGGER.fine(() -> "Deducted " + quantity + " " + name + " from available inventory");
+    }
+    //@@author
 
     //@@author gavinlimsh
     /**

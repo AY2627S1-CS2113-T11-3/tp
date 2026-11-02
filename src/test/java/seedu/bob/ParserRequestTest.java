@@ -232,30 +232,36 @@ class ParserRequestTest {
     @Test
     void markRequest_preparedThenFulfilled_statusUpdated() {
         String deadline = date(2);
+        execute("add-i n/Wire c/Components q/10");
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
 
         assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by " + deadline + "\n",
                 execute("mark-r 1 prepared"));
         assertTrue(execute("list-r").contains("1. [Prepared] Alice"));
+        assertEquals(10, inventory.getTotalAvailableQuantity("Wire"));
 
         assertEquals("Successfully marked request 1 as fulfilled: Alice - 5x Wire by " + deadline + "\n",
                 execute("mark-r 1 Fulfilled"));
         assertTrue(execute("list-r").contains("1. [Fulfilled] Alice"));
+        assertEquals(5, inventory.getTotalAvailableQuantity("Wire"));
     }
 
     @Test
     void markRequest_statusUppercase_statusUpdated() {
         String deadline = date(2);
+        execute("add-i n/Wire c/Components q/10");
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
 
         assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by " + deadline + "\n",
                 execute("mark-r 1 PREPARED"));
         assertTrue(execute("list-r").contains("1. [Prepared] Alice"));
+        assertEquals(10, inventory.getTotalAvailableQuantity("Wire"));
     }
 
     @Test
     void markRequest_statusSurroundingWhitespace_accepted() {
         String deadline = date(2);
+        execute("add-i n/Wire c/Components q/10");
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
 
         assertEquals("Successfully marked request 1 as prepared: Alice - 5x Wire by " + deadline + "\n",
@@ -265,11 +271,52 @@ class ParserRequestTest {
     @Test
     void markRequest_pendingDirectlyToFulfilled_allowed() {
         String deadline = date(2);
+        execute("add-i n/Wire c/Components q/10");
         execute("add-r n/Alice i/Wire q/5 d/" + deadline);
 
         assertEquals("Successfully marked request 1 as fulfilled: Alice - 5x Wire by " + deadline + "\n",
                 execute("mark-r 1 fulfilled"));
         assertTrue(execute("list-r").contains("1. [Fulfilled] Alice"));
+        assertEquals(5, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_fulfilledInsufficientStock_rejected() {
+        String deadline = date(2);
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+
+        assertEquals("Cannot remove 5 Wire. Only 0 are available.\n",
+                execute("mark-r 1 fulfilled"));
+        assertTrue(execute("list-r").contains("1. [Pending] Alice"));
+        assertEquals(0, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_fulfilledTwiceOrReverted_rejectedWithoutDoubleDeduction() {
+        String deadline = date(2);
+        execute("add-i n/Wire c/Components q/10");
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+        execute("mark-r 1 fulfilled");
+
+        String expected = "Request 1 is already fulfilled and cannot be changed: Alice - 5x Wire by "
+                + deadline + "\n";
+        assertEquals(expected, execute("mark-r 1 fulfilled"));
+        assertEquals(expected, execute("mark-r 1 prepared"));
+        assertEquals(5, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void markRequest_fulfilledDeductsAcrossCategories() {
+        String deadline = date(2);
+        execute("add-i n/Wire c/Components q/3");
+        execute("add-i n/Wire c/Spares q/4");
+        execute("add-r n/Alice i/Wire q/5 d/" + deadline);
+
+        execute("mark-r 1 fulfilled");
+
+        assertEquals(0, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(2, inventory.getAvailableQuantity("Wire", "Spares"));
+        assertEquals(2, inventory.getTotalAvailableQuantity("Wire"));
     }
 
     @Test

@@ -1,0 +1,40 @@
+@startuml
+!pragma layout smetana
+!include loan-style.puml
+top to bottom direction
+skinparam componentStyle rectangle
+
+actor "Lab technician" as User
+component "Bob / Ui\nConsole and application lifecycle" as Console
+component "Parser\nCommand validation and dispatch" as Logic
+
+package "Model" {
+    component "AppState\nShared application state" as State
+    component "Model managers\nInventory, sessions, contacts,\nrequests, loan history, broken reports" as Managers
+}
+
+package "Storage" as Persistence {
+    component "Storage\nFile selection, backup, atomic replacement" as Storage
+    component "SnapshotCodec\nStrict JSON and domain validation" as Codec
+}
+
+artifact "AppSnapshot\nImmutable storage records" as Snapshot
+database "Local files\ndata/bob.json\ndata/bob.json.bak" as Files
+
+User --> Console : enters commands / reads responses
+Console --> Logic : handleCommand(input, state)
+Logic --> Managers : execute commands
+Console --> State : export / restore state
+State --> Managers : owns
+Console --> Storage : load() / save(snapshot)
+Storage --> Codec : decode() / encode()
+Storage --> Files : read / replace complete files
+State ..> Snapshot : toSnapshot() / restore()
+Codec ..> Snapshot : JSON conversion
+Codec ..> State : validate in temporary state
+
+note bottom of Managers
+  Loans and broken reports share Inventory.
+  Broken reports also share ContactManager.
+end note
+@enduml

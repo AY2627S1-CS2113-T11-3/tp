@@ -52,4 +52,4 @@ GitHub: [rachelnwk](https://github.com/rachelnwk)
 - **Contributions to the Developer Guide:** Documented the contact design, including the validation rules, the
   decision to allow duplicates, the single-line `delete-c INDEX` format that matches `delete-s`, and known
   limitations such as a role that begins with a letter and a slash being read as a command prefix.
-  - [Contact management design](../DeveloperGuide.md#contact-management)
+  - [Contact management design](../DeveloperGuide.md#44-contact-management)

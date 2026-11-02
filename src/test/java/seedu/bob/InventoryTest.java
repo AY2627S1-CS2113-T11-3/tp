@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 import seedu.bob.exception.CategoryNotFoundException;
+import seedu.bob.exception.CommandException;
 import seedu.bob.exception.DuplicateItemException;
 import seedu.bob.exception.InsufficientStockException;
 import seedu.bob.exception.InvalidItemIndexException;
@@ -141,6 +142,76 @@ class InventoryTest {
 
         assertEquals("Cannot remove 6 Wrench. Only 5 are available.", exception.getMessage());
         assertEquals(5, inventory.getAvailableQuantity("Wrench", "Tools"));
+    }
+    //@@author
+
+    //@@author Lokwx
+    @Test
+    void deductTotalAvailableQuantity_acrossCategories_deductsInDisplayOrder() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 3));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 4));
+
+        inventory.deductTotalAvailableQuantity("wIrE", 5);
+
+        assertEquals(0, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(2, inventory.getAvailableQuantity("Wire", "Spares"));
+        assertEquals(2, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void deductTotalAvailableQuantity_insufficientStock_preservesAllStock() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 3));
+        inventory.addItem(new InventoryItem("Wire", "Spares", 4));
+
+        InsufficientStockException exception = assertThrows(InsufficientStockException.class,
+                () -> inventory.deductTotalAvailableQuantity("Wire", 8));
+
+        assertEquals("Cannot remove 8 Wire. Only 7 are available.", exception.getMessage());
+        assertEquals(3, inventory.getAvailableQuantity("Wire", "Components"));
+        assertEquals(4, inventory.getAvailableQuantity("Wire", "Spares"));
+    }
+
+    @Test
+    void deductTotalAvailableQuantity_exactStock_removesItemAndCategory() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 5));
+
+        inventory.deductTotalAvailableQuantity("Wire", 5);
+
+        assertEquals(0, inventory.getTotalAvailableQuantity("Wire"));
+    }
+
+    @Test
+    void deductTotalAvailableQuantity_missingItem_throwsInsufficientStockException() {
+        Inventory inventory = new Inventory();
+
+        InsufficientStockException exception = assertThrows(InsufficientStockException.class,
+                () -> inventory.deductTotalAvailableQuantity("Absent", 1));
+
+        assertEquals("Cannot remove 1 Absent. Only 0 are available.", exception.getMessage());
+    }
+
+    @Test
+    void deductTotalAvailableQuantity_nonPositiveQuantity_throwsInvalidQuantityException() throws CommandException {
+        Inventory inventory = new Inventory();
+        inventory.addItem(new InventoryItem("Wire", "Components", 5));
+
+        assertThrows(InvalidQuantityException.class,
+                () -> inventory.deductTotalAvailableQuantity("Wire", 0));
+        assertThrows(InvalidQuantityException.class,
+                () -> inventory.deductTotalAvailableQuantity("Wire", -1));
+    }
+
+    @Test
+    void deductTotalAvailableQuantity_nullName_throwsNullPointerException() {
+        Inventory inventory = new Inventory();
+
+        NullPointerException exception = assertThrows(NullPointerException.class,
+                () -> inventory.deductTotalAvailableQuantity(null, 1));
+
+        assertEquals("Item name must not be null", exception.getMessage());
     }
     //@@author
 }

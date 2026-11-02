@@ -1,0 +1,55 @@
+@startuml
+!include loan-style.puml
+hide circle
+top to bottom direction
+
+class Storage {
+    {field} -path: Path
+    {field} -backupPath: Path
+    --
+    {field} +load(): LoadResult
+    {field} +save(snapshot: AppSnapshot)
+    {field} #moveAtomically(source: Path, target: Path)
+}
+class SnapshotCodec {
+    --
+    {field} {static} ~decode(json: String): AppSnapshot
+    {field} {static} ~encode(snapshot: AppSnapshot): String
+}
+class AppState {
+    --
+    {field} +toSnapshot(): AppSnapshot
+    {field} {static} +restore(snapshot: AppSnapshot): AppState
+}
+class AppSnapshot <<record>> {
+    {field} -schemaVersion: int {readOnly}
+    {field} -inventory: List<InventoryCategory> {readOnly}
+    {field} -sessions: List<SessionEntry> {readOnly}
+    {field} -requests: List<RequestEntry> {readOnly}
+    {field} -contacts: List<ContactEntry> {readOnly}
+    {field} -loanRecords: List<LoanRecordEntry> {readOnly}
+    {field} -nextLoanId: long {readOnly}
+    {field} -brokenItems: List<BrokenItemEntry> {readOnly}
+    --
+}
+class LoadResult <<record>> {
+    {field} -source: LoadResult.Source {readOnly}
+    --
+}
+
+Storage ..> SnapshotCodec : converts and validates >
+Storage ..> LoadResult : creates >
+LoadResult --> "1" AppSnapshot : snapshot >
+SnapshotCodec ..> AppSnapshot : serializes / deserializes >
+SnapshotCodec ..> AppState : restore() validates domain state >
+AppState ..> AppSnapshot : exports / restores >
+
+note bottom of AppSnapshot
+  Nested records contain storage values only.
+  Defensive list copies keep snapshots independent.
+  No managers or mutable domain objects are serialized.
+end note
+note bottom of LoadResult
+  Source is MAIN, BACKUP, or NEW.
+end note
+@enduml

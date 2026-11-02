@@ -6,8 +6,9 @@ Preparation uses the
 session's headcount to calculate required quantities and compare them with the inventory. Requests are sorted by
 deadline and show whether the requested quantity is currently in inventory.
 
-**Data is kept only while Bob is running.** Exiting or restarting clears all inventory, sessions, preparations,
-contacts, requests, loans, and broken-item reports.
+**Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
+from that same directory restores inventory, sessions, preparations, requests, contacts, active and closed loan records, and
+broken-item reports.
 
 ## Contents
 
@@ -20,6 +21,8 @@ contacts, requests, loans, and broken-item reports.
 - [Student request tracking](#student-request-tracking)
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
+  - [View loan history](#view-loan-history-list-l-history)
+- [Saving and restoring data](#saving-and-restoring-data)
 - [Broken-item tracking](#broken-item-tracking)
 - [Exiting Bob](#exiting-bob)
 - [Errors and troubleshooting](#errors-and-troubleshooting)
@@ -72,11 +75,12 @@ contacts, requests, loans, and broken-item reports.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
 6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
-   the source code. Each launch starts with empty lists.
+   the source code. Launch from the same directory to restore your saved records. The first launch starts empty.
 
 ## Command format
 
-- Enter each command on one line and press Enter. There are no follow-up selection prompts after a command.
+- Enter each command on one line and press Enter. Normal commands need no follow-up selection.
+  If Bob cannot save while exiting, it offers `retry`, `cancel`, or `exit` as described below.
 - UPPER_CASE words in the formats below are placeholders. Replace them with your own values.
 - Square brackets around a parameter mean it is optional. Do not type the brackets.
 - Commands and prefixes are case-sensitive: use `add-i`, not `ADD-I`, and `n/`, not `N/`.
@@ -97,6 +101,8 @@ contacts, requests, loans, and broken-item reports.
   and broken units for `add-b`.
 
 The examples below show command responses without the extra blank line Bob prints after each command.
+When an example calls for a new, empty working directory, launch the built `bob.jar` using its full path from
+that directory. Restarting Bob in an existing working directory reloads its saved data rather than clearing it.
 
 ## Viewing help
 
@@ -140,7 +146,7 @@ Contacts
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
-  list-l [overdue]
+  list-l [overdue|history|returned]
   delete-l INDEX
   return INDEX
 Broken items
@@ -235,7 +241,7 @@ order. No arguments are accepted.
 
 **Format:** `list-i`
 
-After the two additions above:
+This example assumes only the two `add-i` examples above have been run, leaving 15 Wire and 1 Oscilloscope.
 
 ```text
 list-i
@@ -262,8 +268,9 @@ or recording a loan or broken-item report, because those operations can remove e
 
 ### Find an item: `find-i`
 
-Searches for items whose name **or** category contains a keyword, and shows where every unit is: in stock or on
-loan. Use it to answer "Do we have any of these, and can I hand one out now?" without scanning the whole `list-i`.
+Searches for items whose name **or** category contains a keyword and displays available stock and active loans.
+Broken units are excluded; use `list-b` for damage reports. An item with only broken units does not appear here.
+Use this command to check availability without scanning the whole `list-i`.
 
 **Format:** `find-i KEYWORD`
 
@@ -271,9 +278,9 @@ loan. Use it to answer "Do we have any of these, and can I hand one out now?" wi
 - Matching ignores capitalization and finds partial words. `meter` matches `Multimeter`, and `equip` matches every
   item in `Equipment`.
 - Each result shows the item, its category, units available, units on active loans, and a status:
-  - `Available`: at least one unit is in stock.
-  - `All on loan`: every unit is lent out. These items are still found, even though they no longer appear in
-    `list-i`.
+    - `Available`: at least one unit is in stock.
+    - `All on loan`: no units are available, but active loans exist. This label describes the stock and loan
+      records searched here; additional broken units may exist in `list-b`.
 - Items with the same name in different categories are shown as separate results.
 - Searching does not change inventory or loans.
 
@@ -494,7 +501,8 @@ required quantities. Use `list-s` to find its index.
 A preparation is a checklist for one session. It compares required totals against current inventory; it does not
 reserve or deduct stock. Items do not have to exist in inventory before they can be included in preparation.
 
-The examples in this section form a separate sequence. Start with a fresh application, enter your name, and run:
+The examples in this section form a separate sequence. Launch Bob from a new, empty working directory so earlier
+saved data is not loaded, enter your name, and run:
 
 ```text
 add-i n/Wire c/Components q/15
@@ -589,8 +597,8 @@ Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 
 
 ## Student request tracking
 
-Track items that students ask to borrow or collect. Requests are kept in a separate list, do not reserve stock, and
-are displayed in deadline order.
+Track items that students ask to borrow or collect. Requests are kept in a separate list and displayed in deadline
+order. Adding a request does not reserve stock. Marking a request fulfilled deducts its quantity from available stock.
 
 ### Add a request: `add-r`
 
@@ -609,7 +617,7 @@ Creates a request with the student's name, item, quantity, and deadline.
 - The request does not name an inventory category. Availability combines stock with the same item name from all
   categories, ignoring capitalization. It matches the full item name: `Wire` does not match `Jumper Wire`.
 - The item does not need to exist in inventory. A request can exceed available stock; `list-r` shows the shortage
-  so that you can arrange the missing units.
+  so that you can arrange the missing units. The request can only be marked fulfilled once enough stock is available.
 
 Example in an empty request list, with 15 Wire in inventory:
 
@@ -638,7 +646,7 @@ requests and inventory unchanged.
 | --- | --- | --- |
 | `add-r n/ i/Wire q/2 d/8 October 2099` | `Student name cannot be blank.` | Supply the student's name after `n/`. |
 | `add-r n/Alice i/ q/2 d/8 October 2099` | `Item name cannot be blank.` | Supply the requested item after `i/`. |
-| `add-r n/Alice i/Wire q/0 d/8 October 2099` | `Quantity must be a positive integer.` | Enter at least 1. |
+| `add-r n/Alice i/Wire q/0 d/8 October 2099` | `Quantity must be greater than zero.` | Enter at least 1. |
 | `add-r n/Alice i/Wire q/ d/8 October 2099` | `Quantity must be a positive integer.` | Supply a quantity; requests have no default. |
 | `add-r n/Alice i/Wire q/2 d/31 February 2099` | `Deadline must be a valid date in d MMMM yyyy format.` | Use a real calendar date and a full, capitalized English month name. |
 
@@ -672,8 +680,8 @@ Student requests
 
 An empty request list displays `No requests recorded.` between the heading and the closing divider.
 
-Availability is checked again each time `list-r` runs. Removing inventory after adding a request can increase the
-shortfall; adding inventory can remove it. Requests never reserve or consume stock.
+Availability is checked again each time `list-r` runs. Adding or deleting a request does not change inventory.
+Marking a request prepared does not change stock; marking it fulfilled deducts its quantity.
 
 The deletion and marking examples below each assume Alice's request is still present as request 1 and there are
 15 Wire available. Treat them as separate examples; deleting Alice's request removes it from the marking list too.
@@ -709,14 +717,17 @@ Changes the status shown for a request.
 - Use the index from `list-r`.
 - `STATUS` must be `prepared` or `fulfilled`. The status is not case-sensitive, so `Prepared` and `FULFILLED` also
   work.
-- Marking replaces the current status. A fulfilled request can be marked as prepared again if it was marked by
-  mistake.
-- You may mark a pending request directly as fulfilled, even when stock is insufficient. Bob records the status
-  you supply; it does not verify a handover or require a prepared step. `pending` is the initial status and cannot
-  be supplied to `mark-r`.
-- Marking a request does not change inventory stock or create a loan. If the handover is a loan,
-  record it separately with `add-l`, which deducts stock. Use `delete-i` only for an issue or consumption
-  that has not already reduced inventory. Never deduct the same units twice.
+- `prepared` only updates the status. It does not change inventory.
+- `fulfilled` is final. It deducts the requested quantity from available stock across all categories, in inventory
+  display order.
+- If total available stock is less than the requested quantity, the command is rejected. The status and stock stay
+  unchanged.
+- You may mark a pending request directly as fulfilled when enough stock is available. `pending` is the initial
+  status and cannot be supplied to `mark-r`.
+- A fulfilled request cannot be marked again or changed back to prepared. Deleting it with `delete-r` does not
+  restore stock.
+- Fulfilling does not create a loan. If the handover is a loan, record it with `add-l` instead. Do not deduct the
+  same units twice.
 
 Continuing the example above:
 
@@ -740,7 +751,19 @@ Student requests
 --------------------------------------------------------------------
 ```
 
-To complete the request, run:
+To complete the request, Alice needs 20 Wire but only 15 are available. Add the missing 5 in another category first:
+
+```text
+add-i n/Wire c/Spares q/5
+```
+
+Expected output:
+
+```text
+Successfully added: 5x Wire to the inventory
+```
+
+Total available stock is now 20, so the request can be fulfilled:
 
 ```text
 mark-r 1 fulfilled
@@ -752,20 +775,20 @@ Expected output:
 Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
 ```
 
-#### Example: availability after stock changes
+The 20 requested units are now deducted from available stock. The request remains in `list-r` as `[Fulfilled]`, but
+current availability is 0. Completed requests do not display a shortage warning:
 
-For Alice's request above, consider these stock changes after marking it fulfilled. This example starts with
-15 Wire in Components and no Wire in Spares, independently of the inventory tutorial.
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 20x Wire by 8 October 2099 (Available: 0)
+--------------------------------------------------------------------
+```
 
-| Action after marking the request | Available Wire | Shortfall shown by `list-r` |
-| --- | --- | --- |
-| Start with 15 Wire in Components | 15 | 5 |
-| Add `add-i n/Wire c/Spares q/5` | 20 | No warning |
-| Remove `delete-i c/Components i/1 q/3` | 17 | 3 |
-
-This adds Wire to a new category rather than topping up Components. `list-r` combines both categories.
-Another request for Wire would compare its own quantity with the same 17 available units: the first request does
-not set any units aside. Even a fulfilled request continues to show current availability.
+Availability describes current stock, not the completed handover. Pending and prepared requests still show
+shortage warnings when stock is insufficient. Another request for Wire would see 0 available.
+Deleting the fulfilled request with `delete-r` does not restore the 20 units.
 
 ## Contact management
 
@@ -781,7 +804,8 @@ Adds a contact with a name and phone number, and optionally an email and a role 
 - Use `r/` to note why you would contact this person, for example what they repair or supply.
 - `PHONE` must contain digits only, with no length limit. Spaces, `+`, and `-` are not accepted, so write
   `6561234567` rather than `+65 6123 4567`.
-- `EMAIL` is only checked loosely: it must contain an `@` and no spaces. It is not checked against real addresses.
+- `EMAIL` is only checked loosely: it must have non-whitespace text on both sides of an `@`, with no whitespace
+  anywhere in the value. It is not checked against real addresses.
 - A value you include must not be blank. Leave the whole prefix out instead.
 - Duplicates are allowed. Adding the same name or number twice creates two separate contacts.
 - A word in a value that is a single letter followed by `/` (for example `a/b`) is read as a new prefix, so the
@@ -880,7 +904,7 @@ adding or deleting a supplier contact does not change a loan's borrower details.
 - Every successful command creates a separate record, including repeated loans to the same borrower.
 - Rejected commands leave inventory, loans, and supplier contacts unchanged.
 
-In a fresh application, enter:
+For this separate example, launch Bob from a new, empty working directory, enter your name, and run:
 
 ```text
 add-i n/Multimeter c/Equipment q/5
@@ -917,7 +941,7 @@ An empty list displays `No active loans.` between the heading and closing divide
 
 **Format:** `delete-l INDEX`
 
-Removes an incorrect loan record and restores its entire quantity to available inventory. Use the index
+Marks an incorrect active loan as `VOIDED`, retains it in history, and restores its entire quantity to inventory. Use the index
 from the latest `list-l`. Remaining loans are renumbered, so list again before selecting another record.
 This command corrects an entry. Use `return` when the borrower has actually returned the items.
 Partial deletion is not supported.
@@ -971,9 +995,9 @@ change supplier contacts, sessions, or other loans.
 - Restoration merges matching stock without regard to capitalization, or recreates missing items/categories,
   following the same inventory rules as correcting a loan.
 - Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
-- A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
+- A closed loan cannot be returned or voided again. Positions can refer to different loans after renumbering;
   always check `list-l` before the next operation.
-- Returned records are removed immediately; return history is not retained in this version.
+- Returned records leave the active list immediately and remain in history as `RETURNED`.
 
 ### Track overdue loans: `list-l overdue`
 
@@ -1011,8 +1035,94 @@ Loans due today or in the future do not produce this warning. Invalid or insuffi
 are rejected without adding a loan or printing an overdue warning. Returned and corrected records
 are removed from both active and overdue lists.
 
-All loans disappear when Bob exits; persistence is planned for V2.0b. Return history and partial returns
-remain unsupported.
+Active, returned, and voided loans persist between launches. Partial returns remain unsupported.
+
+### View loan history: `list-l history`
+
+**Format:** `list-l history`
+
+Displays every recorded loan in creation order, including active loans, completed returns, and incorrect entries
+that were voided using `delete-l`. Use `list-l returned` to show genuine returns only; voided entries are excluded.
+Both filters are lowercase and accept no additional arguments.
+
+Each history row shows a permanent loan ID, status, original item/borrower details, due date, and recording/closure
+dates. The console shows calendar dates in the timestamp's original timezone offset; the save file retains the full
+offset timestamps. These dates describe when the commands were recorded, which may differ from a backlog loan's
+physical borrowing or return date. An active record has `Closed: -`.
+
+For example, a returned record may appear as:
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [RETURNED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: 31 October 2026 | Closed: 1 November 2026
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+**A loan ID is not an active-list index.** Continue using the latest `list-l` or `list-l overdue` indices for
+`return INDEX` and `delete-l INDEX`. IDs are not recycled when records close, even after the active list becomes empty. Repeated loans
+with identical details remain separate records. Closed records cannot be returned or voided again.
+
+An empty history displays `No loan records.`. An empty returned-only view displays `No returned loans.`.
+Backup recovery restores an earlier ledger and its ID counter; changes lost after that backup may include loan IDs.
+Viewing history changes no stock and does not rewrite saved files. There is no command to permanently erase history,
+edit a historical entry, or record a partial return.
+
+When loading older version-1 data, existing active loans receive IDs and show `Recorded: Unknown` because their
+original recording times were not saved. Their original item, borrower, due date, and available stock are preserved.
+Earlier returned/deleted loans cannot be recovered automatically. The next successful change saves the upgraded
+format; keep using the updated Bob build after that upgrade.
+
+## Saving and restoring data
+
+Bob saves automatically after each command that changes data. There is no separate save command. Listing data,
+viewing help, rejected commands, and marking a request with its existing status do not rewrite saved files.
+An ordinary command's response is complete when its following blank line appears.
+
+The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, complete
+loan history and its next-ID counter, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
+shortages are recalculated when displayed. Preparation and pending/prepared requests do not reserve stock.
+Fulfilling a request deducts stock once;
+loading a fulfilled request does not deduct it again.
+
+The files are relative to your terminal's working directory, not the location of `bob.jar`:
+
+| File | Purpose |
+| --- | --- |
+| `data/bob.json` | Latest successfully saved complete state. |
+| `data/bob.json.bak` | Previous valid state, retained after replacing an existing save. |
+
+If both files are absent, Bob starts empty and creates its first save after a data-changing command. Launching
+from another directory selects different files. Use one running Bob process per data directory. Files are local
+plain-text JSON and include contact and borrower details; keep them in a location appropriate for those records.
+
+If the main save is missing or unusable and a valid backup exists, Bob restores the backup and displays:
+
+```text
+Recovered data from backup. It may not include the latest changes.
+```
+
+Recovery may lose the most recent change. Bob repairs the main save on the next successful change or when you
+exit. A corrupt main file is never copied over the valid backup. If no usable saved state exists, Bob stops
+before asking for your name and preserves the files. An unsupported data version also stops startup, even if
+an older backup is available. Keep copies of the files before investigating; restore a known valid copy or use
+the Bob version that supports the saved format. Do not replace the files with empty data to silence an error.
+
+If a change cannot be saved, Bob keeps it in the running application and prints a warning with the affected
+file path. A command's success confirmation describes the in-memory change; the accompanying warning means
+it has not reached disk. Resolve the reported file-access problem and make another change, or use `Bye` to
+retry saving. Closing or terminating the process while this warning remains can lose unsaved changes.
+
+Completed saves use temporary files and atomic replacement to avoid partially written main snapshots. This
+does not guarantee recovery from every disk or power failure. Back up the `data` directory separately if needed.
+
+Bob also reads version-1 saves from earlier releases. It converts their active loans into history records in
+memory; earlier returns and corrections cannot be recovered because version 1 did not retain them. Imported
+recording dates appear as `Unknown`. The next successful data-changing command saves the complete state in
+version 2. Viewing data and exiting without changes leave a valid version-1 main file unchanged.
 
 ## Broken-item tracking
 
@@ -1025,7 +1135,8 @@ Units on an active loan are also excluded from available stock. If a loan is ret
 record its full return with `return INDEX`, then report the damaged quantity with `add-b`.
 Partial loan returns are not supported.
 
-The examples below form a separate sequence. In a fresh application, enter your name, then run:
+The examples below form a separate sequence. Launch Bob from a new, empty working directory, enter your name,
+then run:
 
 ```text
 add-i n/Meter c/Equipment q/10
@@ -1130,7 +1241,19 @@ the available quantity exceed `2147483647`, Bob rejects the command and leaves t
 ## Exiting Bob
 
 Enter `Bye` on its own line. The spelling is case-insensitive, so `bye` and `BYE` also work.
-Bob exits without a farewell message or a save prompt. All data entered during the run is discarded.
+Bob normally exits without a farewell message; completed changes are already saved. If unsaved changes remain,
+Bob tries saving them first. If that fails, it displays:
+
+```text
+Unsaved changes remain. Enter retry, cancel, or exit:
+```
+
+- `retry`: try saving again and exit if successful.
+- `cancel`: continue using Bob with the unsaved data still in memory.
+- `exit`: explicitly exit without those unsaved changes. Earlier saved data remains available.
+
+Choices ignore capitalization. Explicit unsaved exit returns a nonzero process exit code. If standard input
+ends, Bob retries a pending save once and exits with a nonzero code if it fails, without waiting for an answer.
 
 ## Errors and troubleshooting
 
@@ -1172,6 +1295,8 @@ These are examples of the current messages:
 | Invalid or past request deadline | `Deadline must be a valid date in d MMMM yyyy format.` or `Request deadline cannot be before today.` | Use a real date such as `8 October 2099`, with a capitalized full month name, and do not use a date before today. |
 | Unknown request index | `Request index 3 is invalid. There are 2 recorded request(s).` | Use `list-r` to check the index. |
 | Invalid request status | `Status must be "prepared" or "fulfilled".` | Use `prepared` or `fulfilled` after the index. |
+| Request cannot be fulfilled | `Cannot remove 20 Wire. Only 15 are available.` | Add stock or reduce the request by deleting it and adding a corrected one. |
+| Request already fulfilled | `Request 1 is already fulfilled and cannot be changed: Alice - 20x Wire by 8 October 2099` | Use `list-r` to check the status. Fulfilled requests are final. |
 | Missing or reordered broken-item arguments | `Invalid format. Use: add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]` | Supply all required prefixes in that order; omit `m/` entirely if no contact is assigned. |
 | Blank fault description | `Fault description cannot be blank.` | Enter the fault after `f/`. |
 | Invalid reported date | `Date reported must be a valid date in d MMMM yyyy format (e.g., 23 October 2026).` | Use a real date and a capitalized full English month name. |
@@ -1186,26 +1311,28 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 
 ## Current limitations
 
-- There is no saving, loading, export, or recovery after exit. All data is held in memory.
+- Storage is local to one working directory and one running process. There is no cloud sync or import/export
+  command. Only version-1 and version-2 saves are supported. Unsaved changes and the newest change after backup
+  recovery can be lost.
 - `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
   have sufficient stock even if there is not enough to supply both at once.
-- Requests do not reserve inventory either. Two requests can each show enough stock for the same units, and marking a
-  request as fulfilled does not deduct anything from inventory. Record a loan separately with `add-l`;
-  use `delete-i` for other issues or consumption only if those units have not already been deducted.
+- Requests do not reserve inventory when added. Two requests can each show enough stock for the same units, but the
+  first fulfilled request consumes stock and can leave the second one short.
+- Fulfilled requests cannot be changed back or marked again. Deleting a fulfilled request does not restore stock;
+  there is no unfulfill command.
 - Requests are not removed automatically when their deadline passes. Delete them with `delete-r` when they are no
   longer needed.
-- Requests cannot be edited in place. Delete the old request and add the corrected one.
+- Requests cannot be edited in place. Delete a pending or prepared request and add the corrected one.
 - Session dates are checked against today's date on the computer running Bob. For a session dated today, its start
   time is not checked against the current clock time. Sessions do not disappear automatically after their dates pass.
 - `find-i` searches inventory and active loans only. It does not show item locations, and it cannot use special
   search patterns such as wildcards. If every unit of an item is on loan, the result uses the spelling typed in the
   first matching loan.
-- Commands cannot be chained on one line. Each add or delete command affects one item, session, contact, or request.
+- Commands cannot be chained on one line. Each add or delete command affects one entry.
 - Broken-item reports cannot be edited in place or partially repaired. There is no disposal command, repair history,
   or command to reassign a report's contact. `delete-b` always restores the entire reported quantity.
-- Commands cannot be chained on one line. Each add or delete command affects one entry.
 
 ## FAQ
 
@@ -1215,8 +1342,9 @@ Yes. Run `add-s`, then `list-s`, and use that session's index in `add-p`. The se
 
 **Does an item need to exist in inventory first?**
 
-For session preparation or student requests, no: missing stock is shown as unavailable. For loans and
-broken-item reports, yes: the item must exist in the selected category with enough available units.
+For session preparation or student requests, no: missing stock is shown as unavailable. A request can be recorded
+before stock arrives, but it can only be fulfilled once enough stock is available. For loans and broken-item reports,
+yes: the item must exist in the selected category with enough available units.
 
 **Why can I repeat `add-p` but not `add-i` for the same item?**
 
@@ -1233,14 +1361,14 @@ No inventory adjustment is needed: preparation never removes stock. `delete-p` c
 
 **Does marking a request as fulfilled remove the item from inventory?**
 
-No. Request tracking only records that the item was prepared or handed over. If you lend the units,
-record the loan with `add-l`; this already deducts stock. Use `delete-i` for other issues or consumption
-only when those units have not already been deducted. Do not also use `delete-i` for units recorded
-with `add-l` or `add-b`. `list-r` rechecks available stock each time it is displayed.
+Yes. Marking a request fulfilled deducts the requested quantity from available stock across all categories, in
+inventory display order. `prepared` does not change stock. If stock is insufficient, the command is rejected and the
+request stays pending or prepared. Fulfillment does not create a loan; use `add-l` instead when the handover is a loan.
 
 **Can I change a request's student, item, quantity, or deadline?**
 
-Not in place. Delete the request with `delete-r` and add a corrected one with `add-r`.
+Not in place. Delete the request with `delete-r` and add a corrected one with `add-r`. A fulfilled request cannot be
+changed back, and deleting it does not restore stock.
 
 **Why did deleting a broken-item report increase my inventory?**
 
@@ -1250,7 +1378,9 @@ disposal and partial repairs are not supported.
 
 **Can I keep my data for the next launch or transfer it to another computer?**
 
-Not in the current version. Bob has no save or import function; a new launch starts with empty lists.
+Yes. Restart from the same working directory to restore `data/bob.json`. To transfer records, exit Bob after
+successful saving and copy the `data` directory into the working directory on the other computer. Use a Bob
+version that supports the same saved format. There is no interactive import command.
 
 ## Command summary
 
@@ -1277,9 +1407,11 @@ Not in the current version. Bob has no save or import function; a new launch sta
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans with overdue markers | `list-l` |
 | List overdue loans only | `list-l overdue` |
-| Delete an incorrect loan and restore stock | `delete-l INDEX` |
+| List all active, returned, and voided loan records | `list-l history` |
+| List genuine returned loans only | `list-l returned` |
+| Void an incorrect loan and restore stock | `delete-l INDEX` |
 | Record a full return and restore stock | `return INDEX` |
 | Report broken inventory units | `add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]` |
 | List broken-item reports and contacts | `list-b` |
 | Remove a repaired or incorrect report and restore stock | `delete-b INDEX` |
-| Exit and discard data | `Bye` |
+| Exit, retrying any unsaved changes | `Bye` |

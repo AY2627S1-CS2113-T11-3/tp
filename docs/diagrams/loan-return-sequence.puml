@@ -5,7 +5,7 @@ skinparam maxMessageSize 240
 
 participant ":Parser" as Parser
 participant ":LoanManager" as Manager
-participant "loans:ArrayList<Loan>" as Loans
+participant "records:ArrayList<LoanRecord>" as Loans
 participant ":Inventory" as Inventory
 participant "Ui" as Ui
 
@@ -13,16 +13,14 @@ participant "Ui" as Ui
 activate Parser
 Parser -> Manager : returnLoan(1)
 activate Manager
-Manager -> Manager : removeLoanAndRestoreStock(1)
+Manager -> Manager : closeLoanAndRestoreStock(1, RETURNED)
 activate Manager
 note over Manager
-    Validate the full-list index.
-    Convert to zero-based position.
+    Filter ACTIVE records; validate index.
+    Select active.get(userIndex - 1).
 end note
-Manager -> Loans : get(0)
-activate Loans
-Loans --> Manager : loan
-deactivate Loans
+Manager -> Manager : closed = selected.close(RETURNED, now)
+Manager -> Manager : loan = selected.loan()
 Manager -> Inventory : restoreStock(name, category, quantity)
 activate Inventory
 note right of Inventory
@@ -34,12 +32,16 @@ Inventory --> Manager : completed
 deactivate Inventory
 note over Manager, Loans
     If overflow rejects restoration,
-    removal is skipped; the active loan
+    replacement is skipped; the active loan
     and stock remain unchanged.
 end note
-Manager -> Loans : remove(0)
+Manager -> Loans : indexOf(selected)
 activate Loans
-Loans --> Manager : loan
+Loans --> Manager : recordIndex
+deactivate Loans
+Manager -> Loans : set(recordIndex, closed)
+activate Loans
+Loans --> Manager : record
 deactivate Loans
 Manager --> Manager : loan
 deactivate Manager

@@ -2,11 +2,15 @@
 
 **Bob** is a command-line application that helps university lab technicians manage inventory, schedule lab sessions, calculate session preparation requirements, maintain supplier and maintenance contacts, and track student requests, equipment loans, and broken items. It is written in Java and optimized for users who prefer typing fast, single-line commands.
 
+Bob saves lab records automatically to `data/bob.json` and restores them when launched from the same working
+directory. See the [User Guide](docs/UserGuide.md#saving-and-restoring-data) for backups, recovery, and failed-save
+exit choices, and the [storage contract](docs/StorageFormat.md) for the version-2 file format and version-1 compatibility.
+
 ## Setting up in IntelliJ
 
 Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recent version.
 
-1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.google.com/search?q=https://www.jetbrains.com/help/idea/sdk.html%23set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
+1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
 2. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
 3. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/bob/Bob.java` file, right-click it, and choose `Run 'Bob.main()'`. If the setup is correct, you should see something like the below:
    ```text
@@ -15,12 +19,12 @@ Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recen
    > Task :classes
 
    > Task :seedu.bob.Bob.main()
-     ____        _     
-    |  _ \      | |    
-    | |_) | ___ | |__  
-    |  _ < / _ \| '_ \ 
+     ____        _
+    |  _ \      | |
+    | |_) | ___ | |__
+    |  _ < / _ \| '_ \
     | |_) | (_) | |_) |
-    |____/ \___/|_.__/ 
+    |____/ \___/|_.__/
 
    What is your name?
    ```
@@ -43,7 +47,7 @@ Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recen
 
 * To run _I/O redirection_ tests (aka _Text UI tests_), build with `./gradlew check shadowJar`,
   then run `sh text-ui-test/runtest.sh`. On Windows, use `gradlew.bat check shadowJar`
-  and `text-ui-test\runtest.bat`. See [the test instructions](https://www.google.com/search?q=text-ui-test/README.md).
+  and `text-ui-test\runtest.bat`. See [the test instructions](text-ui-test/README.md).
 
 ### JUnit tests
 
