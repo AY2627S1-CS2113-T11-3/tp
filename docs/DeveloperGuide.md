@@ -6,6 +6,10 @@
 
 - [Acknowledgements](#1-acknowledgements)
 - [Setting up and getting started](#2-setting-up-and-getting-started)
+  - [Prerequisites](#21-prerequisites)
+  - [Importing and building](#22-importing-and-building)
+  - [Running Bob](#23-running-bob)
+  - [Running tests](#24-running-tests)
 - [Design](#3-design)
   - [Architecture](#31-architecture)
   - [UI component](#32-ui-component)
@@ -14,17 +18,63 @@
   - [Storage component](#35-storage-component)
     - [Automatic saving](#351-automatic-saving)
     - [Startup and recovery](#352-startup-and-recovery)
+    - [Diagram sources](#353-diagram-sources)
   - [Common classes](#36-common-classes)
 - [Implementation](#4-implementation)
   - [Inventory management](#41-inventory-management)
+    - [Detailed inventory addition design](#411-detailed-inventory-addition-design)
+    - [Responsibilities and storage](#412-responsibilities-and-storage)
+    - [Example walkthrough](#413-example-walkthrough)
+    - [Validation and failure behaviour](#414-validation-and-failure-behaviour)
+    - [Design considerations and alternatives](#415-design-considerations-and-alternatives)
+    - [Verification and limitations](#416-verification-and-limitations)
   - [Session scheduling](#42-session-scheduling)
+    - [Detailed scheduling design](#421-detailed-scheduling-design)
   - [Session preparation](#43-session-preparation)
+    - [Detailed preparation design](#431-detailed-preparation-design)
+    - [Key operations](#432-key-operations)
+    - [Example walkthrough](#433-example-walkthrough)
+    - [Interactions during preparation addition](#434-interactions-during-preparation-addition)
+    - [Calculating availability and shortfalls](#435-calculating-availability-and-shortfalls)
+    - [Design considerations and alternatives](#436-design-considerations-and-alternatives)
+    - [Preparation validation, assertions, and testing](#437-preparation-validation-assertions-and-testing)
+    - [Preparation limitations](#438-preparation-limitations)
+    - [Preparation diagram sources](#439-preparation-diagram-sources)
   - [Contact management](#44-contact-management)
   - [Loan tracking](#45-loan-tracking)
-    - [Loan history](#4511-loan-history)
-  - [Student request tracking](#46-student-request-tracking)
-  - [Broken-item tracking](#47-broken-item-tracking)
-  - [Validation and error handling](#48-validation-and-error-handling)
+    - [Detailed loan tracking design](#451-detailed-loan-tracking-design)
+    - [Key operations](#452-key-operations)
+    - [Example walkthrough](#453-example-walkthrough)
+    - [Interactions during loan addition](#454-interactions-during-loan-addition)
+    - [Interactions during a full return](#455-interactions-during-a-full-return)
+    - [Overdue evaluation and filtered indices](#456-overdue-evaluation-and-filtered-indices)
+    - [Design considerations and alternatives](#457-design-considerations-and-alternatives)
+    - [Loan validation, assertions, and testing](#458-loan-validation-assertions-and-testing)
+    - [Loan tracking limitations](#459-loan-tracking-limitations)
+    - [Diagram sources](#4510-diagram-sources)
+  - [Loan history](#46-loan-history)
+    - [Objective and lifecycle](#461-objective-and-lifecycle)
+    - [Record model, identifiers, and timestamps](#462-record-model-identifiers-and-timestamps)
+    - [Stock consistency and integration](#463-stock-consistency-and-integration)
+    - [Persistence and version-1 compatibility](#464-persistence-and-version-1-compatibility)
+    - [Commands and views](#465-commands-and-views)
+    - [Considerations and alternatives](#466-considerations-and-alternatives)
+    - [Implementation phases and verification record](#467-implementation-phases-and-verification-record)
+  - [Student request tracking](#47-student-request-tracking)
+    - [Detailed request addition design](#471-detailed-request-addition-design)
+    - [Responsibilities and storage](#472-responsibilities-and-storage)
+    - [Addition walkthrough](#473-addition-walkthrough)
+    - [Detailed request fulfillment design](#474-detailed-request-fulfillment-design)
+    - [Validation and failure behavior](#475-validation-and-failure-behavior)
+    - [Design considerations and alternatives](#476-design-considerations-and-alternatives)
+    - [Verification and limitations](#477-verification-and-limitations)
+  - [Broken-item tracking](#48-broken-item-tracking)
+    - [Responsibilities and relationships](#481-responsibilities-and-relationships)
+    - [Example and stock consistency](#482-example-and-stock-consistency)
+    - [Validation and contact handling](#483-validation-and-contact-handling)
+    - [Design choices and limitations](#484-design-choices-and-limitations)
+    - [Verification and diagram sources](#485-verification-and-diagram-sources)
+  - [Validation and error handling](#49-validation-and-error-handling)
 - [Documentation, logging, testing, and DevOps](#5-documentation-logging-testing-and-devops)
 - [Appendix A: Product Scope](#appendix-a-product-scope)
 - [Appendix B: User Stories](#appendix-b-user-stories)
@@ -39,6 +89,8 @@
 - [JUnit 5](https://docs.junit.org/5.14.4/overview.html) — used for automated unit and integration tests.
 - [Gson](https://google.github.io/gson/UserGuide.html) — converts dedicated snapshot records to and from JSON.
 - [Java logging API](https://docs.oracle.com/en/java/javase/25/docs/api/java.logging/module-summary.html) — used for diagnostic logging.
+- [PlantUML](https://plantuml.com/) — used to generate UML diagrams from the committed `.puml` sources.
+- [Graphviz](https://graphviz.org/) — used by PlantUML to lay out class diagrams.
 
 ## 2. Setting up and getting started
 
@@ -1087,7 +1139,7 @@ checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../t
 - Due dates have day precision and use the manager clock's timezone; no automatic notifications are sent.
 - All loan records persist with available inventory. History accumulates and increases snapshot comparison/write costs.
 
-The [loan history design](#4511-loan-history) below explains retention, migration, and the alternatives considered.
+The [loan history design](#46-loan-history) below explains retention, migration, and the alternatives considered.
 
 #### 4.5.10. Diagram sources
 
@@ -1100,13 +1152,13 @@ The section follows the walkthrough and design-alternatives format of the
 See the [SE-EDU PlantUML tutorial](https://se-education.org/guides/tutorials/plantUml.html) for editing and image export.
 Export PNGs into `docs/images/` after changing a source so the guide's images remain in sync.
 
-#### 4.5.11. Loan history
+### 4.6. Loan history
 
 **Status: implemented.** Active, returned, and voided records persist in schema version 2. The following design
 record retains the original considerations, alternatives, and phased verification plan. Existing action commands
 still use active-list indices; the additional views expose permanent identities for bookkeeping.
 
-##### 4.5.11.1. Objective and lifecycle
+#### 4.6.1. Objective and lifecycle
 
 The manager keeps every successfully recorded loan for bookkeeping, including loans that have been returned or corrected.
 It uses one permanent, insertion-ordered collection and derives active and historical views from it.
@@ -1124,7 +1176,7 @@ permanently erase records. Retaining voided entries preserves an account of corr
 completed borrowing. Optional correction reasons, editing, partial returns, reopening records, export, and permanent
 history deletion are outside the initial implementation.
 
-##### 4.5.11.2. Record model, identifiers, and timestamps
+#### 4.6.2. Record model, identifiers, and timestamps
 
 Keep `Loan` as the existing immutable snapshot of item details, quantity, borrower name and phone, and due date.
 The implementation adds an immutable `LoanRecord` wrapper for lifecycle metadata; closing a loan replaces its wrapper while
@@ -1155,7 +1207,7 @@ filtered active records, not through positions in the complete collection. Overd
 positions, as they do today. A permanent loan ID is an identity for bookkeeping, not another name for a displayed
 active index. History output must label IDs clearly and direct users to `list-l` before selecting an active index.
 
-##### 4.5.11.3. Stock consistency and integration
+#### 4.6.3. Stock consistency and integration
 
 `LoanManager` should remain the only coordinator of loan and inventory changes. Before a return or correction,
 validate the active index and prepare the closed record. Restore inventory before replacing the active record.
@@ -1171,7 +1223,7 @@ leave four units available, retain the first record as `RETURNED`, and display t
 Voiding that remaining active loan should restore availability to five and retain its record as `VOIDED`.
 History then contains both original IDs, while the active view is empty. Restarting must preserve this result.
 
-##### 4.5.11.4. Persistence and version-1 compatibility
+#### 4.6.4. Persistence and version-1 compatibility
 
 Use schema version 2 because loan storage changes from active-only entries to permanent records with lifecycle
 metadata. Extend `AppSnapshot`, `AppState`, and `SnapshotCodec` to include every loan record and `nextLoanId`.
@@ -1200,7 +1252,7 @@ Previously returned or deleted loans cannot be reliably reconstructed from versi
 Existing backups are previous snapshots, not a complete loan ledger. Migration imports available active records;
 history retention starts with this feature, without fabricating earlier returns or their dates.
 
-##### 4.5.11.5. Commands and views
+#### 4.6.5. Commands and views
 
 | Command | View |
 | --- | --- |
@@ -1216,7 +1268,7 @@ Use creation order rather than sorting on timestamps, which can be unknown for i
 return immutable result rows, render through `Ui`, and never mutate the model or rewrite storage files.
 Exact output, empty states, and argument validation were recorded in the UI plan before implementation.
 
-##### 4.5.11.6. Considerations and alternatives
+#### 4.6.6. Considerations and alternatives
 
 | Design question | Recommended approach and rationale | Alternative and tradeoff |
 | --- | --- | --- |
@@ -1234,7 +1286,7 @@ Permanent IDs do not require changing the available-stock inventory model or add
 The earlier total-stock alternative remains a separate design choice. Partial returns would require additional
 quantity invariants and return-event data, so they should not be included implicitly in this history extension.
 
-##### 4.5.11.7. Implementation phases and verification record
+#### 4.6.7. Implementation phases and verification record
 
 | Phase | Work and completion criteria | Verification |
 | --- | --- | --- |
@@ -1252,7 +1304,7 @@ expected outputs, and record the chronological result. Use fixed clocks for time
 for file-writing tests. The [UI test plan](../test/ui-test-plan.md) contains the reusable loan-history cases
 and expected outputs for these verification steps.
 
-### 4.6. Student request tracking
+### 4.7. Student request tracking
 
 `add-r`, `delete-r`, `list-r`, and `mark-r` follow the same structure as the other features: `Request` validates and
 formats one request, `RequestManager` owns the deadline-sorted list and prints confirmations, and `Parser` dispatches
@@ -1295,13 +1347,13 @@ marking `fulfilled` deducts the requested quantity.
 | Status changes | `mark-r` sets `prepared` or `fulfilled`; `fulfilled` is final | A fulfilled request has already changed stock, so allowing it to return to `prepared` would leave status and inventory inconsistent. |
 | Inventory effect | `fulfilled` deducts; other request commands leave stock unchanged | Adding, deleting, and marking prepared still change request state and trigger autosaving. `delete-r` never restores stock. |
 
-#### 4.6.1. Detailed request addition design
+#### 4.7.1. Detailed request addition design
 
 Request addition records a student's requirement through
 `add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE`. All four arguments are mandatory and must appear in that order.
 See the [User Guide](UserGuide.md#add-a-request-add-r) for user-facing examples.
 
-#### 4.6.2. Responsibilities and storage
+#### 4.7.2. Responsibilities and storage
 
 | Component | Responsibility in addition |
 | --- | --- |
@@ -1319,7 +1371,7 @@ the comparison keys, so it does not require re-sorting.
 Quantity and status are not tie-breakers. `Collections.sort` is stable, so requests with equal comparison keys
 retain their relative insertion order. Duplicates remain separate records rather than being merged.
 
-#### 4.6.3. Addition walkthrough
+#### 4.7.3. Addition walkthrough
 
 Assume the list already contains a request from student Bob for two Batteries by 9 October 2099, and the
 computer's date is no later than 8 October 2099. Enter:
@@ -1369,7 +1421,7 @@ categories, accumulates using a `long`, and caps the displayed total at `Integer
 independently; two requests may both show sufficient stock for the same units, and the first fulfilled request consumes
 the stock that the second one needs.
 
-#### 4.6.4. Detailed request fulfillment design
+#### 4.7.4. Detailed request fulfillment design
 
 `mark-r INDEX fulfilled` is the only request command that changes inventory. `prepared` is a status-only change.
 
@@ -1395,7 +1447,7 @@ The manager retains its index-specific error message for rejected command operat
 Listings show live availability for every request, but shortage warnings apply only to pending or prepared requests.
 A fulfilled request has already received its stock, so a lower current inventory does not imply an incomplete handover.
 
-#### 4.6.5. Validation and failure behavior
+#### 4.7.5. Validation and failure behavior
 
 | Boundary | Rule and result |
 | --- | --- |
@@ -1412,7 +1464,7 @@ These guarantees cover expected validation failures, rather than recovery from u
 termination. Assertions detect programming errors and do not replace input validation. Creation, rejection, and status
 changes emit `FINE` diagnostics without changing normal console output.
 
-#### 4.6.6. Design considerations and alternatives
+#### 4.7.6. Design considerations and alternatives
 
 | Decision | Rationale and trade-off |
 | --- | --- |
@@ -1423,7 +1475,7 @@ changes emit `FINE` diagnostics without changing normal console output.
 | Make fulfillment final | Reversing fulfillment would require restoring stock and deciding which category receives it. Rejecting the change keeps status and stock consistent. |
 | Inject a clock for model tests | Tests can verify deadlines due today and in the past without depending on the wall clock. The normal command path still uses the local calendar date. |
 
-#### 4.6.7. Verification and limitations
+#### 4.7.7. Verification and limitations
 
 `RequestTest` covers trimmed fields, invalid quantities and dates, clock-based deadline boundaries, initial status,
 comparison ordering, and status changes. `RequestManagerTest` covers sorting, tie-breakers, null input, indices,
@@ -1437,14 +1489,14 @@ not removed automatically after their deadline. Marking prepared records status 
 and is final; deleting a fulfilled request does not restore stock, and there is no unfulfill command. Fulfillment also
 does not create a loan; use the loan command instead when the handover is a loan.
 
-### 4.7. Broken-item tracking
+### 4.8. Broken-item tracking
 
 `add-b`, `list-b`, and `delete-b` track damaged units separately from usable inventory. Recording damage deducts
 usable stock; deleting a fully repaired or incorrectly recorded report restores its entire quantity. This is a
 stock-changing operation, not a general-purpose record deletion. See the [User Guide](UserGuide.md#broken-item-tracking)
 for command syntax and user-facing messages.
 
-#### 4.7.1. Responsibilities and relationships
+#### 4.8.1. Responsibilities and relationships
 
 `Bob` creates one `BrokenItemManager` with the same `Inventory` and `ContactManager` used by other features, and
 passes it to `Parser`. `BrokenItem` validates and stores report details; `BrokenItemManager` coordinates reports
@@ -1461,7 +1513,7 @@ and contacts with the application. A report may retain a reference to a contact 
 | List | `getBrokenItems()` returns an unmodifiable snapshot. `Ui#showBrokenItems` displays one-based positions and resolves each contact through `getAvailableContact()`. No stock changes. |
 | Delete | `deleteBrokenItem(index)` validates the position, calls `Inventory#restoreBrokenStock`, then removes the report. Remaining positions shift. |
 
-#### 4.7.2. Example and stock consistency
+#### 4.8.2. Example and stock consistency
 
 Assume five Multimeters in Equipment and no existing reports. Reporting two broken units leaves three usable
 units and one report for two units. `list-b` changes neither quantity. After both units are repaired,
@@ -1485,7 +1537,7 @@ first be returned through the loan workflow, then reported with `add-b`; the two
 `find-i` currently combines usable inventory and active loans only. It does not include broken quantities, and
 an item with all units broken and none on loan may be absent from its results.
 
-#### 4.7.3. Validation and contact handling
+#### 4.8.3. Validation and contact handling
 
 - `Parser` requires prefixes in order (`n/ c/ q/ f/ d/`, optionally `m/`), nonempty values, and valid integers.
   `list-b` rejects arguments; `delete-b` requires one positive index within the current report list.
@@ -1501,7 +1553,7 @@ an item with all units broken and none on loan may be absent from its results.
   `InvalidBrokenItemIndexException`. `Parser` prints their messages. Assertions check internal report validity
   and exact stock changes; FINE logging records diagnostics without adding normal console output.
 
-#### 4.7.4. Design choices and limitations
+#### 4.8.4. Design choices and limitations
 
 **Separate reports rather than a broken flag on inventory items.** A report preserves its quantity, fault,
 reported date, and optional contact even if deduction removes the last usable inventory entry. A single flag
@@ -1515,7 +1567,7 @@ Reports cannot be edited, partially repaired, disposed of, or reassigned to anot
 all units and keeps no repair history. Reports persist across restarts without repeating stock deductions. Concurrent
 commands would require coordinated storage of reports and inventory changes.
 
-#### 4.7.5. Verification and diagram sources
+#### 4.8.5. Verification and diagram sources
 
 `BrokenItemTest` covers field validation and fixed-clock date boundaries. `BrokenItemManagerTest` covers exact
 stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, and interaction
@@ -1526,7 +1578,7 @@ Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
 [addition sequence](diagrams/broken-item-add-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs
 in `docs/images/` after changing their sources.
 
-### 4.8. Validation and error handling
+### 4.9. Validation and error handling
 
 Validation is performed at the parser and domain boundaries:
 
@@ -1666,10 +1718,13 @@ Use case ends.
 ## Appendix C: Non-Functional Requirements
 
 1. The application should run with JDK 25 on Windows, macOS, and Linux.
-2. Normal commands should complete interactively without noticeable delay for the expected small, in-memory data set.
-3. Invalid user input should produce a clear error message and should not partially modify application state.
+2. Read-only, rejected, and unchanged commands must leave saved file contents and modification times unchanged.
+   A data-changing command must finish its synchronous save attempt before the next command is processed.
+3. Invalid user input must produce a command-specific error and leave model state unchanged. Verify this by
+   comparing relevant listings before and after rejection in the UI test plan.
 4. Collections exposed for querying should not allow callers to mutate manager state accidentally.
-5. The code should remain maintainable through JavaDoc, Checkstyle, unit tests, and feature-level UI tests.
+5. Java classes and nontrivial behavior must be documented with Javadoc. Before accepting a Java change,
+   the Java 25 Gradle `check` task and the affected feature UI regression cases must pass.
 6. Completed snapshots must survive restarting from the same working directory. Multi-user access, encryption,
    unsaved-change recovery, and guarantees against every power or disk failure are outside the storage contract.
 
@@ -1687,81 +1742,205 @@ Use case ends.
 
 ## Appendix E: Instructions for Manual Testing
 
-These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each
-independent scenario with a fresh process and an empty temporary working directory. For restart scenarios, keep
-that scenario's directory between processes. Never run destructive fixture setup against a user's data directory.
+These scenarios provide concrete commands and observable results for manual acceptance testing. The
+[UI test plan](../test/ui-test-plan.md) contains the full command-by-command expected console output and additional
+boundary cases. The results below are acceptance expectations, not a record of execution.
+
+### Test setup and isolation
+
+Build once from the repository root using Java 25:
+
+```text
+Windows: .\gradlew.bat check shadowJar
+macOS/Linux: ./gradlew check shadowJar
+```
+
+Use a new, empty directory for each independent scenario. Copy the built JAR into that directory so the launch
+command works while Bob keeps its test data separate from the repository and any real records. For example,
+from the repository root in PowerShell:
+
+```powershell
+$manualJar = (Resolve-Path 'build/libs/bob.jar').Path
+$manualDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('bob-manual-' + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $manualDirectory | Out-Null
+Copy-Item -LiteralPath $manualJar -Destination (Join-Path $manualDirectory 'bob.jar')
+Set-Location -LiteralPath $manualDirectory
+java -jar bob.jar
+```
+
+On macOS/Linux, from the repository root:
+
+```sh
+manual_directory=$(mktemp -d)
+cp build/libs/bob.jar "$manual_directory/bob.jar"
+cd "$manual_directory"
+java -jar bob.jar
+```
+
+Enter `Alex` at the name prompt. Keep the same directory across launches within a restart scenario. In the
+filesystem scenarios below, use a second terminal opened in that test directory. All fixture changes apply only
+to that directory. Close Bob before modifying an existing snapshot, except for the explicitly described
+failed-save fixture. Future-date examples assume the test date is no later than 31 December 2099; use later
+valid dates if necessary.
 
 ### Launch and shutdown
 
-1. Build with `gradlew.bat check shadowJar` on Windows or `./gradlew check shadowJar` on macOS/Linux.
-2. Launch with `java -jar build/libs/bob.jar`.
-3. Verify that Bob prints the banner and asks for a name.
-4. Enter a name and verify that the welcome message and divider appear.
-5. Enter `help` and verify that all command groups are displayed.
-6. Enter `Bye`, `bye`, or `BYE` and verify that the application exits cleanly.
+1. Launch with `java -jar bob.jar`. Verify that the banner and name prompt appear.
+2. Enter `Alex`. Verify that the greeting names Alex and a divider appears.
+3. Enter `help`. Verify that inventory, sessions, preparations, contacts, requests, loans, and broken-item commands appear.
+4. Enter `Bye`. Verify a clean exit without a farewell message. In a new scenario, repeat with `bye` or `BYE`.
 
-### Inventory and preparation
+### Inventory, scheduling, and preparation
 
-1. Add an item with `add-i` and confirm it with `list-i`.
-2. Add a session with a future date using `add-s`, then add a requirement using `add-p`.
-3. Use `list-p` to verify required quantity, available quantity, and shortage markers.
-4. Use `delete-p` and verify that only the preparation changes, not inventory.
-5. Test invalid quantities, indices, missing prefixes, duplicate inventory items, and conflicting sessions.
+Start empty and enter these commands in order:
+
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/15` | Creates 15 available Wire in Components. |
+| `add-i n/Wire c/Components q/1` | Rejects a duplicate; stock stays 15. |
+| `add-i n/Tape c/Consumables q/0` | Rejects a nonpositive quantity; Tape is absent. |
+| `add-s n/Practice Lab d/31 December 2099 l/Room-A s/0900 e/1000 p/10` | Creates one session for 10 attendees. |
+| `add-s n/Circuit Lab d/31 December 2099 l/room-a s/0930 e/1030 p/5` | Rejects the overlapping session; only Practice Lab remains. |
+| `add-p s/1 i/Wire c/Components q/2` | Creates a total requirement of 20 Wire. |
+| `list-p s/1` | Shows 20 required, 15 available, and a shortage of 5. |
+| `delete-p s/1 i/1 q/20` | Removes the requirement without changing available stock. |
+| `list-i` | Still shows 15 Wire. |
 
 ### Finding inventory items
 
-1. In a fresh process, run `add-i n/Wire c/Components q/5` and
-   `add-i n/Jumper Wire c/Spares q/3`, then run `find-i wire`.
-2. Verify that both entries appear and that matching ignores capitalization and accepts partial names.
-3. Search by category with `find-i components` and verify that only matching categories appear.
-4. Run `add-l n/Wire c/Components q/5 b/Alex Tan t/91234567 d/31 December 2099`, then repeat the search. Verify that
-   Wire remains in the results with zero available units, five active-loan units, and the `All on loan` status.
-5. Run `find-i missing` and verify that Bob reports no matches. Run `find-i` without a keyword and verify that it is
-   rejected without changing inventory or loans.
+Start empty and enter these commands in order:
+
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/5` | Creates five Wire. |
+| `add-i n/Jumper Wire c/Spares q/3` | Creates three Jumper Wire. |
+| `find-i WIRE` | Matches both entries despite capitalization. |
+| `find-i components` | Matches Wire in Components only. |
+| `add-l n/Wire c/Components q/5 b/Alex Tan t/91234567 d/31 December 2099` | Creates an active loan and deducts all five available Wire. |
+| `find-i wire` | Still includes Wire with zero available, five on loan, and `All on loan`; Jumper Wire remains available. |
+| `find-i missing` | Reports no matches. |
+| `find-i` | Rejects the missing keyword; inventory and loans stay unchanged. |
 
 ### Student requests
 
-1. In a fresh process, add 15 Wire with `add-i n/Wire c/Components q/15`.
-2. Add a request with `add-r n/Alice i/Wire q/20 d/31 December 2099`, then run `list-r`.
-3. Verify that the request is `Pending`, shows 15 available, and reports a shortfall of 5.
-4. Run `mark-r 1 prepared`, then `list-r`. Verify that the status changes to `Prepared` and inventory stays at 15.
-5. Run `mark-r 1 fulfilled` and verify that insufficient stock is rejected without changing the status or inventory.
-6. Add 5 more Wire under a different category, run `mark-r 1 fulfilled`, and verify that the request becomes
-   `Fulfilled` and all 20 units are deducted across the two categories.
-7. Verify that a fulfilled request cannot be marked again and that deleting it with `delete-r 1` does not restore
-   stock. In a separate process, verify that `delete-r` removes a pending request and renumbers the remaining list.
-8. Test missing or reordered prefixes, blank names, zero or non-numeric quantities, past or invalid deadlines,
-   invalid indices, and unsupported statuses. Verify that each rejected command leaves requests and inventory unchanged.
+Start empty and enter these commands in order:
 
-### Broken-item tracking
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/15` | Creates 15 available Wire. |
+| `add-r n/Alice i/Wire q/20 d/31 December 2099` | Creates a Pending request for 20 Wire. |
+| `list-r` | Shows 15 available and a shortfall of 5. |
+| `mark-r 1 prepared` | Changes the status to Prepared without deducting stock. |
+| `mark-r 1 fulfilled` | Rejects insufficient stock; the request stays Prepared and stock stays 15. |
+| `add-i n/Wire c/Spares q/5` | Adds five Wire under a different category. |
+| `mark-r 1 fulfilled` | Changes the request to Fulfilled and deducts all 20 Wire across both categories. |
+| `mark-r 1 prepared` | Rejects changing a fulfilled request. |
+| `delete-r 1` | Removes the request without restoring stock. |
+| `list-i` | Shows no remaining inventory. |
 
-1. In a fresh process, run `add-i n/Meter c/Equipment q/10`. To test contact assignment, also run
-   `add-c n/Lab Maintenance t/61234567`.
-2. Record two broken units using
-   `add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020`, adding `m/1` if a contact was created.
-3. Run `list-b` and `list-i`. Verify that the report contains the fault, date, and expected contact display, while
-   usable stock has fallen from 10 to 8.
-4. Run `find-i meter` and verify that it shows only usable stock and active loans, not the two broken units.
-5. After treating both units as fully repaired, run `delete-b 1`. Verify that the report is removed and stock returns
-   to 10. Do not use this command for a partial repair because it restores the whole reported quantity.
-6. Test a missing item or category, excessive or invalid quantity, blank fault, future or invalid date, invalid contact,
-   extra arguments to `list-b`, and invalid deletion indices. Verify that rejected commands change neither reports nor
-   inventory.
+### Broken-item tracking and contacts
 
-### Contacts and loans
+Start empty and enter these commands in order:
 
-1. Add contacts with required fields and with optional email or role fields.
-2. Use `list-c`, then delete a contact using its displayed index.
-3. Add enough inventory for a loan and execute `add-l`.
-4. Verify that `list-i` shows reduced stock and `list-l` shows the active loan.
-5. Add a past-due loan and verify the warning and `[OVERDUE]` marker.
-6. Use `list-l overdue` and verify that displayed indices still refer to the full active-loan list.
-7. Execute `return INDEX` and verify that stock is restored, the loan leaves the active list, and history shows `RETURNED`.
-8. Test insufficient stock, invalid dates, invalid borrower phone numbers, invalid indices, and restoration overflow.
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Meter c/Equipment q/10` | Creates ten usable Meters. |
+| `add-c n/Lab Maintenance t/61234567` | Creates contact 1. |
+| `add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020 m/1` | Creates one report and deducts two usable units. |
+| `list-b` | Shows the fault, date, quantity two, and Lab Maintenance contact. |
+| `find-i meter` | Shows eight available units; the broken units are excluded. |
+| `delete-c 1` | Removes the contact without removing the report. |
+| `list-b` | Shows `Unavailable (contact deleted)` for the report's contact. |
+| `delete-b 1` | Removes the whole report and restores both units. |
+| `list-i` | Shows ten usable Meters again. |
+| `delete-b 1` | Rejects the now-invalid index; stock stays ten. |
+
+### Loan lifecycle and history
+
+Start empty and enter these commands in order:
+
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/5` | Creates five available Wire. |
+| `add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/1 January 2020` | Creates loan ID 1, warns that its due date is past, and leaves three available Wire. |
+| `list-l overdue` | Shows the loan as overdue at active index 1. |
+| `return 1` | Restores stock to five and closes loan ID 1 as RETURNED. |
+| `return 1` | Rejects the index; does not restore stock twice. |
+| `list-l returned` | Shows loan ID 1 with RETURNED status. |
+| `add-l n/Wire c/Components q/1 b/Bea Tan t/92345678 d/31 December 2099` | Creates loan ID 2 at active index 1 and leaves four available Wire. |
+| `delete-l 1` | Restores stock to five and closes loan ID 2 as VOIDED. |
+| `list-l history` | Retains IDs 1 and 2 with RETURNED and VOIDED statuses respectively. |
+| `list-l` | Shows no active loans. |
+
+For a restoration-overflow boundary case, start another empty scenario:
+
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/1` | Creates one Wire. |
+| `add-l n/Wire c/Components q/1 b/Alex Tan t/91234567 d/31 December 2099` | Loans the only unit, removing the depleted stock entry. |
+| `add-i n/Wire c/Components q/2147483647` | Creates a replacement stock entry at the maximum integer quantity. |
+| `return 1` | Rejects restoration overflow. |
+| `list-l` | Still shows the active loan. |
+| `list-i` | Still shows 2147483647 available Wire. |
+
+### Saving and restarting
+
+Start empty and enter these commands in order:
+
+| Command | Expected result |
+| --- | --- |
+| `add-i n/Wire c/Components q/5` | Creates `data/bob.json` containing five available Wire. |
+| `add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/31 December 2099` | Saves three available Wire and one active loan. |
+| `Bye` | Exits cleanly. |
+
+Launch `java -jar bob.jar` again from the same directory and enter `Alex`:
+
+| Command | Expected result |
+| --- | --- |
+| `list-i` | Shows three available Wire; loading has not deducted stock again. |
+| `list-l` | Shows the saved active loan. |
+| `return 1` | Restores stock to five and saves the RETURNED record. |
+| `Bye` | Exits cleanly. |
+
+Launch once more. `list-i` must show five Wire, `list-l` must be empty, and `list-l history` must retain
+loan ID 1 as RETURNED. To check read-only saving behavior, record the main file's modification time and contents,
+run `list-i` and `help`, and verify both remain unchanged.
+
+### Recovering from a backup
+
+1. In an empty scenario, run `add-i n/Wire c/Components q/5`, then
+   `add-i n/Tape c/Consumables q/2`, then `Bye`.
+2. Verify that both `data/bob.json` and `data/bob.json.bak` exist. The backup contains the previous state with
+   Wire only; the main file additionally contains Tape.
+3. With Bob stopped, replace only this scenario's main file contents with `invalid JSON`. Leave the backup intact.
+4. Restart from the same directory and enter `Alex`. Verify the message
+   `Recovered data from backup. It may not include the latest changes.`
+5. Run `list-i`. Verify five Wire and no Tape, matching the older backup rather than an empty dataset.
+6. Enter `Bye` to save the recovered state. Restart again and verify five Wire with no recovery warning.
+
+### Failed-save retry and exit choices
+
+1. Start a fresh empty scenario and enter `Alex`. Before any data-changing command, use the second terminal
+   to create an ordinary file named `data`, preventing Bob from creating its data directory. In PowerShell,
+   use `Set-Content -LiteralPath './data' -Value 'manual-test blocker'`; on macOS/Linux,
+   use `printf '%s' 'manual-test blocker' > data`.
+2. Run `add-i n/Wire c/Components q/5`. Verify the addition confirmation followed by a warning beginning
+   `Warning: changes are only in memory. Could not save to`. No snapshot has been saved.
+3. Run `Bye`. Verify `Unsaved changes remain. Enter retry, cancel, or exit:`.
+4. Enter `cancel`. Verify `Exit canceled. Unsaved changes remain in memory.`. Run `list-i` and verify five Wire.
+5. Remove only the blocker file in the second terminal: PowerShell `Remove-Item -LiteralPath './data'`,
+   or macOS/Linux `rm ./data`. Do not create a replacement file.
+6. Run `Bye`. Saving must succeed and Bob must exit. Restart from the same directory and verify five Wire.
+7. To test the explicit retry choice, repeat in a new scenario, but remove the blocker while the exit-choice
+   prompt is displayed, then enter `retry`. Verify successful saving and exit, then restart to confirm five Wire.
+8. To test deliberate unsaved exit, repeat in another new scenario and leave the blocker in place. At the
+   exit-choice prompt, enter `exit`. Verify `Exiting with unsaved changes.` and a nonzero process exit code
+   (`$LASTEXITCODE` in PowerShell or `$?` immediately after Java exits in a POSIX shell). No snapshot is created.
 
 ### Automated and UI verification
 
-1. Run `gradlew.bat check` or `./gradlew check` and confirm that compilation, tests, and Checkstyle pass.
-2. Run the platform-specific text UI test script.
-3. For each case in `test/ui-test-plan.md`, compare actual output with the expected output exactly, including dividers,
-   spacing, capitalization, warnings, and blank lines.
+Run `gradlew.bat check` or `./gradlew check` from the repository root for compilation, tests, and Checkstyle.
+Run the platform-specific text UI test script for the course-style fixture. For the full UI plan on Windows,
+run `powershell -File scripts/run-ui-tests.ps1` from the repository root. The runner compares exact expected output,
+stops at the first mismatch, and writes a transcript. Use the [UI test plan](../test/ui-test-plan.md) for additional
+malformed-prefix, date, quantity, index, contact, startup-failure, and migration cases.

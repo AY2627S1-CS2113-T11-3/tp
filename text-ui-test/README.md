@@ -37,7 +37,7 @@ transcripts are saved in `test/ui-persistence-phase3-session.md` through `test/u
 
 Use `-CasePrefix UI-HISTORY-` for the loan-history model, restart, and history-view cases. These cases verify
 permanent IDs, returned/voided records, active-list indices, and read-only file fingerprints. See the
-[Developer Guide](../docs/DeveloperGuide.md#implementation-phases-and-verification-record) for phase criteria.
+[Developer Guide](../docs/DeveloperGuide.md#467-implementation-phases-and-verification-record) for phase criteria.
 
 The first 11 commands follow case UI-PREP-001 in `test/ui-test-plan.md`: create a
 session, add stock, calculate preparation quantities, report shortages, remove

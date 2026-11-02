@@ -90,7 +90,7 @@ GitHub: [Lokwx](https://github.com/Lokwx)
   - [Detailed inventory addition design and diagrams](https://github.com/Lokwx/tp/commit/4ed0ac9)
   - [Detailed request addition design](https://github.com/Lokwx/tp/commit/f88e0a0)
   - [Inventory management design](../DeveloperGuide.md#41-inventory-management)
-  - [Student request tracking design](../DeveloperGuide.md#46-student-request-tracking)
+  - [Student request tracking design](../DeveloperGuide.md#47-student-request-tracking)
 
 - **Team documentation and UML maintenance:** Addressed Developer Guide feedback across inventory, scheduling,
   preparation, loans, broken-item tracking, and storage diagrams. Corrected navigability, class compartments,
@@ -233,7 +233,7 @@ without changing normal console output.
 
 ### Requests: sorting and live availability
 
-Source: [Student request tracking](../DeveloperGuide.md#46-student-request-tracking).
+Source: [Student request tracking](../DeveloperGuide.md#47-student-request-tracking).
 
 `RequestManager` stores an `ArrayList<Request>` and sorts after each addition. Requests compare by
 deadline, then student and item names ignoring case. Stable sorting preserves insertion order when
@@ -246,7 +246,7 @@ Each request is checked independently; the displayed availability is not a reser
 
 ### Fulfillment: check stock before mutation
 
-Source: [Request fulfillment design](../DeveloperGuide.md#464-detailed-request-fulfillment-design).
+Source: [Request fulfillment design](../DeveloperGuide.md#474-detailed-request-fulfillment-design).
 
 1. `Parser` validates the index and status and passes the shared inventory to `RequestManager#markRequest`.
 2. The manager retrieves the request and rejects an already fulfilled request.
