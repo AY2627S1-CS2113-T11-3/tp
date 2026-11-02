@@ -10640,3 +10640,1202 @@ Bye
 ```text
 
 ```
+
+## User Guide audit against upstream cf84af2
+
+These cases verify the User Guide against the team repository at `cf84af2`. Build that upstream revision
+in an isolated directory and pass its `bob.jar` to the upstream `scripts/run-ui-tests.ps1` runner.
+Every case starts in an empty storage directory. Expected output is derived from the guide and source contracts
+before execution; it is not captured from the running application. Existing earlier-phase cases are unchanged.
+
+### UI-UG-QUICKSTART-001: User Guide quickstart examples
+
+**Aim:** Verify the exact quick-start and preparation examples.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/15
+```
+
+**Expected output**
+
+```text
+Successfully added: 15x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-p s/1 i/Wire c/Components q/2
+```
+
+**Expected output**
+
+```text
+Successfully added: 20x Wire [Components] to preparation
+--------------------------------------------------------------------
+Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 15) !! Insufficient items (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-p s/1
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 20, Available: 15) !! Insufficient items (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-p s/1 i/1 q/5
+```
+
+**Expected output**
+
+```text
+Successfully removed: 5x Wire [Components] from preparation
+--------------------------------------------------------------------
+Lab preparation: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+1. Wire [Components] (Required: 15, Available: 15)
+--------------------------------------------------------------------
+```
+
+### UI-UG-INVENTORY-001: User Guide inventory examples
+
+**Aim:** Verify inventory addition, duplicate rejection, lookup, and deletion examples.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/15
+```
+
+**Expected output**
+
+```text
+Successfully added: 15x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Oscilloscope c/Equipment
+```
+
+**Expected output**
+
+```text
+Successfully added: 1x Oscilloscope to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-i n/Wire c/COMPONENTS q/5
+```
+
+**Expected output**
+
+```text
+Item "Wire" already exists in category "Components".
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Components
+1: Wire (Qty: 15)
+Equipment
+1: Oscilloscope (Qty: 1)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+1. Wire [Components] (Available: 15, On loan: 0) - Available
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/5
+```
+
+**Expected output**
+
+```text
+Successfully removed: 5x Wire from the inventory
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/11
+```
+
+**Expected output**
+
+```text
+Cannot remove 11 Wire. Only 10 are available.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-i c/Components i/1 q/10
+```
+
+**Expected output**
+
+```text
+Successfully removed: 10x Wire from the inventory
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Oscilloscope (Qty: 1)
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+find-i wire
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Search results for "wire"
+--------------------------------------------------------------------
+No items match "wire".
+--------------------------------------------------------------------
+```
+
+### UI-UG-SCHEDULING-001: User Guide scheduling examples
+
+**Aim:** Verify every scheduling example and the updated date-format error.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+No sessions scheduled.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-s n/Practice Lab d/8 October 2099 l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Successfully added: Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-s n/Circuit Lab d/8 October 2099 l/Room-A s/0930 e/1030 p/15
+```
+
+**Expected output**
+
+```text
+Session conflicts with "Practice Lab" at Room-A on 8 October 2099 from 0900 to 1000.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+1. Practice Lab on 8 October 2099 at Room-A from 0900 to 1000 for 10 attendees
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-s 2
+```
+
+**Expected output**
+
+```text
+Session index 2 is invalid. There are 1 scheduled session(s).
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-s
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-s INDEX
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-s n/Invalid d/31 February 2099 l/Room-A s/0900 e/1000 p/10
+```
+
+**Expected output**
+
+```text
+Date must be in the format 'd MMMM yyyy' (e.g., 22 November 2027). Ensure the month is capitalized.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-s 1
+```
+
+**Expected output**
+
+```text
+Successfully removed session: Practice Lab
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-s
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Sessions
+--------------------------------------------------------------------
+No sessions scheduled.
+--------------------------------------------------------------------
+```
+
+### UI-UG-REQUESTS-001: User Guide requests examples
+
+**Aim:** Verify prepared and fulfilled examples, category aggregation, final status, and deletion.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/15
+```
+
+**Expected output**
+
+```text
+Successfully added: 15x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-r n/Alice i/Wire q/20 d/8 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added request: Alice - 20x Wire by 8 October 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Pending] Alice - 20x Wire by 8 October 2099 (Available: 15) !! Insufficient stock (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+mark-r 1 prepared
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as prepared: Alice - 20x Wire by 8 October 2099
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Prepared] Alice - 20x Wire by 8 October 2099 (Available: 15) !! Insufficient stock (Shortfall: 5)
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Cannot remove 20 Wire. Only 15 are available.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-i n/Wire c/Spares q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Wire to the inventory
+```
+
+#### Step 8
+
+**Input**
+
+```text
+mark-r 1 fulfilled
+```
+
+**Expected output**
+
+```text
+Successfully marked request 1 as fulfilled: Alice - 20x Wire by 8 October 2099
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-r
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Student requests
+--------------------------------------------------------------------
+1. [Fulfilled] Alice - 20x Wire by 8 October 2099 (Available: 0)
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+mark-r 1 prepared
+```
+
+**Expected output**
+
+```text
+Request 1 is already fulfilled and cannot be changed: Alice - 20x Wire by 8 October 2099
+```
+
+#### Step 11
+
+**Input**
+
+```text
+delete-r 1
+```
+
+**Expected output**
+
+```text
+Successfully removed request: Alice - 20x Wire by 8 October 2099
+Request list updated. Run list-r to see the latest order.
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+No items in inventory.
+--------------------------------------------------------------------
+```
+
+### UI-UG-CONTACTS-001: User Guide contacts examples
+
+**Aim:** Verify contact examples and optional-field validation.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+**Expected output**
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Resistors, LEDs, wires
+```
+
+**Expected output**
+
+```text
+Successfully added: Component Supplier (91234567) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. NUS Infrastructure (65161234) - Aircon and lighting repairs
+2. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: NUS Infrastructure
+```
+
+#### Step 5
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Component Supplier (91234567, supplier@example.com) - Resistors, LEDs, wires
+--------------------------------------------------------------------
+```
+
+#### Step 6
+
+**Input**
+
+```text
+add-c n/Invalid t/123 e/@
+```
+
+**Expected output**
+
+```text
+Email must be a valid address, e.g. name@example.com.
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-c n/Local t/00123 e/a@b
+```
+
+**Expected output**
+
+```text
+Successfully added: Local (00123) to contacts
+```
+
+### UI-UG-LOANS-001: User Guide loans examples
+
+**Aim:** Verify loan examples, voided and returned records, permanent IDs, and active indices.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+list-l returned
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Returned loans
+--------------------------------------------------------------------
+No returned loans.
+--------------------------------------------------------------------
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-i n/Multimeter c/Equipment q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Multimeter to the inventory
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+1. 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-l 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted incorrect loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [VOIDED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+```
+
+#### Step 8
+
+**Input**
+
+```text
+return 1
+```
+
+**Expected output**
+
+```text
+Successfully returned loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099. Inventory restored.
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-l
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loans
+--------------------------------------------------------------------
+No active loans.
+--------------------------------------------------------------------
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-l history
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Loan history
+--------------------------------------------------------------------
+Loan ID 1 [VOIDED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan ID 2 [RETURNED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+list-l returned
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Returned loans
+--------------------------------------------------------------------
+Loan ID 2 [RETURNED] 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+   Recorded: {{TODAY}} | Closed: {{TODAY}}
+Loan IDs are permanent. Use list-l for active indices.
+--------------------------------------------------------------------
+```
+
+#### Step 12
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Multimeter (Qty: 5)
+--------------------------------------------------------------------
+```
+
+### UI-UG-OVERDUE-001: User Guide overdue examples
+
+**Aim:** Verify the overdue example preserves active-list index 2.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Multimeter c/Equipment q/5
+```
+
+**Expected output**
+
+```text
+Successfully added: 5x Multimeter to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/30 October 2099
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/1 January 2000
+```
+
+**Expected output**
+
+```text
+Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 1 January 2000
+Warning: this loan is already overdue.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-l overdue
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Overdue loans
+--------------------------------------------------------------------
+2. 2x Multimeter [Equipment] to Alex Tan (91234567), due 1 January 2000 [OVERDUE]
+--------------------------------------------------------------------
+```
+
+### UI-UG-BROKEN-001: User Guide broken examples
+
+**Aim:** Verify broken-item examples, deleted contact handling, and full stock restoration.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Meter c/Equipment q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Meter to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Lab Maintenance t/61234567
+```
+
+**Expected output**
+
+```text
+Successfully added: Lab Maintenance (61234567) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020 m/1
+```
+
+**Expected output**
+
+```text
+Successfully recorded broken item: 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020. Available inventory reduced.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020
+   Contact: Lab Maintenance (61234567)
+--------------------------------------------------------------------
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Lab Maintenance
+```
+
+#### Step 6
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020
+   Contact: Unavailable (contact deleted)
+--------------------------------------------------------------------
+```
+
+#### Step 7
+
+**Input**
+
+```text
+delete-b 1
+```
+
+**Expected output**
+
+```text
+Successfully deleted broken-item report: 2x Meter [Equipment], fault: Cracked screen, reported 1 January 2020. All units restored to inventory.
+```
+
+#### Step 8
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+No broken items recorded.
+--------------------------------------------------------------------
+```
+
+#### Step 9
+
+**Input**
+
+```text
+list-i
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Inventory
+--------------------------------------------------------------------
+Equipment
+1: Meter (Qty: 10)
+--------------------------------------------------------------------
+```
+
+### UI-UG-HELP-001: User Guide help examples
+
+**Aim:** Verify the complete documented help output.
+
+**Preconditions:** Java 25; upstream cf84af2 executable; empty isolated storage.
+
+#### Step 1
+
+**Input**
+
+```text
+help
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Available commands
+--------------------------------------------------------------------
+Inventory
+  add-i n/NAME c/CATEGORY [q/QUANTITY]
+  delete-i c/CATEGORY i/INDEX_OF_ITEM q/QUANTITY
+  list-i
+  find-i KEYWORD
+Lab sessions
+  add-s n/NAME d/DATE l/LOCATION s/STARTTIME e/ENDTIME p/HEADCOUNT
+  delete-s INDEX
+  list-s
+Lab preparation
+  add-p s/SESSION_INDEX i/ITEM_NAME c/CATEGORY [q/QUANTITY_PER_PERSON]
+  delete-p s/SESSION_INDEX i/ITEM_INDEX q/TOTAL_QUANTITY
+  list-p s/SESSION_INDEX
+Student requests
+  add-r n/STUDENT_NAME i/ITEM q/QUANTITY d/DEADLINE
+  delete-r INDEX
+  list-r
+  mark-r INDEX STATUS (prepared or fulfilled)
+Contacts
+  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
+  delete-c INDEX
+  list-c
+Loans
+  add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
+  list-l [overdue|history|returned]
+  delete-l INDEX
+  return INDEX
+Broken items
+  add-b n/NAME c/CATEGORY q/QUANTITY f/FAULT d/DATE_REPORTED [m/CONTACT_INDEX]
+  list-b
+  delete-b INDEX
+    Deletion restores all units: use only for full repairs or incorrect reports.
+Other
+  help
+  Bye
+--------------------------------------------------------------------
+```

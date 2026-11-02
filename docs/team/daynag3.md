@@ -43,6 +43,11 @@ GitHub: [DaynaG3](https://github.com/DaynaG3)
   - [Establish the cross-feature regression baseline](https://github.com/DaynaG3/tp/commit/f9a6fb9)
   - [Add persistence fixtures, recovery checks, and transcript support](https://github.com/DaynaG3/tp/commit/448c8bc)
   - [Reconcile UI cases with merged stock behavior](https://github.com/DaynaG3/tp/commit/ef757f5)
+  - For the subsequent User Guide audit, added 9 reusable cases covering 69 commands, with expected responses
+    recorded before execution. Ran these against an isolated upstream build alongside the 86 existing regression
+    cases: all 95 cases, 695 steps, and 689 commands passed. The same upstream build passed all 370 unit tests
+    with zero Checkstyle violations on Java 25. Existing test cases were preserved, and no application code changed.
+  - [User Guide example regression cases](../../test/ui-test-plan.md#user-guide-audit-against-upstream-cf84af2)
 
 - **Enhancements implemented:** Separated loan queries and confirmations from console rendering, captured borrower values independently of mutable contacts, and added invariant assertions and diagnostic logging. Used immutable loan-history records and complete snapshots to keep inventory and loan lifecycle changes consistent across restarts. Added RepoSense author boundaries around storage contributions while preserving teammates' attribution.
   - [Capture borrower details independently](https://github.com/DaynaG3/tp/commit/a999fe1)
@@ -59,6 +64,12 @@ GitHub: [DaynaG3](https://github.com/DaynaG3)
   - [Document saving, recovery, and failed-save exit choices](https://github.com/DaynaG3/tp/commit/1b15cae)
   - [Align persistence instructions with merged features](https://github.com/DaynaG3/tp/commit/96dde32)
   - [Document loan history and returned-only commands](https://github.com/DaynaG3/tp/commit/d288e49)
+  - Audited all 17 sections against upstream `cf84af2`, checking command formats, help output, and internal links.
+  - Updated feature instructions, examples, FAQs, and limitations to match lookup, broken-item tracking,
+    loan history, persistence, migration, and request fulfillment.
+  - Clarified example setup, validation, indices, and stock changes; added a dedicated `list-l returned` section.
+  - [Updated User Guide](../UserGuide.md)
+  - [Upstream revision reviewed](https://github.com/AY2627S1-CS2113-T11-3/tp/commit/cf84af215d8ab42ead8c2e23029764162ef1f44d)
 
 - **Contributions to the Developer Guide:** Reorganized the guide using the Address Book Level 3 structure, adding the table of contents, acknowledgements, setup and build instructions, component descriptions, requirements, use cases, glossary, and manual testing guidance. Restored and expanded the scheduling design explanation using the existing scheduling diagrams. Documented loan responsibilities, borrower snapshots, UI separation, validation, invariants, logging, inventory restoration, and design alternatives. Added storage architecture, snapshot boundaries, automatic saving, startup recovery, and integration behavior. Documented retained loan history, lifecycle and ID rules, timestamps, migration, stock consistency, limitations, alternatives, and phased verification. Created four loan UML diagrams and four storage diagrams with editable PlantUML sources and rendered PNGs, then updated the affected diagrams for loan history. Corrected the JUnit reference to match version 5.14.4.
   - [Loan-tracking design and UML diagrams](https://github.com/DaynaG3/tp/commit/a2608cd)
@@ -87,13 +98,31 @@ GitHub: [DaynaG3](https://github.com/DaynaG3)
   - [Document persistence UI cases and runner usage](https://github.com/DaynaG3/tp/commit/80bed4c)
   - [Update README feature and storage summaries](https://github.com/DaynaG3/tp/commit/d288e49)
   - [Document the loan-history verification sequence](https://github.com/DaynaG3/tp/commit/c816af3)
+  - Extended the UI test plan with the `UI-UG-*` audit cases for quick start, inventory and lookup, scheduling,
+    preparation, request fulfillment, contacts, loans and history, overdue filtering, broken-item repairs, and
+    the complete help output. Recorded the upstream revision and empty-storage preconditions so the examples
+    can be repeated without using a technician's saved data.
 
 - **Team documentation:** Updated my entry in [About Us](../AboutUs.md), created this project portfolio page, and maintained it with implementation, testing, and documentation contributions supported by commit references.
   - [Update About Us](https://github.com/DaynaG3/tp/commit/fc22d1b)
   - [Create the project portfolio page](https://github.com/DaynaG3/tp/commit/59e2527)
 
-- **Contributions to team-based tasks:** Assigned issues to teammates, reviewed teammates' work, and merged teammates' pull requests. [Placeholder: add issue numbers, PR numbers, and brief descriptions of the coordination and review work.]
+- **Contributions to team-based tasks:** Created and assigned feature and documentation tasks to coordinate
+  the team's backlog, define product scope, and clarify ownership.
+  - Created core feature tasks for [help (#12)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/12),
+    [lab scheduling (#13)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/13),
+    [inventory (#14)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/14), and
+    [lab preparation (#18)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/18).
+  - Captured the [equipment-addition user story (#15)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/15)
+    and defined the [record-persistence task (#51)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/51).
+  - Coordinated documentation requirements through tasks for
+    [Developer Guide class diagrams (#49)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/49) and
+    [individual portfolio pages (#50)](https://github.com/AY2627S1-CS2113-T11-3/tp/issues/50).
 
-- **Review and mentoring contributions:** [Placeholder: add links to pull requests reviewed and examples of helping teammates with implementation, debugging, testing, or integration.]
+- **Review contributions:** Reviewed teammates' feature and design documentation changes and helped integrate
+  completed work.
+  - Submitted review comments on [PR #43: Item-management Developer Guide](https://github.com/AY2627S1-CS2113-T11-3/tp/pull/43).
+  - Submitted review comments on [PR #45: Request tracking](https://github.com/AY2627S1-CS2113-T11-3/tp/pull/45).
+  - Approved and merged [PR #48: Lab-scheduling Developer Guide](https://github.com/AY2627S1-CS2113-T11-3/tp/pull/48).
 
 - **Contributions beyond the project team:** Not applicable.
