@@ -26,8 +26,11 @@
   - [Broken-item tracking](#47-broken-item-tracking)
   - [Validation and error handling](#48-validation-and-error-handling)
 - [Documentation, logging, testing, and DevOps](#5-documentation-logging-testing-and-devops)
-- [Appendix: Requirements](#6-appendix-requirements)
-- [Appendix: Instructions for manual testing](#7-appendix-instructions-for-manual-testing)
+- [Appendix A: Product Scope](#appendix-a-product-scope)
+- [Appendix B: User Stories](#appendix-b-user-stories)
+- [Appendix C: Non-Functional Requirements](#appendix-c-non-functional-requirements)
+- [Appendix D: Glossary](#appendix-d-glossary)
+- [Appendix E: Instructions for Manual Testing](#appendix-e-instructions-for-manual-testing)
 
 ## 1. Acknowledgements
 
@@ -1583,11 +1586,9 @@ java -ea -Djava.util.logging.config.file=build/loan-debug-logging.properties -ja
 Normal launches need no logging configuration. Logging tests capture records directly and restore shared logger settings
 after each test. The UI regression plan is checked both normally and with assertions enabled.
 
-## 6. Appendix: Requirements
+## Appendix A: Product Scope
 
-### 6.1. Product scope
-
-#### 6.1.1. Target users
+### Target users
 
 Bob targets lab technicians or teaching assistants who:
 
@@ -1595,27 +1596,30 @@ Bob targets lab technicians or teaching assistants who:
 - schedule laboratory sessions at different locations and times; and
 - need a quick command-line workflow without a database or graphical interface.
 
-#### 6.1.2. Value proposition
+### Value proposition
 
-Bob combines inventory tracking, session scheduling, preparation checks, supplier contacts, and student loan tracking in
-one lightweight command-line application. It highlights preparation shortages and updates availability when stock is
-loaned or returned.
+Bob combines inventory tracking and lookup, session scheduling, preparation checks, supplier contacts, student requests,
+loans, and broken-item reports in one lightweight command-line application. It highlights shortages and updates
+availability when stock is fulfilled, loaned, returned, reported broken, or restored.
 
-### 6.2. User stories
+## Appendix B: User Stories
 
 | Priority | As a... | I want to... | So that I can... |
 |---|---|---|---|
 | High | lab technician | add, remove, and list inventory | know what equipment is available |
 | High | lab technician | schedule and delete lab sessions | avoid conflicting bookings |
 | High | lab technician | prepare materials for a session | identify shortages before the session |
+| High | lab technician | find an item across inventory and active loans | see whether it is available or fully loaned |
 | High | lab technician | record and return loans | track borrowed resources and restore stock |
+| Medium | lab technician | track student requests and their status | prepare and fulfil requests by their deadlines |
+| Medium | lab technician | record and clear broken-item reports | separate damaged units from usable stock |
 | Medium | lab technician | save supplier and repair contacts | find relevant people quickly |
 | Medium | lab technician | filter overdue loans | follow up on late returns |
 | Low | project maintainer | persist data between launches | retain records after restarting Bob |
 
-### 6.3. Use cases
+### Use cases
 
-#### 6.3.1. Use case: Prepare a lab session
+#### Use case: Prepare a lab session
 
 **Actor:** Lab technician
 
@@ -1637,7 +1641,7 @@ Use case ends.
   - **4a1.** System marks the item insufficient and displays the shortfall.
   - Use case resumes at step 5.
 
-#### 6.3.2. Use case: Record and return a loan
+#### Use case: Record and return a loan
 
 **Actor:** Lab technician
 
@@ -1659,7 +1663,7 @@ Use case ends.
 - **3a.** Restoring stock would overflow the integer range.
   - **3a1.** System rejects the return and keeps the loan active.
 
-### 6.4. Non-functional requirements
+## Appendix C: Non-Functional Requirements
 
 1. The application should run with JDK 25 on Windows, macOS, and Linux.
 2. Normal commands should complete interactively without noticeable delay for the expected small, in-memory data set.
@@ -1669,23 +1673,25 @@ Use case ends.
 6. Completed snapshots must survive restarting from the same working directory. Multi-user access, encryption,
    unsaved-change recovery, and guarantees against every power or disk failure are outside the storage contract.
 
-### 6.5. Glossary
+## Appendix D: Glossary
 
 - **Inventory item** — A named resource stored under a category with a positive quantity.
 - **Session** — A scheduled lab event with a date, location, time range, and headcount.
 - **Preparation** — The total material requirement for one session.
+- **Request** — A student's requested item and quantity, its deadline, and its pending, prepared, or fulfilled status.
 - **Loan** — Immutable details of lent units and a borrower; a `LoanRecord` tracks its active or closed status.
+- **Broken-item report** — A record of damaged units that are excluded from usable inventory until the report is deleted.
 - **Backlog loan** — A loan added with a due date before today.
 - **Overdue** — A loan whose due date is strictly before the current local date.
 - **Prefix** — The one-letter marker such as `n/` or `q/` that introduces a command argument.
 
-## 7. Appendix: Instructions for manual testing
+## Appendix E: Instructions for Manual Testing
 
 These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each
 independent scenario with a fresh process and an empty temporary working directory. For restart scenarios, keep
 that scenario's directory between processes. Never run destructive fixture setup against a user's data directory.
 
-### 7.1. Launch and shutdown
+### Launch and shutdown
 
 1. Build with `gradlew.bat check shadowJar` on Windows or `./gradlew check shadowJar` on macOS/Linux.
 2. Launch with `java -jar build/libs/bob.jar`.
@@ -1694,7 +1700,7 @@ that scenario's directory between processes. Never run destructive fixture setup
 5. Enter `help` and verify that all command groups are displayed.
 6. Enter `Bye`, `bye`, or `BYE` and verify that the application exits cleanly.
 
-### 7.2. Inventory and preparation
+### Inventory and preparation
 
 1. Add an item with `add-i` and confirm it with `list-i`.
 2. Add a session with a future date using `add-s`, then add a requirement using `add-p`.
@@ -1702,7 +1708,47 @@ that scenario's directory between processes. Never run destructive fixture setup
 4. Use `delete-p` and verify that only the preparation changes, not inventory.
 5. Test invalid quantities, indices, missing prefixes, duplicate inventory items, and conflicting sessions.
 
-### 7.3. Contacts and loans
+### Finding inventory items
+
+1. In a fresh process, run `add-i n/Wire c/Components q/5` and
+   `add-i n/Jumper Wire c/Spares q/3`, then run `find-i wire`.
+2. Verify that both entries appear and that matching ignores capitalization and accepts partial names.
+3. Search by category with `find-i components` and verify that only matching categories appear.
+4. Run `add-l n/Wire c/Components q/5 b/Alex Tan t/91234567 d/31 December 2099`, then repeat the search. Verify that
+   Wire remains in the results with zero available units, five active-loan units, and the `All on loan` status.
+5. Run `find-i missing` and verify that Bob reports no matches. Run `find-i` without a keyword and verify that it is
+   rejected without changing inventory or loans.
+
+### Student requests
+
+1. In a fresh process, add 15 Wire with `add-i n/Wire c/Components q/15`.
+2. Add a request with `add-r n/Alice i/Wire q/20 d/31 December 2099`, then run `list-r`.
+3. Verify that the request is `Pending`, shows 15 available, and reports a shortfall of 5.
+4. Run `mark-r 1 prepared`, then `list-r`. Verify that the status changes to `Prepared` and inventory stays at 15.
+5. Run `mark-r 1 fulfilled` and verify that insufficient stock is rejected without changing the status or inventory.
+6. Add 5 more Wire under a different category, run `mark-r 1 fulfilled`, and verify that the request becomes
+   `Fulfilled` and all 20 units are deducted across the two categories.
+7. Verify that a fulfilled request cannot be marked again and that deleting it with `delete-r 1` does not restore
+   stock. In a separate process, verify that `delete-r` removes a pending request and renumbers the remaining list.
+8. Test missing or reordered prefixes, blank names, zero or non-numeric quantities, past or invalid deadlines,
+   invalid indices, and unsupported statuses. Verify that each rejected command leaves requests and inventory unchanged.
+
+### Broken-item tracking
+
+1. In a fresh process, run `add-i n/Meter c/Equipment q/10`. To test contact assignment, also run
+   `add-c n/Lab Maintenance t/61234567`.
+2. Record two broken units using
+   `add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020`, adding `m/1` if a contact was created.
+3. Run `list-b` and `list-i`. Verify that the report contains the fault, date, and expected contact display, while
+   usable stock has fallen from 10 to 8.
+4. Run `find-i meter` and verify that it shows only usable stock and active loans, not the two broken units.
+5. After treating both units as fully repaired, run `delete-b 1`. Verify that the report is removed and stock returns
+   to 10. Do not use this command for a partial repair because it restores the whole reported quantity.
+6. Test a missing item or category, excessive or invalid quantity, blank fault, future or invalid date, invalid contact,
+   extra arguments to `list-b`, and invalid deletion indices. Verify that rejected commands change neither reports nor
+   inventory.
+
+### Contacts and loans
 
 1. Add contacts with required fields and with optional email or role fields.
 2. Use `list-c`, then delete a contact using its displayed index.
@@ -1713,7 +1759,7 @@ that scenario's directory between processes. Never run destructive fixture setup
 7. Execute `return INDEX` and verify that stock is restored, the loan leaves the active list, and history shows `RETURNED`.
 8. Test insufficient stock, invalid dates, invalid borrower phone numbers, invalid indices, and restoration overflow.
 
-### 7.4. Automated and UI verification
+### Automated and UI verification
 
 1. Run `gradlew.bat check` or `./gradlew check` and confirm that compilation, tests, and Checkstyle pass.
 2. Run the platform-specific text UI test script.
