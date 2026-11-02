@@ -1,0 +1,43 @@
+@startuml
+!include loan-style.puml
+hide circle
+class Inventory {
+    --
+    {field} +addItem(item: InventoryItem)
+    {field} +removeItem(category: String, userIndex: int, quantity: int)
+    {field} +getAvailableQuantity(name: String, category: String): int
+    {field} +listItems()
+}
+class InventoryItem {
+    {field} -name: String {readOnly}
+    {field} -category: String {readOnly}
+    {field} -quantity: int
+    --
+    {field} +getName(): String
+    {field} +getCategory(): String
+    {field} +getQuantity(): int
+}
+class Parser {
+    --
+}
+class LoanManager {
+    --
+}
+class BrokenItemManager {
+    --
+}
+class ItemFinder {
+    --
+}
+Inventory --> "0..*" InventoryItem : items {grouped by category} >
+Parser ..> Inventory : invokes >
+Parser ..> InventoryItem : creates >
+LoanManager --> "1" Inventory : shared inventory >
+BrokenItemManager --> "1" Inventory : shared inventory >
+ItemFinder ..> Inventory : queries >
+note bottom of Inventory
+  Category and item matching ignores case.
+  Inventory stores supplied item references;
+  exclusive ownership is not guaranteed.
+end note
+@enduml

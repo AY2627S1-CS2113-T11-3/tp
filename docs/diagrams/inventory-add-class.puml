@@ -1,27 +1,28 @@
 @startuml
-!pragma layout smetana
 !include loan-style.puml
 hide circle
-hide empty members
 top to bottom direction
 
 class Parser {
-    -addItem(arguments: String, inventory: Inventory)
+    --
+    {field} -addItem(arguments: String, inventory: Inventory)
 }
 class Inventory {
-    +addItem(item: InventoryItem)
-    -findCategory(requestedCategory: String): String
-    -hasValidState(): boolean
+    --
+    {field} +addItem(item: InventoryItem)
+    {field} -findCategory(requestedCategory: String): String
+    {field} -hasValidState(): boolean
 }
 class InventoryItem {
-    -name: String {readOnly}
-    -category: String {readOnly}
-    -quantity: int
+    {field} -name: String {readOnly}
+    {field} -category: String {readOnly}
+    {field} -quantity: int
+    --
 }
 
-Parser ..> Inventory : invokes
-Parser ..> InventoryItem : creates
-Inventory --> "0..*" InventoryItem : items grouped by category\n{ordered}
+Parser ..> Inventory : invokes >
+Parser ..> InventoryItem : creates >
+Inventory --> "0..*" InventoryItem : items grouped by category\n{ordered} >
 note bottom of Inventory
   LinkedHashMap of category names
   to ArrayList<InventoryItem>.

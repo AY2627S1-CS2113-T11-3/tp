@@ -101,6 +101,8 @@ broken-item reports.
   and broken units for `add-b`.
 
 The examples below show command responses without the extra blank line Bob prints after each command.
+When an example calls for a new, empty working directory, launch the built `bob.jar` using its full path from
+that directory. Restarting Bob in an existing working directory reloads its saved data rather than clearing it.
 
 ## Viewing help
 
@@ -239,7 +241,7 @@ order. No arguments are accepted.
 
 **Format:** `list-i`
 
-After the two additions above:
+This example assumes only the two `add-i` examples above have been run, leaving 15 Wire and 1 Oscilloscope.
 
 ```text
 list-i
@@ -499,7 +501,8 @@ required quantities. Use `list-s` to find its index.
 A preparation is a checklist for one session. It compares required totals against current inventory; it does not
 reserve or deduct stock. Items do not have to exist in inventory before they can be included in preparation.
 
-The examples in this section form a separate sequence. Start with a fresh application, enter your name, and run:
+The examples in this section form a separate sequence. Launch Bob from a new, empty working directory so earlier
+saved data is not loaded, enter your name, and run:
 
 ```text
 add-i n/Wire c/Components q/15
@@ -801,7 +804,8 @@ Adds a contact with a name and phone number, and optionally an email and a role 
 - Use `r/` to note why you would contact this person, for example what they repair or supply.
 - `PHONE` must contain digits only, with no length limit. Spaces, `+`, and `-` are not accepted, so write
   `6561234567` rather than `+65 6123 4567`.
-- `EMAIL` is only checked loosely: it must contain an `@` and no spaces. It is not checked against real addresses.
+- `EMAIL` is only checked loosely: it must have non-whitespace text on both sides of an `@`, with no whitespace
+  anywhere in the value. It is not checked against real addresses.
 - A value you include must not be blank. Leave the whole prefix out instead.
 - Duplicates are allowed. Adding the same name or number twice creates two separate contacts.
 - A word in a value that is a single letter followed by `/` (for example `a/b`) is read as a new prefix, so the
@@ -900,7 +904,7 @@ adding or deleting a supplier contact does not change a loan's borrower details.
 - Every successful command creates a separate record, including repeated loans to the same borrower.
 - Rejected commands leave inventory, loans, and supplier contacts unchanged.
 
-In a fresh application, enter:
+For this separate example, launch Bob from a new, empty working directory, enter your name, and run:
 
 ```text
 add-i n/Multimeter c/Equipment q/5
@@ -991,7 +995,7 @@ change supplier contacts, sessions, or other loans.
 - Restoration merges matching stock without regard to capitalization, or recreates missing items/categories,
   following the same inventory rules as correcting a loan.
 - Invalid indices or restoration exceeding 2,147,483,647 leave the loan and stock unchanged.
-- A removed loan cannot be returned or deleted again. Positions can refer to different loans after renumbering;
+- A closed loan cannot be returned or voided again. Positions can refer to different loans after renumbering;
   always check `list-l` before the next operation.
 - Returned records leave the active list immediately and remain in history as `RETURNED`.
 
@@ -1115,6 +1119,11 @@ retry saving. Closing or terminating the process while this warning remains can 
 Completed saves use temporary files and atomic replacement to avoid partially written main snapshots. This
 does not guarantee recovery from every disk or power failure. Back up the `data` directory separately if needed.
 
+Bob also reads version-1 saves from earlier releases. It converts their active loans into history records in
+memory; earlier returns and corrections cannot be recovered because version 1 did not retain them. Imported
+recording dates appear as `Unknown`. The next successful data-changing command saves the complete state in
+version 2. Viewing data and exiting without changes leave a valid version-1 main file unchanged.
+
 ## Broken-item tracking
 
 Record damaged inventory units, their faults, the date reported, and an optional maintenance contact.
@@ -1126,7 +1135,8 @@ Units on an active loan are also excluded from available stock. If a loan is ret
 record its full return with `return INDEX`, then report the damaged quantity with `add-b`.
 Partial loan returns are not supported.
 
-The examples below form a separate sequence. In a fresh application, enter your name, then run:
+The examples below form a separate sequence. Launch Bob from a new, empty working directory, enter your name,
+then run:
 
 ```text
 add-i n/Meter c/Equipment q/10
@@ -1301,8 +1311,9 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 
 ## Current limitations
 
-- Storage is local to one working directory and one running process. There is no cloud sync, automatic format
-  migration, or import/export command. Unsaved changes and the newest change after backup recovery can be lost.
+- Storage is local to one working directory and one running process. There is no cloud sync or import/export
+  command. Only version-1 and version-2 saves are supported. Unsaved changes and the newest change after backup
+  recovery can be lost.
 - `todo` and `done` are not supported commands. Use `help` for a list of commands and `Bye` to exit.
 - Inventory items and sessions cannot be edited in place. There is no command to top up an existing inventory item.
 - Preparation does not reserve inventory or combine requirements across sessions. Two sessions can each appear to
