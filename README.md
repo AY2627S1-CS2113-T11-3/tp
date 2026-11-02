@@ -10,7 +10,7 @@ exit choices, and the [storage contract](docs/StorageFormat.md) for the version-
 
 Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recent version.
 
-1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.google.com/search?q=https://www.jetbrains.com/help/idea/sdk.html%23set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
+1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
 2. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
 3. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/bob/Bob.java` file, right-click it, and choose `Run 'Bob.main()'`. If the setup is correct, you should see something like the below:
    ```text
@@ -47,7 +47,7 @@ Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recen
 
 * To run _I/O redirection_ tests (aka _Text UI tests_), build with `./gradlew check shadowJar`,
   then run `sh text-ui-test/runtest.sh`. On Windows, use `gradlew.bat check shadowJar`
-  and `text-ui-test\runtest.bat`. See [the test instructions](https://www.google.com/search?q=text-ui-test/README.md).
+  and `text-ui-test\runtest.bat`. See [the test instructions](text-ui-test/README.md).
 
 ### JUnit tests
 
