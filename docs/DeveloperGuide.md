@@ -26,8 +26,11 @@
   - [Broken-item tracking](#47-broken-item-tracking)
   - [Validation and error handling](#48-validation-and-error-handling)
 - [Documentation, logging, testing, and DevOps](#5-documentation-logging-testing-and-devops)
-- [Appendix: Requirements](#6-appendix-requirements)
-- [Appendix: Instructions for manual testing](#7-appendix-instructions-for-manual-testing)
+- [Appendix A: Product Scope](#appendix-a-product-scope)
+- [Appendix B: User Stories](#appendix-b-user-stories)
+- [Appendix C: Non-Functional Requirements](#appendix-c-non-functional-requirements)
+- [Appendix D: Glossary](#appendix-d-glossary)
+- [Appendix E: Instructions for Manual Testing](#appendix-e-instructions-for-manual-testing)
 
 ## 1. Acknowledgements
 
@@ -75,7 +78,7 @@ Bob prints a banner, asks for the user's name, and then accepts one command per 
 
 - Run the complete automated test and Checkstyle suite with `check`.
 - Run the text UI tests with `text-ui-test\runtest.bat` on Windows or `sh text-ui-test/runtest.sh` on macOS/Linux.
-- The feature-specific manual test cases are recorded in [`test/ui-test-plan.md`](../test/ui-test-plan.md).
+- The feature-specific manual test cases are recorded in [`test/ui-test-plan.md`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md).
 
 ## 3. Design
 
@@ -110,7 +113,7 @@ files themselves. The snapshot boundary allows a loaded dataset to be validated 
 
 ### 3.2. UI component
 
-The UI is implemented by [`Bob`](../src/main/java/seedu/bob/Bob.java) and [`Ui`](../src/main/java/seedu/bob/Ui.java).
+The UI is implemented by [`Bob`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Bob.java) and [`Ui`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Ui.java).
 
 - `Bob` displays the banner and greeting, reads input using `Scanner`, and separates command responses.
 - `Ui` renders loan and broken-item confirmations and listings and stores the divider and complete `help` message.
@@ -119,7 +122,7 @@ The UI is implemented by [`Bob`](../src/main/java/seedu/bob/Bob.java) and [`Ui`]
 
 ### 3.3. Logic component
 
-The logic component is implemented by [`Parser`](../src/main/java/seedu/bob/Parser.java).
+The logic component is implemented by [`Parser`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Parser.java).
 
 For every input line, `Parser`:
 
@@ -145,19 +148,19 @@ An `X` denotes object destruction, not the end of a method call. See the [diagra
 
 The model is composed of domain objects and managers:
 
-- [`Inventory`](../src/main/java/seedu/bob/Inventory.java) stores categories and `InventoryItem` objects.
-- [`SessionManager`](../src/main/java/seedu/bob/SessionManager.java) stores sessions in chronological order.
-- [`Session`](../src/main/java/seedu/bob/Session.java) validates dates, times, and scheduling conflicts.
-- [`Preparation`](../src/main/java/seedu/bob/Preparation.java) stores per-session requirements through `PreparationItem`.
-- [`ContactManager`](../src/main/java/seedu/bob/ContactManager.java) stores contacts.
-- [`RequestManager`](../src/main/java/seedu/bob/RequestManager.java) stores deadline-sorted student requests.
-- [`Request`](../src/main/java/seedu/bob/Request.java) validates request details and holds the fulfillment status.
-- [`BrokenItemManager`](../src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
+- [`Inventory`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Inventory.java) stores categories and `InventoryItem` objects.
+- [`SessionManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/SessionManager.java) stores sessions in chronological order.
+- [`Session`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Session.java) validates dates, times, and scheduling conflicts.
+- [`Preparation`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Preparation.java) stores per-session requirements through `PreparationItem`.
+- [`ContactManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/ContactManager.java) stores contacts.
+- [`RequestManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/RequestManager.java) stores deadline-sorted student requests.
+- [`Request`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Request.java) validates request details and holds the fulfillment status.
+- [`BrokenItemManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
   and maintenance-contact availability.
-- [`BrokenItem`](../src/main/java/seedu/bob/BrokenItem.java) holds immutable validated damage-report details.
-- [`LoanManager`](../src/main/java/seedu/bob/LoanManager.java) retains all loan records and exposes active-only views using the shared inventory.
-- [`Loan`](../src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
-- [`LoanRecord`](../src/main/java/seedu/bob/LoanRecord.java) retains a permanent ID, lifecycle status, and recording/closure timestamps.
+- [`BrokenItem`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/BrokenItem.java) holds immutable validated damage-report details.
+- [`LoanManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/LoanManager.java) retains all loan records and exposes active-only views using the shared inventory.
+- [`Loan`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Loan.java) stores an independent item snapshot, quantity, borrower values, and due date.
+- [`LoanRecord`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/LoanRecord.java) retains a permanent ID, lifecycle status, and recording/closure timestamps.
 - `LoanAdditionResult` and `LoanListEntry` carry immutable operation/query results to the loan UI.
 - `AppState` groups the managers, exports snapshots, and restores complete independent model state.
 - `AppSnapshot` and its nested records describe version-2 storage values without retaining mutable model references.
@@ -229,7 +232,7 @@ return a nonzero code. Read-only, rejected, and unchanged commands do not write 
 `AppStateTest`, `StorageTest`, `BobStartupTest`, and `BobPersistenceTest` cover complete round trips, historical
 dates, statuses, ordering, independence, strict JSON, stock restoration, backup recovery, failed atomic moves,
 unchanged-file checks, every mutation type, and failed-save exit choices. File-writing tests use JUnit temporary
-directories. The `UI-PERSIST-*` cases in the [UI test plan](../test/ui-test-plan.md) test the packaged executable,
+directories. The `UI-PERSIST-*` cases in the [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) test the packaged executable,
 including fresh-process restarts and injected filesystem failures, with chronological phase transcripts.
 
 #### 3.5.1. Automatic saving
@@ -391,7 +394,7 @@ errors; input validation still operates when assertions are disabled. Addition a
 
 `InventoryTest` covers successful addition, null input, case-insensitive duplicates, unchanged stock after duplicate
 rejection, and identical names in different categories. `InventoryItemTest` covers constructor validation, while
-`InventoryLoggingTest` checks diagnostic records. The [UI test plan](../test/ui-test-plan.md) records malformed-prefix,
+`InventoryLoggingTest` checks diagnostic records. The [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) records malformed-prefix,
 blank-field, and invalid-quantity cases. These references describe existing checks; run the tests after changing
 the implementation rather than assuming the documentation proves correctness.
 
@@ -765,7 +768,7 @@ are disabled.
 `PreparationTest` covers headcount multiplication, case-insensitive merging, partial and full removal, invalid input,
 and overflow. `ParserPreparationTest` covers category-specific shortages, recalculation after stock changes, and malformed or invalid
 commands leaving state unchanged. Console
-scenarios are recorded as `UI-PREP-*` in the [UI test plan](../test/ui-test-plan.md).
+scenarios are recorded as `UI-PREP-*` in the [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md).
 
 #### 4.3.8. Preparation limitations
 
@@ -800,7 +803,7 @@ The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules
 | Empty list | `list-c` shows `No contacts saved.` | Matches `list-s`, which shows `No sessions scheduled.` |
 
 Known limitation: prefixes are detected by a shared pattern (a single letter followed by `/` at the start of a
-word), so a value containing a word such as `a/b` cannot be entered. This affects every command, not only contacts.
+word), so a value containing a word such as `a/b` cannot be entered. This affects commands with prefixed arguments, including contacts; `find-i` accepts plain search text.
 
 ### 4.5. Loan tracking
 
@@ -1073,7 +1076,7 @@ sections below describe the shared failure boundary and diagnostic configuration
 results, full returns, corrections, replenished stock, and overflow preservation. `LoanOverdueTest` covers date boundaries,
 timezones, midnight rollover, one clock read per query, and filtered indices. `ParserLoanTest` and `LoanUiTest` cover
 command handling and rendered results. Additional assertion, logging, and inventory-validation tests cover defensive
-checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](../test/ui-test-plan.md).
+checks. Console scenarios are recorded as `UI-LOAN-*` in the [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md).
 
 #### 4.5.9. Loan tracking limitations
 
@@ -1246,7 +1249,7 @@ implementation that could lose closed records on exit. At each implementation ph
 follow the SE-EDU Java coding standard, run Java 25 unit tests and Checkstyle through `check`, and use the `test-ui`
 skill for the relevant recorded console cases before proceeding. Stop UI execution at the first mismatch, preserve
 expected outputs, and record the chronological result. Use fixed clocks for timestamps and temporary directories
-for file-writing tests. The [UI test plan](../test/ui-test-plan.md) contains the reusable loan-history cases
+for file-writing tests. The [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) contains the reusable loan-history cases
 and expected outputs for these verification steps.
 
 ### 4.6. Student request tracking
@@ -1342,23 +1345,12 @@ Request list updated. Run list-r to see the latest order.
 The following sequence summarizes a successful addition after command dispatch. Prefix extraction, assertions,
 logging, and console rendering are condensed into descriptive steps.
 
-```mermaid
-sequenceDiagram
-    participant P as parser:Parser
-    participant R as request:Request
-    participant M as requestManager:RequestManager
-    P->>P: Validate prefixes, extract values, parse quantity
-    P->>R: Construct with student, item, quantity, deadline
-    activate R
-    R->>R: Validate fields and deadline against clock
-    R-->>P: Validated request, status pending
-    deactivate R
-    P->>M: addRequest(request)
-    activate M
-    M->>M: Append and sort requests
-    M-->>P: Print confirmation and refresh reminder
-    deactivate M
-```
+![Successful request addition sequence diagram](images/request-add-sequence.png)
+
+*Figure R1: Successful request addition. Construction validates the request before the manager appends and sorts it.
+The manager retains the request after the call returns; routine getters, assertions, logging, and output are omitted.*
+
+Editable source: [request addition sequence](diagrams/request-add-sequence.puml).
 
 Addition succeeds even if no Wire exists. A request can be recorded while stock is short, but fulfillment checks the
 total before changing anything. `getTotalAvailableQuantity` matches the complete item name ignoring case across all
@@ -1426,7 +1418,7 @@ changes emit `FINE` diagnostics without changing normal console output.
 comparison ordering, and status changes. `RequestManagerTest` covers sorting, tie-breakers, null input, indices,
 availability display, fulfillment deductions, insufficient stock, and one-way status changes. `ParserRequestTest`
 covers command formats, rejected inputs, confirmations, ordering, live stock checks, and failed fulfillment.
-`RequestLoggingTest` verifies request diagnostics; the [UI test plan](../test/ui-test-plan.md) records console cases.
+`RequestLoggingTest` verifies request diagnostics; the [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) records console cases.
 
 Requests persist across application restarts. They have no persistent identifiers: adding or deleting a request can change the
 indices used by `delete-r` and `mark-r`, so users must refresh `list-r`. Requests cannot be edited in place and are
@@ -1547,8 +1539,8 @@ Use `java -ea -jar build/libs/bob.jar` for debugging; Gradle tests enable assert
 ## 5. Documentation, logging, testing, and DevOps
 
 - [User Guide](UserGuide.md) — user-facing command formats, examples, and limitations.
-- [UI test plan](../test/ui-test-plan.md) — command-by-command manual and console test cases.
-- [README](../README.md) — setup, Gradle, testing, and Checkstyle instructions.
+- [UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) — command-by-command manual and console test cases.
+- [README](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/README.md) — setup, Gradle, testing, and Checkstyle instructions.
 
 The project uses Gradle and the Gradle wrapper for reproducible builds. Java code follows the SE-EDU Java coding standard,
 and `check` runs compilation, automated tests, and Checkstyle. Changes should be developed on a feature branch and
@@ -1583,11 +1575,9 @@ java -ea -Djava.util.logging.config.file=build/loan-debug-logging.properties -ja
 Normal launches need no logging configuration. Logging tests capture records directly and restore shared logger settings
 after each test. The UI regression plan is checked both normally and with assertions enabled.
 
-## 6. Appendix: Requirements
+## Appendix A: Product Scope
 
-### 6.1. Product scope
-
-#### 6.1.1. Target users
+### Target users
 
 Bob targets lab technicians or teaching assistants who:
 
@@ -1595,27 +1585,30 @@ Bob targets lab technicians or teaching assistants who:
 - schedule laboratory sessions at different locations and times; and
 - need a quick command-line workflow without a database or graphical interface.
 
-#### 6.1.2. Value proposition
+### Value proposition
 
-Bob combines inventory tracking, session scheduling, preparation checks, supplier contacts, and student loan tracking in
-one lightweight command-line application. It highlights preparation shortages and updates availability when stock is
-loaned or returned.
+Bob combines inventory tracking and lookup, session scheduling, preparation checks, supplier contacts, student requests,
+loans, and broken-item reports in one lightweight command-line application. It highlights shortages and updates
+availability when stock is fulfilled, loaned, returned, reported broken, or restored.
 
-### 6.2. User stories
+## Appendix B: User Stories
 
 | Priority | As a... | I want to... | So that I can... |
 |---|---|---|---|
 | High | lab technician | add, remove, and list inventory | know what equipment is available |
 | High | lab technician | schedule and delete lab sessions | avoid conflicting bookings |
 | High | lab technician | prepare materials for a session | identify shortages before the session |
+| High | lab technician | find an item across inventory and active loans | see whether it is available or fully loaned |
 | High | lab technician | record and return loans | track borrowed resources and restore stock |
+| Medium | lab technician | track student requests and their status | prepare and fulfil requests by their deadlines |
+| Medium | lab technician | record and clear broken-item reports | separate damaged units from usable stock |
 | Medium | lab technician | save supplier and repair contacts | find relevant people quickly |
 | Medium | lab technician | filter overdue loans | follow up on late returns |
 | Low | project maintainer | persist data between launches | retain records after restarting Bob |
 
-### 6.3. Use cases
+### Use cases
 
-#### 6.3.1. Use case: Prepare a lab session
+#### Use case: Prepare a lab session
 
 **Actor:** Lab technician
 
@@ -1637,7 +1630,7 @@ Use case ends.
   - **4a1.** System marks the item insufficient and displays the shortfall.
   - Use case resumes at step 5.
 
-#### 6.3.2. Use case: Record and return a loan
+#### Use case: Record and return a loan
 
 **Actor:** Lab technician
 
@@ -1659,7 +1652,7 @@ Use case ends.
 - **3a.** Restoring stock would overflow the integer range.
   - **3a1.** System rejects the return and keeps the loan active.
 
-### 6.4. Non-functional requirements
+## Appendix C: Non-Functional Requirements
 
 1. The application should run with JDK 25 on Windows, macOS, and Linux.
 2. Normal commands should complete interactively without noticeable delay for the expected small, in-memory data set.
@@ -1669,53 +1662,222 @@ Use case ends.
 6. Completed snapshots must survive restarting from the same working directory. Multi-user access, encryption,
    unsaved-change recovery, and guarantees against every power or disk failure are outside the storage contract.
 
-### 6.5. Glossary
+## Appendix D: Glossary
 
 - **Inventory item** — A named resource stored under a category with a positive quantity.
 - **Session** — A scheduled lab event with a date, location, time range, and headcount.
 - **Preparation** — The total material requirement for one session.
+- **Request** — A student's requested item and quantity, its deadline, and its pending, prepared, or fulfilled status.
 - **Loan** — Immutable details of lent units and a borrower; a `LoanRecord` tracks its active or closed status.
+- **Broken-item report** — A record of damaged units that are excluded from usable inventory until the report is deleted.
 - **Backlog loan** — A loan added with a due date before today.
 - **Overdue** — A loan whose due date is strictly before the current local date.
 - **Prefix** — The one-letter marker such as `n/` or `q/` that introduces a command argument.
 
-## 7. Appendix: Instructions for manual testing
+## Appendix E: Instructions for Manual Testing
 
-These instructions supplement the detailed cases in [`test/ui-test-plan.md`](../test/ui-test-plan.md). Start each
-independent scenario with a fresh process and an empty temporary working directory. For restart scenarios, keep
-that scenario's directory between processes. Never run destructive fixture setup against a user's data directory.
+These scenarios complement the [User Guide](UserGuide.md). They cover normal workflows and selected failures;
+use the [detailed UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md)
+for exact command responses and further variations. All dates below assume the computer's date is between
+1 January 2020 and 31 December 2099.
 
-### 7.1. Launch and shutdown
+Build with Java 25 using `.\gradlew.bat check shadowJar` on Windows or `./gradlew check shadowJar` on macOS/Linux.
+For **each independent scenario**, create a new empty working directory and launch Bob using the absolute path to
+`build/libs/bob.jar`, or to the downloaded release JAR. For example, use `java -jar "C:\path\to\bob.jar"` on Windows
+or `java -jar "/path/to/bob.jar"` on macOS/Linux, replacing the example path. A relative `build/libs/bob.jar` path
+will not work from an unrelated temporary directory. Enter `Alex` when prompted. Keep the same working directory
+for a scenario's restart steps. Use only disposable data for the recovery and save-failure scenarios.
 
-1. Build with `gradlew.bat check shadowJar` on Windows or `./gradlew check shadowJar` on macOS/Linux.
-2. Launch with `java -jar build/libs/bob.jar`.
-3. Verify that Bob prints the banner and asks for a name.
-4. Enter a name and verify that the welcome message and divider appear.
-5. Enter `help` and verify that all command groups are displayed.
-6. Enter `Bye`, `bye`, or `BYE` and verify that the application exits cleanly.
+### Launch, help, and shutdown
 
-### 7.2. Inventory and preparation
+1. Verify that Bob prints its banner and asks for a name, then greets `Alex` with a divider.
+2. Enter `help`. Verify that inventory, sessions, preparation, requests, contacts, loans, broken items, and exit
+   commands are present. Enter `help extra`; verify that the format error leaves the application running.
+3. Enter `Bye` and verify clean exit. Repeat in fresh processes using `bye` and `BYE`.
 
-1. Add an item with `add-i` and confirm it with `list-i`.
-2. Add a session with a future date using `add-s`, then add a requirement using `add-p`.
-3. Use `list-p` to verify required quantity, available quantity, and shortage markers.
-4. Use `delete-p` and verify that only the preparation changes, not inventory.
-5. Test invalid quantities, indices, missing prefixes, duplicate inventory items, and conflicting sessions.
+### Inventory, sessions, and preparation
 
-### 7.3. Contacts and loans
+In a fresh scenario, enter:
 
-1. Add contacts with required fields and with optional email or role fields.
-2. Use `list-c`, then delete a contact using its displayed index.
-3. Add enough inventory for a loan and execute `add-l`.
-4. Verify that `list-i` shows reduced stock and `list-l` shows the active loan.
-5. Add a past-due loan and verify the warning and `[OVERDUE]` marker.
-6. Use `list-l overdue` and verify that displayed indices still refer to the full active-loan list.
-7. Execute `return INDEX` and verify that stock is restored, the loan leaves the active list, and history shows `RETURNED`.
-8. Test insufficient stock, invalid dates, invalid borrower phone numbers, invalid indices, and restoration overflow.
+```text
+add-i n/Wire c/Components q/15
+add-s n/Practice Lab d/31 December 2099 l/Room-A s/0900 e/1000 p/10
+add-p s/1 i/Wire c/Components q/2
+list-i
+list-s
+list-p s/1
+```
 
-### 7.4. Automated and UI verification
+Verify 15 Wire, one scheduled session, and 20 required Wire with a shortfall of 5. Then enter:
 
-1. Run `gradlew.bat check` or `./gradlew check` and confirm that compilation, tests, and Checkstyle pass.
-2. Run the platform-specific text UI test script.
-3. For each case in `test/ui-test-plan.md`, compare actual output with the expected output exactly, including dividers,
-   spacing, capitalization, warnings, and blank lines.
+```text
+delete-p s/1 i/1 q/5
+list-p s/1
+delete-i c/Components i/1 q/1
+list-p s/1
+delete-s 1
+list-s
+list-p s/1
+delete-i c/Components i/1 q/14
+list-i
+```
+
+Removing five preparation units leaves 15 required without changing stock. Removing one inventory unit then
+leaves 14 available and a shortfall of 1. Deleting the session removes its preparation, so `list-s` is empty and
+`list-p s/1` reports an invalid session. Removing the remaining stock leaves inventory empty.
+Also test zero/non-numeric quantities, missing prefixes, duplicate items, invalid indices, and overlapping
+sessions at the same location; rejected commands must leave the relevant records unchanged.
+
+### Finding inventory items
+
+In a fresh scenario, enter:
+
+```text
+add-i n/Wire c/Components q/5
+add-i n/Jumper Wire c/Spares q/3
+find-i wire
+find-i COMPONENTS
+add-l n/Wire c/Components q/5 b/Alex Tan t/91234567 d/31 December 2099
+find-i wire
+find-i missing
+find-i
+```
+
+The first search finds both items; the category search finds only Wire. After lending all five Wire, the search
+still shows it with zero available, five on loan, and `All on loan`. The last two commands produce no-match and
+missing-keyword messages, respectively. Search-result numbers must not be used as inventory or loan action indices.
+
+### Student requests
+
+In a fresh scenario, enter:
+
+```text
+add-i n/Wire c/Components q/15
+add-r n/Alice i/Wire q/20 d/31 December 2099
+list-r
+mark-r 1 prepared
+mark-r 1 fulfilled
+list-r
+add-i n/Wire c/Spares q/5
+mark-r 1 fulfilled
+list-r
+list-i
+mark-r 1 fulfilled
+mark-r 1 prepared
+delete-r 1
+list-r
+list-i
+```
+
+The request begins `Pending` with 15 available and a shortfall of 5. Preparation changes status without deducting
+stock. The first fulfillment fails and preserves `Prepared` and all 15 units. After adding the other category,
+fulfillment deducts all 20 units and displays `Fulfilled` without a shortage warning. Both subsequent marking
+attempts fail. Deleting the request leaves both lists empty and does not restore stock.
+In a separate scenario, add requests with different deadlines and verify deadline order and renumbering after
+deletion. Test malformed/past deadlines, blank names, bad quantities, invalid indices, and unsupported statuses.
+
+### Broken-item tracking
+
+In a fresh scenario, enter:
+
+```text
+add-i n/Meter c/Equipment q/10
+add-c n/Lab Maintenance t/61234567
+add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020 m/1
+list-b
+list-i
+find-i meter
+delete-c 1
+list-b
+delete-b 1
+list-b
+list-i
+```
+
+The report initially shows its maintenance contact, fault, and date. Inventory and search show eight usable units;
+broken units are excluded. Deleting the contact changes the report's contact to `Unavailable (contact deleted)`.
+Deleting the report removes it and restores stock to 10 even though its contact was deleted. This operation
+represents full repair or correction, so do not use it for partial repairs or disposal.
+Test excessive quantities, unknown items/categories, blank faults, future dates, invalid contacts, and invalid report
+indices. Rejections must not change stock or reports.
+
+### Contacts, active loans, overdue loans, and history
+
+In a fresh scenario, enter:
+
+```text
+add-c n/Lab Maintenance t/61234567
+add-c n/Component Supplier t/91234567 e/supplier@example.com r/Wires
+list-c
+delete-c 1
+list-c
+add-i n/Multimeter c/Equipment q/5
+add-l n/Multimeter c/Equipment q/2 b/Alex Tan t/91234567 d/31 December 2099
+add-l n/Multimeter c/Equipment q/1 b/Sam Lee t/92345678 d/1 January 2000
+list-i
+list-l
+list-l overdue
+return 1
+list-l
+delete-l 1
+list-i
+list-l
+list-l history
+list-l returned
+```
+
+Contacts are renumbered after deletion. Creating loans does not create supplier contacts. Stock falls to two.
+The second loan produces an overdue warning and is row `2.` in the overdue filter. Returning the first loan
+restores two units and renumbers the remaining active loan to 1. Correcting that remaining loan restores one
+more unit, leaving five in stock and no active loans. History retains loan ID 1 as `RETURNED` and ID 2 as `VOIDED`;
+the returned-only view contains ID 1 alone. Verify that listing either view does not restore stock again.
+Test invalid phones/dates/indices, insufficient stock, unsupported filters, extra return arguments, and a restoration
+that would exceed 2,147,483,647; rejected operations must preserve the active loan and stock.
+
+### Automatic saving and restart
+
+In a fresh scenario, enter:
+
+```text
+add-i n/Wire c/Components q/10
+add-r n/Alice i/Wire q/3 d/31 December 2099
+mark-r 1 fulfilled
+add-l n/Wire c/Components q/2 b/Alex Tan t/91234567 d/31 December 2099
+Bye
+```
+
+Verify that `data/bob.json` exists in that scenario's working directory. Restart from **the same directory** and
+enter `list-i`, `list-r`, `list-l`, and `list-l history` on separate lines. Expect five Wire available, one fulfilled
+request, and active loan ID 1 for two Wire. Loading must not deduct the quantities again. Enter `return 1` and `Bye`,
+restart again, and verify seven available Wire, no active loans, and ID 1 retained as `RETURNED` in both history views.
+The detailed `UI-PERSIST-*` and `UI-HISTORY-*` cases cover the other record types and version-1 migration.
+
+### Backup recovery and unusable saved data
+
+1. In a disposable scenario, add one inventory entry, then add a second entry. Exit successfully. Keep a separate
+   copy of the entire `data` folder. The main save now contains both entries; the backup contains the first only.
+2. Replace the main `data/bob.json` contents with invalid JSON, leaving the backup untouched. Restart, enter your
+   name, and verify `Recovered data from backup. It may not include the latest changes.` and only the first entry.
+3. Enter `Bye` and restart again. Verify that the repaired main loads without the recovery message and that the
+   original backup was not overwritten with corrupt data.
+4. In another disposable directory, place invalid JSON in both main and backup files. Verify that startup stops
+   before the name prompt, preserves both files, and accepts no commands. Also test an unsupported schema version:
+   startup must refuse it even if an older valid backup exists.
+
+### Failed saves and exit choices
+
+Use the isolated filesystem fixtures and exact steps in
+[`UI-PERSIST-SAVE-FAIL-001` through `004`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md#ui-persist-save-fail-001-keep-unsaved-data-visible-and-allow-cancel-or-explicit-exit).
+Those fixtures make the save path unwritable without changing permissions on a real data directory.
+
+Verify that a save failure leaves the in-memory change visible and prints a warning. On `Bye`, `cancel` must
+return to the command loop with that change intact. After correcting the fixture, `retry` must save successfully
+and exit. In a separate failed-save run, `exit` must discard only unsaved changes and return a nonzero exit code.
+If input ends while saving still fails, Bob must exit with a nonzero code without hanging at a prompt.
+
+### Automated verification
+
+Run `.\gradlew.bat check` or `./gradlew check`, then the platform's `text-ui-test` script. The
+[UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) supplies exact expected
+responses and a command-by-command runner. Compare dividers, spacing, capitalization, warnings, and blank lines;
+stop at the first mismatch. Passing automated checks complements these manual workflows.

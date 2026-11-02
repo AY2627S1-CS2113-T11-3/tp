@@ -2,13 +2,12 @@
 
 Bob is a command-line application for lab technicians to manage inventory, schedule lab sessions, prepare materials
 for each session, track student requests, keep contacts, track resources loaned to students, and record broken items.
-Preparation uses the
-session's headcount to calculate required quantities and compare them with the inventory. Requests are sorted by
-deadline and show whether the requested quantity is currently in inventory.
+Preparation uses the session's headcount to calculate required quantities and compare them with the inventory.
+Requests are sorted by deadline and show whether the requested quantity is currently in inventory.
 
 **Bob saves changes automatically** to `data/bob.json` in the directory from which you launch it. Restarting
-from that same directory restores inventory, sessions, preparations, requests, contacts, active and closed loan records, and
-broken-item reports.
+from that same directory restores inventory, sessions, preparations, requests, contacts, active and closed loan
+records, and broken-item reports.
 
 ## Contents
 
@@ -22,6 +21,7 @@ broken-item reports.
 - [Contact management](#contact-management)
 - [Loan tracking](#loan-tracking)
   - [View loan history](#view-loan-history-list-l-history)
+  - [View returned loans](#view-returned-loans-list-l-returned)
 - [Saving and restoring data](#saving-and-restoring-data)
 - [Broken-item tracking](#broken-item-tracking)
 - [Exiting Bob](#exiting-bob)
@@ -32,27 +32,17 @@ broken-item reports.
 
 ## Quick start
 
-1. Install a Java 25 JDK and open a terminal in the project root, the folder containing `build.gradle`.
-2. Run `java --version` and check that it reports Java 25. On macOS with SDKMAN and the project's JDK installed,
-   select it with `sdk use java 25.0.3.fx-zulu`.
-3. Build and launch Bob using the commands for your platform below. The first build needs an internet connection
-   to download build dependencies.
+1. Install a Java 25 JDK.
+2. Download the JAR from the team's [latest release](https://github.com/AY2627S1-CS2113-T11-3/tp/releases/latest).
+   Put it in a folder where you want to keep Bob's records. Rename the downloaded file to `bob.jar` so that the
+   commands below work exactly as written. You do not need the source code or Gradle to run this JAR.
+3. Open a terminal in that folder. Run `java --version` and check that it reports Java 25, then launch Bob:
 
-   **macOS / Linux**
-
-   ```bash
-   ./gradlew shadowJar
-   java -jar build/libs/bob.jar
+   ```text
+   java -jar bob.jar
    ```
 
-   **Windows PowerShell**
-
-   ```powershell
-   .\gradlew.bat shadowJar
-   java -jar build/libs/bob.jar
-   ```
-
-   The application is named Bob, and the build produces a file named `bob.jar`.
+   Use this command on Windows, macOS, or Linux. Keep using the same working directory to restore saved records.
 
 4. Bob displays a banner and asks `What is your name?`. Enter your name, for example `Alex`, and press Enter.
    Bob responds:
@@ -62,7 +52,9 @@ broken-item reports.
    --------------------------------------------------------------------
    ```
 
-5. Enter one command at a time. You can try this sequence in a fresh application:
+5. Enter one command at a time. This sequence assumes empty inventory and no scheduled sessions. To try it
+   without affecting saved records, exit Bob and relaunch it from a new, empty working directory using the full
+   path to the JAR. Enter your name, then try these commands:
 
    ```text
    add-i n/Wire c/Components q/15
@@ -74,8 +66,14 @@ broken-item reports.
    The example date is deliberately in the future. Replace it with your session date, which must be today or later.
    Ten attendees needing two wires each require 20 wires. With only 15 in inventory, Bob reports a shortfall of 5.
 
-6. Enter `Bye` to exit. To start again, run `java -jar build/libs/bob.jar`. Rebuild with `shadowJar` after changing
-   the source code. Launch from the same directory to restore your saved records. The first launch starts empty.
+6. Enter `Bye` to exit. To start again, use the same `java -jar` command and launch from the same working directory
+   to restore your saved records. The first launch in a directory with no saved files starts empty.
+
+**Building from source (optional):** Clone or download the
+[repository](https://github.com/AY2627S1-CS2113-T11-3/tp), open a terminal in its root folder, and use Java 25.
+Run `./gradlew shadowJar` on macOS/Linux or `.\gradlew.bat shadowJar` in Windows PowerShell, then launch with
+`java -jar build/libs/bob.jar`. The first build needs internet access to download dependencies. Rebuild after
+changing source code. See the [Developer Guide](DeveloperGuide.md#2-setting-up-and-getting-started) for setup details.
 
 ## Command format
 
@@ -85,7 +83,8 @@ broken-item reports.
 - Square brackets around a parameter mean it is optional. Do not type the brackets.
 - Commands and prefixes are case-sensitive: use `add-i`, not `ADD-I`, and `n/`, not `N/`.
   The exit command is an exception: `Bye`, `bye`, and `BYE` all work.
-- Supply prefixes in the exact order shown. Missing, repeated, reordered, or unexpected prefixes are rejected.
+- For commands with prefixed arguments, supply prefixes in the exact order shown. Missing, repeated, reordered,
+  or unexpected prefixes are rejected. `find-i` takes plain search text, without argument prefixes.
 - Names, categories, and locations can contain spaces. For example, use `i/Red LED c/Lab Components` without quotes.
   Quotes are not treated as an escape mechanism. Avoid prefix-like tokens such as `q/` inside a value because Bob
   interprets them as arguments.
@@ -93,7 +92,9 @@ broken-item reports.
   also ignores capitalization. Month names in dates must use the capitalization shown below.
 - Indices are positive, one-based positions in the displayed lists. Inventory item indices restart at 1 in each
   category; preparation item indices belong to the selected session. Request indices follow the deadline-sorted
-  `list-r` display. Use the latest list after deleting an entry.
+  `list-r` display. Loan actions use active-list indices, while history displays permanent loan IDs. Use the latest
+  list after adding or deleting entries, lending units, reporting broken units, or fulfilling requests; these actions
+  can change the positions of existing entries.
 - Quantities, indices, and headcounts must be positive integers no greater than 2,147,483,647. Do not include commas
   or decimal points when entering numbers. Calculated preparation totals must also fit within this limit.
 - `q/` has different meanings: inventory units for inventory commands, units **per attendee** for `add-p`,
@@ -101,6 +102,7 @@ broken-item reports.
   and broken units for `add-b`.
 
 The examples below show command responses without the extra blank line Bob prints after each command.
+Diagnostic logging lines, such as `INFO:`, may also appear in the terminal and are omitted from these examples.
 When an example calls for a new, empty working directory, launch the built `bob.jar` using its full path from
 that directory. Restarting Bob in an existing working directory reloads its saved data rather than clearing it.
 
@@ -281,7 +283,10 @@ Use this command to check availability without scanning the whole `list-i`.
     - `Available`: at least one unit is in stock.
     - `All on loan`: no units are available, but active loans exist. This label describes the stock and loan
       records searched here; additional broken units may exist in `list-b`.
-- Items with the same name in different categories are shown as separate results.
+- Items with the same name in different categories are shown as separate results. Results follow inventory order,
+  followed by matching items that exist only on active loans, in loan order. Search-result row numbers are not
+  inventory or loan action indices; use `list-i` or `list-l` before removing stock or closing a loan.
+- The displayed on-loan total is capped at 2,147,483,647 if the combined active-loan quantity exceeds that limit.
 - Searching does not change inventory or loans.
 
 With 15 Wire in Components and 1 Oscilloscope in Equipment, enter:
@@ -661,8 +666,9 @@ are accepted.
 
 **Format:** `list-r`
 
-Rows show `Available: N`, where `N` is the total stock for the item name across all categories. If `N` is less than
-the requested quantity, Bob also shows the shortfall.
+Rows show `Available: N`, where `N` is the current total stock for the item name across all categories, capped
+at 2,147,483,647. Pending and prepared requests show a shortfall when `N` is less than the requested quantity.
+Fulfilled requests show current availability without a shortage warning, because their handover is complete.
 
 ```text
 list-r
@@ -805,7 +811,7 @@ Adds a contact with a name and phone number, and optionally an email and a role 
 - `PHONE` must contain digits only, with no length limit. Spaces, `+`, and `-` are not accepted, so write
   `6561234567` rather than `+65 6123 4567`.
 - `EMAIL` is only checked loosely: it must have non-whitespace text on both sides of an `@`, with no whitespace
-  anywhere in the value. It is not checked against real addresses.
+  anywhere in the value. It is not checked against real addresses, and a domain suffix such as `.com` is not required.
 - A value you include must not be blank. Leave the whole prefix out instead.
 - Duplicates are allowed. Adding the same name or number twice creates two separate contacts.
 - A word in a value that is a single letter followed by `/` (for example `a/b`) is read as a new prefix, so the
@@ -917,11 +923,16 @@ The loan command prints:
 Successfully added loan: 2x Multimeter [Equipment] to Alex Tan (91234567), due 30 October 2099
 ```
 
-There are now 3 Multimeters available in inventory.
+There are now 3 Multimeters available in inventory. The deletion and return examples below are alternatives:
+if you try both, add the loan again before the second operation. Each new addition receives a new permanent ID.
 
 ### List active loans: `list-l`
 
 **Format:** `list-l`
+
+```text
+list-l
+```
 
 Displays loans in insertion order with one-based indices. Overdue loans have an `[OVERDUE]` marker.
 Listing loans does not change inventory. A loan due today is not overdue.
@@ -964,7 +975,7 @@ entry uses the loan's spelling and is appended to its category or the inventory 
 Preparation availability reflects the restored stock when next displayed. Supplier contacts and other
 loans are unaffected. An invalid index leaves everything unchanged.
 
-If re-added stock makes restoration exceed 2,147,483,647 units, Bob rejects the deletion and retains both
+If available stock plus the loan quantity would exceed 2,147,483,647 units, Bob rejects the deletion and retains both
 the loan and stock unchanged. Check the inventory quantities before retrying the correction.
 
 ### Record a full return: `return`
@@ -1063,8 +1074,8 @@ Loan IDs are permanent. Use list-l for active indices.
 ```
 
 **A loan ID is not an active-list index.** Continue using the latest `list-l` or `list-l overdue` indices for
-`return INDEX` and `delete-l INDEX`. IDs are not recycled when records close, even after the active list becomes empty. Repeated loans
-with identical details remain separate records. Closed records cannot be returned or voided again.
+`return INDEX` and `delete-l INDEX`. IDs are not recycled when records close, even after the active list becomes
+empty. Repeated loans with identical details remain separate records. Closed records cannot be returned or voided again.
 
 An empty history displays `No loan records.`. An empty returned-only view displays `No returned loans.`.
 Backup recovery restores an earlier ledger and its ID counter; changes lost after that backup may include loan IDs.
@@ -1076,6 +1087,30 @@ original recording times were not saved. Their original item, borrower, due date
 Earlier returned/deleted loans cannot be recovered automatically. The next successful change saves the upgraded
 format; keep using the updated Bob build after that upgrade.
 
+### View returned loans: `list-l returned`
+
+**Format:** `list-l returned`
+
+Shows only genuine full returns, in the order the loans were originally recorded. Active loans and incorrect
+entries closed using `delete-l` are excluded. Rows use the same permanent IDs, original details, and date fields
+as `list-l history`, under the heading `Returned loans`. The list is not sorted by return date.
+
+```text
+list-l returned
+```
+
+When no loans have been returned, the output is:
+
+```text
+--------------------------------------------------------------------
+Returned loans
+--------------------------------------------------------------------
+No returned loans.
+--------------------------------------------------------------------
+```
+
+This is a read-only view. It does not restore stock again, renumber loan IDs, or save the data file.
+
 ## Saving and restoring data
 
 Bob saves automatically after each command that changes data. There is no separate save command. Listing data,
@@ -1083,10 +1118,10 @@ viewing help, rejected commands, and marking a request with its existing status 
 An ordinary command's response is complete when its following blank line appears.
 
 The save contains inventory, sessions and their preparation lists, requests and statuses, contacts, complete
-loan history and its next-ID counter, and broken-item reports with their contact links. Historical sessions and requests remain available when their dates pass. Overdue markers and stock
-shortages are recalculated when displayed. Preparation and pending/prepared requests do not reserve stock.
-Fulfilling a request deducts stock once;
-loading a fulfilled request does not deduct it again.
+loan history and its next-ID counter, and broken-item reports with their contact links. Historical sessions and
+requests remain available when their dates pass. Overdue markers and stock shortages are recalculated when
+displayed. Preparation and pending/prepared requests do not reserve stock. Fulfilling a request deducts stock
+once; loading a fulfilled request does not deduct it again.
 
 The files are relative to your terminal's working directory, not the location of `bob.jar`:
 
@@ -1306,8 +1341,9 @@ These are examples of the current messages:
 | Unknown broken-item index | `Broken-item index 2 is invalid. There are 1 broken-item report(s).` | Run `list-b` and use its current index. |
 | Missing index or extra deletion arguments | `Invalid format. Use: delete-b INDEX` | Supply exactly one index, for example `delete-b 1`. |
 
-If the JAR cannot be found, run `shadowJar` from the project root and use the exact filename
-`build/libs/bob.jar`. If you changed the code but still see old behavior, rebuild and restart Bob.
+If the JAR cannot be found, check the terminal's working directory and the downloaded filename. The quick-start
+command assumes you renamed the download to `bob.jar`. For a source build, run `shadowJar` from the project root
+and use `build/libs/bob.jar`. If you changed source code but still see old behavior, rebuild and restart Bob.
 
 ## Current limitations
 
@@ -1325,6 +1361,8 @@ If the JAR cannot be found, run `shadowJar` from the project root and use the ex
 - Requests are not removed automatically when their deadline passes. Delete them with `delete-r` when they are no
   longer needed.
 - Requests cannot be edited in place. Delete a pending or prepared request and add the corrected one.
+- Loans support full returns only. There is no command to edit or permanently delete retained loan history;
+  returned or deleted loans that were already discarded by a version-1 build cannot be reconstructed.
 - Session dates are checked against today's date on the computer running Bob. For a session dated today, its start
   time is not checked against the current clock time. Sessions do not disappear automatically after their dates pass.
 - `find-i` searches inventory and active loans only. It does not show item locations, and it cannot use special
