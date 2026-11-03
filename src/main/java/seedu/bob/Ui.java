@@ -45,7 +45,7 @@ public class Ui {
             //@@author
             "Contacts",
             "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]",
-            "  delete-c INDEX",
+            "  delete-c INDEX [-force]",
             "  list-c",
             //@@author DaynaG3
             "Loans",

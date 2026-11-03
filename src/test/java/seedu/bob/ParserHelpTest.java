@@ -42,7 +42,7 @@ class ParserHelpTest {
             //@@author
             + "Contacts\n"
             + "  add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]\n"
-            + "  delete-c INDEX\n"
+            + "  delete-c INDEX [-force]\n"
             + "  list-c\n"
             //@@author DaynaG3
             + "Loans\n"

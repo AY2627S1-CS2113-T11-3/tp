@@ -2451,7 +2451,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
@@ -2503,7 +2503,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
@@ -11991,7 +11991,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
