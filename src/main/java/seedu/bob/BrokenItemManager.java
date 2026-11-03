@@ -166,6 +166,25 @@ public class BrokenItemManager {
     }
 
     /**
+     * Counts the active reports that selected this exact contact, so deleting it can be confirmed first.
+     * Matching uses object identity, so a different contact with identical details is not counted.
+     *
+     * @param contact Contact to look for.
+     * @return Number of reports linked to {@code contact}; zero if none.
+     * @throws NullPointerException If the contact is null.
+     */
+    public int countReportsUsing(Contact contact) {
+        Objects.requireNonNull(contact, "Contact must not be null");
+        int count = 0;
+        for (BrokenItem brokenItem : brokenItems) {
+            if (brokenItem.getContact() == contact) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
      * Checks dependencies and stored reports, without requiring old contacts to remain registered.
      *
      * @return Whether the manager contains only valid reports and nonnull dependencies.

@@ -144,7 +144,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
@@ -866,9 +866,10 @@ An empty contact list displays `No contacts saved.` between the contacts heading
 
 Deletes a contact from the list.
 
-**Format:** `delete-c INDEX`
+**Format:** `delete-c INDEX [-force]`
 
 Use the index from `list-c`. Like `delete-s`, this command takes a plain number, without a prefix.
+`-force` is optional and goes after the index. You only need it when a broken-item report uses the contact.
 
 ```text
 delete-c 1
@@ -882,8 +883,46 @@ Successfully removed contact: NUS Infrastructure
 
 Remaining contacts are renumbered. Run `list-c` to check the updated indices before the next command.
 
-If a broken-item report uses the deleted contact, its contact becomes unavailable. The report and inventory
-remain unchanged. Other reports keep their selected contacts even when contact indices change.
+#### Deleting a contact that a broken-item report uses
+
+If any broken-item report uses the contact, `delete-c INDEX` does not delete it. It tells you how many reports
+use it and shows the command to repeat:
+
+```text
+delete-c 1
+```
+
+Expected output:
+
+```text
+Contact NUS Infrastructure is used by 2 broken-item reports. To delete it anyway, use: delete-c 1 -force
+```
+
+To delete the contact anyway, add `-force`:
+
+```text
+delete-c 1 -force
+```
+
+Expected output:
+
+```text
+Successfully removed contact: NUS Infrastructure
+```
+
+Each report that used the contact then shows `Contact: Unavailable (contact deleted)` in `list-b`. The report and
+inventory remain unchanged. Other reports keep their selected contacts even when contact indices change.
+
+**Adding the contact again does not reconnect the reports.** A contact you add afterwards is a new contact, even if
+it has the same name, phone number, email and role, so the old reports stay unavailable. A report's contact cannot
+be changed once it is recorded, so think before you use `-force`.
+
+- Type `-force` exactly as shown, in lowercase, after the index. Any other spelling, such as `-FORCE`, `force` or
+  `--force`, or any other extra word, gives `Invalid format. Use: delete-c INDEX [-force]`, and nothing is deleted.
+- Contacts that no report uses, and reports with no contact, are deleted without the flag. Adding `-force` to
+  such a delete is accepted and changes nothing.
+- An invalid index gives the usual index error, with or without `-force`.
+
 
 ## Loan tracking
 
@@ -1240,9 +1279,10 @@ Broken items
 ```
 
 - Without an assigned contact, the contact line reads `Contact: Not assigned`.
-- If the selected contact is later deleted, it reads `Contact: Unavailable (contact deleted)`.
-  The report remains, and deleting or renumbering other contacts cannot redirect it to another person.
-  Adding a new contact with identical details does not reconnect the report automatically.
+- If the selected contact is later deleted with `delete-c INDEX -force`, it reads
+  `Contact: Unavailable (contact deleted)`. The report remains, and deleting or renumbering other contacts cannot
+  redirect it to another person. Adding a new contact with identical details does not reconnect the report,
+  because it is a different contact.
 - An empty list displays `No broken items recorded.` between the heading and closing divider.
 
 ### Remove a report and restore stock: `delete-b`
@@ -1440,7 +1480,7 @@ version that supports the same saved format. There is no interactive import comm
 | List student requests by deadline | `list-r` |
 | Mark a request as prepared or fulfilled | `mark-r INDEX STATUS` |
 | Add a contact | `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
-| Delete a contact | `delete-c INDEX` |
+| Delete a contact | `delete-c INDEX [-force]` |
 | List contacts | `list-c` |
 | Add a student loan | `add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE` |
 | List active loans with overdue markers | `list-l` |

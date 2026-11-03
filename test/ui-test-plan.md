@@ -2451,7 +2451,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
@@ -2503,7 +2503,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
@@ -3214,7 +3214,7 @@ delete-c
 **Expected output**
 
 ```text
-Invalid format. Use: delete-c INDEX
+Invalid format. Use: delete-c INDEX [-force]
 ```
 
 #### Step 4
@@ -3228,7 +3228,7 @@ delete-c 1 2
 **Expected output**
 
 ```text
-Invalid format. Use: delete-c INDEX
+Invalid format. Use: delete-c INDEX [-force]
 ```
 
 #### Step 5
@@ -3501,6 +3501,175 @@ delete-c 1
 
 ```text
 Contact index 1 is invalid. There are 0 contact(s).
+```
+
+### UI-CONTACT-DELETE-003: Confirm deletion of a contact used by a broken-item report
+
+**Aim:** Verify that deleting a contact selected by a broken-item report is refused with a warning unless `-force` is added, that near-miss flag spellings are rejected, that a forced deletion leaves the report showing an unavailable contact, and that adding a contact with identical details afterwards does not reconnect the report. Boundaries: one report, a flag that is almost `-force`, and an unused contact.
+
+**Preconditions:** Fresh application with empty inventory, contacts, and broken reports.
+
+#### Step 1
+
+**Input**
+
+```text
+add-i n/Wire c/Components q/10
+```
+
+**Expected output**
+
+```text
+Successfully added: 10x Wire to the inventory
+```
+
+#### Step 2
+
+**Input**
+
+```text
+add-c n/Maintenance t/12345678
+```
+
+**Expected output**
+
+```text
+Successfully added: Maintenance (12345678) to contacts
+```
+
+#### Step 3
+
+**Input**
+
+```text
+add-b n/Wire c/Components q/3 f/Frayed insulation d/1 January 2000 m/1
+```
+
+**Expected output**
+
+```text
+Successfully recorded broken item: 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000. Available inventory reduced.
+```
+
+#### Step 4
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Contact Maintenance is used by 1 broken-item report. To delete it anyway, use: delete-c 1 -force
+```
+
+#### Step 5
+
+**Input**
+
+```text
+delete-c 1 -FORCE
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX [-force]
+```
+
+#### Step 6
+
+**Input**
+
+```text
+delete-c 1 force
+```
+
+**Expected output**
+
+```text
+Invalid format. Use: delete-c INDEX [-force]
+```
+
+#### Step 7
+
+**Input**
+
+```text
+list-c
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Maintenance (12345678)
+--------------------------------------------------------------------
+```
+
+#### Step 8
+
+**Input**
+
+```text
+delete-c 1 -force
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Maintenance
+```
+
+#### Step 9
+
+**Input**
+
+```text
+add-c n/Maintenance t/12345678
+```
+
+**Expected output**
+
+```text
+Successfully added: Maintenance (12345678) to contacts
+```
+
+#### Step 10
+
+**Input**
+
+```text
+list-b
+```
+
+**Expected output**
+
+```text
+--------------------------------------------------------------------
+Broken items
+--------------------------------------------------------------------
+1. 3x Wire [Components], fault: Frayed insulation, reported 1 January 2000
+   Contact: Unavailable (contact deleted)
+--------------------------------------------------------------------
+```
+
+#### Step 11
+
+**Input**
+
+```text
+delete-c 1
+```
+
+**Expected output**
+
+```text
+Successfully removed contact: Maintenance
 ```
 
 ### UI-CONTACT-ISOLATION-001: Contact changes preserve inventory and preparation
@@ -11822,7 +11991,7 @@ Student requests
   mark-r INDEX STATUS (prepared or fulfilled)
 Contacts
   add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]
-  delete-c INDEX
+  delete-c INDEX [-force]
   list-c
 Loans
   add-l n/NAME c/CATEGORY q/QUANTITY b/BORROWER t/PHONE d/DUE_DATE
