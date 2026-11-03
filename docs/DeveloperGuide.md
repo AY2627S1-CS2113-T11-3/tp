@@ -44,7 +44,8 @@
     - [Detailed contact design](#441-detailed-contact-design)
     - [Responsibilities and storage](#442-responsibilities-and-storage)
     - [Addition walkthrough](#443-addition-walkthrough)
-    - [Validation rules and deletion safeguard](#444-validation-rules-and-deletion-safeguard)
+    - [Listing and deletion](#444-listing-and-deletion)
+    - [Validation rules and limitations](#445-validation-rules-and-limitations)
   - [Loan tracking](#45-loan-tracking)
     - [Detailed loan tracking design](#451-detailed-loan-tracking-design)
     - [Key operations](#452-key-operations)
@@ -934,16 +935,75 @@ Editable source: [contact addition sequence](diagrams/contact-add-sequence.puml)
 Addition never compares the new contact with the existing ones. Adding the same name and phone twice creates two
 separate contacts, and a later `delete-c` removes only the one at the requested position.
 
-#### 4.4.4. Validation rules and deletion safeguard
+#### 4.4.4. Listing and deletion
 
-Deleting a contact that a broken-item report uses needs `-force`. `Parser.deleteContact` splits its arguments into
-tokens (an index, then optionally exactly `-force`), validates the index, and asks
-`BrokenItemManager#countReportsUsing` how many reports hold that exact `Contact` object. If the count is above zero
-and `-force` is missing, it prints a warning that names the count and repeats the command with the flag, and deletes
-nothing. The check lives in `Parser`, which already holds both managers, so `ContactManager` and `BrokenItemManager`
-do not depend on each other. A flag was chosen over a y/n prompt because no other command asks for confirmation in
-the middle of a command. Adding a contact with identical details later does not reconnect those reports, because
-reports and `countReportsUsing` compare contacts by identity.
+`list-c` takes no arguments and does not change any state. `ContactManager#listContacts` prints the divider, the
+`Contacts` heading, one numbered line per contact in insertion order, and the closing divider. An empty list prints
+`No contacts saved.` instead of any rows. Positions are one-based and are recalculated on every listing.
+
+`delete-c INDEX [-force]` removes the contact at the position shown by `list-c`. Assume the list contains First,
+Second, and Third, and no broken-item report uses any of them. Enter:
+
+```text
+delete-c 2
+```
+
+1. `Parser#deleteContact` splits the arguments into tokens. One token is the index. Two tokens are accepted only if
+   the second is exactly `-force`. No token, more than two tokens, or any other second token throws a
+   `CommandFormatException` carrying the usage message `Invalid format. Use: delete-c INDEX [-force]`.
+2. `parseContactIndex` accepts only a positive integer. Anything else throws an `InvalidContactIndexException` with
+   the message `Contact index must be a positive integer.`
+3. `ContactManager#getContact` converts the one-based index to a list position. An index beyond the end of the list
+   throws an `InvalidContactIndexException` with the message `Contact index N is invalid. There are M contact(s).`
+4. `BrokenItemManager#countReportsUsing` counts the reports that selected this contact. Here it returns zero, so the
+   deletion goes ahead.
+5. `ContactManager#deleteContact` removes the contact, which moves Third up to position 2. It asserts that the list
+   is still valid, logs the removal at `FINE`, and prints:
+
+```text
+Successfully removed contact: Second
+```
+
+Running `list-c` now shows First as 1 and Third as 2. Contacts are never given permanent numbers, so a later command
+that uses an index must use the numbers from the most recent `list-c`.
+
+The following sequence summarizes a successful `delete-c` after command dispatch, including the case where the
+safeguard stops the deletion. Argument splitting, assertions, logging, and console rendering are condensed into
+descriptive steps.
+
+![Contact deletion sequence diagram](images/contact-delete-sequence.png)
+
+*Figure C3: Contact deletion. The index is validated and the contact is looked up before any report is counted. When a
+report uses the contact and `-force` is missing, the command prints a warning and ends without deleting anything.*
+
+Editable source: [contact deletion sequence](diagrams/contact-delete-sequence.puml).
+
+**The deletion safeguard.** A broken-item report keeps a reference to the `Contact` object that it selected. If that
+contact is deleted, the report shows `Contact: Unavailable (contact deleted)`, and a report's contact cannot be changed
+afterwards. `delete-c` therefore asks `BrokenItemManager#countReportsUsing` how many reports hold that exact object.
+If the count is above zero and `-force` is missing, `Parser` prints a warning that names the count and repeats the
+command with the flag, and deletes nothing. For example, after reporting a broken item with contact 1:
+
+```text
+delete-c 1
+```
+
+```text
+Contact NUS Infrastructure is used by 1 broken-item report. To delete it anyway, use: delete-c 1 -force
+```
+
+`delete-c 1 -force` then removes the contact as in the walkthrough above, and `list-b` shows `Unavailable (contact
+deleted)` for that report. The check happens after the index is validated, so `-force` never changes how a malformed or
+out-of-range index is reported. Contacts that no report uses, and reports with no contact, are deleted without the flag,
+and `-force` on such a contact is accepted and changes nothing.
+
+Adding a contact with identical details afterwards does not reconnect those reports, because `countReportsUsing` and
+`BrokenItemManager#getAvailableContact` compare contacts by identity. The new contact is a different object.
+The check lives in `Parser`, which already holds both managers, so `ContactManager` and `BrokenItemManager` do not
+depend on each other for this. A flag was chosen over a y/n prompt because no other command asks for confirmation in
+the middle of a command.
+
+#### 4.4.5. Validation rules and limitations
 
 The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules. Their implementation belongs in
 `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):

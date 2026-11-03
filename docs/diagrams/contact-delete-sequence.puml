@@ -1,0 +1,36 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant "parser:Parser" as parser
+participant "contactManager:ContactManager" as manager
+participant "brokenItemManager:BrokenItemManager" as broken
+
+[-> parser : deleteContact(arguments, contactManager, brokenItemManager)
+activate parser
+parser -> parser : split the arguments into an index\nand an optional -force\nparse the index
+parser -> manager : getContact(index)
+activate manager
+manager --> parser : contact
+deactivate manager
+parser -> broken : countReportsUsing(contact)
+activate broken
+broken --> parser : reportCount
+deactivate broken
+alt reportCount > 0 and -force is missing
+    parser -> parser : print a warning that names the count\nand repeats the command with -force
+else otherwise
+    parser -> manager : deleteContact(index)
+    activate manager
+    manager -> manager : remove the contact from the list\nlater contacts move up one position
+    manager --> parser
+    deactivate manager
+end
+[<-- parser
+deactivate parser
+
+note over manager, broken
+  Successful path after command dispatch. Nothing is deleted when the warning is shown.
+  An invalid format or index ends the command before any report is counted.
+  Assertions, logging, and output are omitted.
+end note
+@enduml
