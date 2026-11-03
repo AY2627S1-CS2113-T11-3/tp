@@ -153,6 +153,95 @@ class BrokenItemManagerTest {
         assertEquals(10, stock());
     }
 
+    // countReportsUsing: boundary value analysis on the number of matching reports (0, 1, 2) and on the input.
+
+    @Test
+    void countReportsUsing_noReports_returnsZero() throws CommandException {
+        Contact contact = registeredContact("Maintenance", "22222222");
+
+        assertEquals(0, manager.countReportsUsing(contact));
+    }
+
+    @Test
+    void countReportsUsing_oneReportUsesContact_returnsOne() throws CommandException {
+        Contact contact = registeredContact("Maintenance", "22222222");
+        manager.addBrokenItem(report(1, contact));
+
+        assertEquals(1, manager.countReportsUsing(contact));
+    }
+
+    @Test
+    void countReportsUsing_twoReportsUseContact_returnsTwo() throws CommandException {
+        Contact contact = registeredContact("Maintenance", "22222222");
+        manager.addBrokenItem(report(1, contact));
+        manager.addBrokenItem(report(2, contact));
+
+        assertEquals(2, manager.countReportsUsing(contact));
+    }
+
+    @Test
+    void countReportsUsing_onlyOtherContactsOrUnassigned_returnsZero() throws CommandException {
+        Contact queried = registeredContact("Maintenance", "22222222");
+        Contact other = registeredContact("Supplier", "33333333");
+        manager.addBrokenItem(report(1, other));
+        manager.addBrokenItem(report(1, null));
+
+        assertEquals(0, manager.countReportsUsing(queried));
+    }
+
+    @Test
+    void countReportsUsing_mixedReports_countsOnlyTheQueriedContact() throws CommandException {
+        Contact first = registeredContact("Maintenance", "22222222");
+        Contact second = registeredContact("Supplier", "33333333");
+        manager.addBrokenItem(report(1, first));
+        manager.addBrokenItem(report(1, second));
+        manager.addBrokenItem(report(1, null));
+        manager.addBrokenItem(report(1, first));
+
+        assertEquals(2, manager.countReportsUsing(first));
+        assertEquals(1, manager.countReportsUsing(second));
+    }
+
+    @Test
+    void countReportsUsing_sameDetailsDifferentObject_notCounted() throws CommandException {
+        Contact used = registeredContact("Maintenance", "22222222");
+        Contact lookalike = registeredContact("Maintenance", "22222222");
+        manager.addBrokenItem(report(1, used));
+
+        assertEquals(1, manager.countReportsUsing(used));
+        assertEquals(0, manager.countReportsUsing(lookalike));
+    }
+
+    @Test
+    void countReportsUsing_afterReportsDeleted_fallsBackThroughOneToZero() throws CommandException {
+        Contact contact = registeredContact("Maintenance", "22222222");
+        manager.addBrokenItem(report(1, contact));
+        manager.addBrokenItem(report(1, contact));
+
+        manager.deleteBrokenItem(1);
+        assertEquals(1, manager.countReportsUsing(contact));
+        manager.deleteBrokenItem(1);
+        assertEquals(0, manager.countReportsUsing(contact));
+    }
+
+    @Test
+    void countReportsUsing_contactNoLongerRegistered_stillCountsItsReports() throws CommandException {
+        Contact contact = registeredContact("Maintenance", "22222222");
+        manager.addBrokenItem(report(1, contact));
+        contacts.deleteContact(1);
+
+        assertEquals(1, manager.countReportsUsing(contact));
+    }
+
+    @Test
+    void countReportsUsing_nullContact_rejectsWithoutMutation() throws CommandException {
+        manager.addBrokenItem(report(1, null));
+
+        assertThrows(NullPointerException.class, () -> manager.countReportsUsing(null));
+        assertEquals(1, manager.getBrokenItems().size());
+        assertEquals(9, stock());
+    }
+
     @Test
     void addBrokenItem_unregisteredContact_rejectsBeforeDeduction() throws CommandException {
         Contact absent = new Contact("Maintenance", "22222222", null, null);
@@ -189,6 +278,13 @@ class BrokenItemManagerTest {
     /** Builds reports with a fixed date so tests do not depend on the day they run. */
     private BrokenItem report(int quantity, Contact contact) throws BrokenItemException {
         return new BrokenItem("Meter", "Equipment", quantity, "Fault", "23 October 2026", contact, CLOCK);
+    }
+
+    /** Registers a contact with the shared contact list so that reports may select it. */
+    private Contact registeredContact(String name, String phone) throws CommandException {
+        Contact contact = new Contact(name, phone, null, null);
+        contacts.addContact(contact);
+        return contact;
     }
 
     private int stock() {

@@ -1449,6 +1449,7 @@ and contacts with the application. A report may retain a reference to a contact 
 | Add | `Parser` resolves the optional contact and constructs a validated `BrokenItem`. `BrokenItemManager#addBrokenItem` checks contact membership, calls `Inventory#removeBrokenStock`, then appends the report. |
 | List | `getBrokenItems()` returns an unmodifiable snapshot. `Ui#showBrokenItems` displays one-based positions and resolves each contact through `getAvailableContact()`. No stock changes. |
 | Delete | `deleteBrokenItem(index)` validates the position, calls `Inventory#restoreBrokenStock`, then removes the report. Remaining positions shift. |
+| Count contact use | `countReportsUsing(contact)` returns how many reports hold that exact `Contact` object, compared by identity, so a contact with identical details is not counted. It is read-only and also counts reports whose contact has since been removed from the contact list. A null contact is rejected. |
 
 #### 4.7.2. Example and stock consistency
 
@@ -1508,7 +1509,8 @@ commands would require coordinated storage of reports and inventory changes.
 
 `BrokenItemTest` covers field validation and fixed-clock date boundaries. `BrokenItemManagerTest` covers exact
 stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, and interaction
-with loans. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, and stock visibility across
+with loans. Its `countReportsUsing` tests apply boundary value analysis to the number of matching reports (none,
+one, two), to unrelated and unassigned reports, to lookalike contacts, and to a null contact. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, and stock visibility across
 features. `ParserHelpTest` and the console regression fixture check the advertised commands.
 
 Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
