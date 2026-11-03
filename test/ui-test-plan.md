@@ -9968,7 +9968,7 @@ Student requests
 **Input**
 
 ```text
-delete-c 1
+delete-c 1 -force
 ```
 
 **Expected output**
@@ -11872,7 +11872,7 @@ Broken items
 **Input**
 
 ```text
-delete-c 1
+delete-c 1 -force
 ```
 
 **Expected output**

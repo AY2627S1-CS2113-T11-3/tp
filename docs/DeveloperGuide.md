@@ -1899,7 +1899,8 @@ Start empty and enter these commands in order:
 | `add-b n/Meter c/Equipment q/2 f/Cracked screen d/1 January 2020 m/1` | Creates one report and deducts two usable units. |
 | `list-b` | Shows the fault, date, quantity two, and Lab Maintenance contact. |
 | `find-i meter` | Shows eight available units; the broken units are excluded. |
-| `delete-c 1` | Removes the contact without removing the report. |
+| `delete-c 1` | Refuses to delete the contact: `Contact Lab Maintenance is used by 1 broken-item report. To delete it anyway, use: delete-c 1 -force`. |
+| `delete-c 1 -force` | Removes the contact without removing the report. |
 | `list-b` | Shows `Unavailable (contact deleted)` for the report's contact. |
 | `delete-b 1` | Removes the whole report and restores both units. |
 | `list-i` | Shows ten usable Meters again. |
