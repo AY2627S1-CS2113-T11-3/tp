@@ -45,7 +45,10 @@
     - [Responsibilities and storage](#442-responsibilities-and-storage)
     - [Addition walkthrough](#443-addition-walkthrough)
     - [Listing and deletion](#444-listing-and-deletion)
-    - [Validation rules and limitations](#445-validation-rules-and-limitations)
+    - [Validation and failure behaviour](#445-validation-and-failure-behaviour)
+    - [Design considerations and alternatives](#446-design-considerations-and-alternatives)
+    - [Verification and limitations](#447-verification-and-limitations)
+    - [Help text and diagram sources](#448-help-text-and-diagram-sources)
   - [Loan tracking](#45-loan-tracking)
     - [Detailed loan tracking design](#451-detailed-loan-tracking-design)
     - [Key operations](#452-key-operations)
@@ -1003,7 +1006,23 @@ The check lives in `Parser`, which already holds both managers, so `ContactManag
 depend on each other for this. A flag was chosen over a y/n prompt because no other command asks for confirmation in
 the middle of a command.
 
-#### 4.4.5. Validation rules and limitations
+#### 4.4.5. Validation and failure behaviour
+
+Validation happens at three layers, and every failure leaves the contact list unchanged. `Parser` checks the command
+format, `Contact` checks the values, and `ContactManager` checks the index. Each failure is a `CommandException`
+subclass whose message `Parser` prints. An unexpected runtime failure is logged and replaced by the generic recovery
+message, as described in [Validation and error handling](#49-validation-and-error-handling).
+
+| Situation | Detected by | Message |
+| --- | --- | --- |
+| Missing, repeated, reordered, or unknown prefix, or text before the first prefix | `Parser#addContact` | `Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]` |
+| Blank name, phone, email, or role | `Contact` | `Contact name cannot be blank.`, `Phone cannot be blank.`, `Email cannot be blank.`, `Role cannot be blank.` |
+| Phone with anything other than digits | `Contact` | `Phone must contain digits only.` |
+| Email without text on both sides of an `@`, or containing whitespace | `Contact` | `Email must be a valid address, e.g. name@example.com.` |
+| `list-c` with arguments | `Parser#listContacts` | `Invalid format. Use: list-c` |
+| `delete-c` with no index, more than two words, or a second word other than `-force` | `Parser#deleteContact` | `Invalid format. Use: delete-c INDEX [-force]` |
+| Index that is not a positive integer, including values beyond the `int` range | `Parser#parseContactIndex` | `Contact index must be a positive integer.` |
+| Index beyond the end of the list, including any index on an empty list | `ContactManager#getContact` | `Contact index N is invalid. There are M contact(s).` |
 
 The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules. Their implementation belongs in
 `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
@@ -1016,8 +1035,76 @@ The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules
 | Optional fields | `e/` before `r/`; a supplied value must not be blank | Matches the fixed prefix order used by every other command. |
 | Empty list | `list-c` shows `No contacts saved.` | Matches `list-s`, which shows `No sessions scheduled.` |
 
-Known limitation: prefixes are detected by a shared pattern (a single letter followed by `/` at the start of a
-word), so a value containing a word such as `a/b` cannot be entered. This affects commands with prefixed arguments, including contacts; `find-i` accepts plain search text.
+#### 4.4.6. Design considerations and alternatives
+
+| Decision | Rationale and trade-off |
+| --- | --- |
+| Keep contacts in an `ArrayList` in insertion order | Displayed positions are the list positions plus one, so there are no gaps after a deletion and no number has to be stored. Permanent identifiers would keep numbers stable, but they would need allocation and persistence, and no other list command uses them. The cost is that users must run `list-c` again before using an index. |
+| Allow duplicate contacts | A contact has no natural unique key, and two people can share a name or number. Rejecting duplicates would need a rule for what counts as the same contact. |
+| Let a report keep the `Contact` object and compare by identity | A stored index would point at a different contact after a deletion. Comparing details would reconnect a report to an unrelated contact that happens to match. Identity is exact, but a contact that is deleted and added again is a new contact and stays unconnected. |
+| Count reports in `Parser`, not in `ContactManager` | `BrokenItemManager` already depends on `ContactManager`. Calling it from `ContactManager` would create a cycle. `Parser` holds both managers, so neither manager learns about the other for this command. |
+| Require `-force` instead of asking for confirmation | Every command is one line, and `text-ui-test` and the session scripts need no interactive input. A y/n prompt would be the only mid-command question in the application. The flag still stops an accidental deletion, because the warning shows the exact command to repeat. |
+| Accept only the exact, lowercase `-force` | Command words and prefixes are case-sensitive everywhere else. Being strict about a destructive option means that a mistyped flag shows the usage message and deletes nothing. |
+| Take a plain `INDEX` for `delete-c` | Matches `delete-s` and `delete-r`, so there is one rule for deleting by position. |
+
+#### 4.4.7. Verification and limitations
+
+`ContactTest` covers the display format with and without the optional fields, blank values, and malformed phone
+numbers and emails. `ContactManagerTest` covers null input, the confirmation, the empty and populated listings, invalid
+indices, and renumbering after a deletion. `ParserContactTest` covers valid commands, duplicates, malformed arguments,
+invalid values, wrong command words, listing order, rejected additions leaving the list empty, and deletion with
+renumbering, including removing the second of four contacts. `ParserBrokenItemTest` and `BrokenItemManagerTest` cover
+the deletion safeguard. `ParserHelpTest` checks that the contact commands appear in the help text. The
+[UI test plan](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/test/ui-test-plan.md) records the console cases
+(`UI-CONTACT-*`). The `text-ui-test` regression, which runs on every pull request, includes `list-c` and `help`.
+
+**Boundary value analysis for the contact-deletion safeguard.** The tests for `countReportsUsing` and `delete-c`
+were chosen by boundary value analysis, so each boundary has a test:
+
+| Input | Boundary values | Test |
+| --- | --- | --- |
+| Reports using the contact (`countReportsUsing`) | 0, 1, 2 | `countReportsUsing_noReports_returnsZero`, `_oneReportUsesContact_returnsOne`, `_twoReportsUseContact_returnsTwo` |
+| Other reports in the list | only other contacts or unassigned; mixed | `_onlyOtherContactsOrUnassigned_returnsZero`, `_mixedReports_countsOnlyTheQueriedContact` |
+| Contact identity | same details but a different object | `_sameDetailsDifferentObject_notCounted` |
+| Report count over time | 2, then 1, then 0 | `_afterReportsDeleted_fallsBackThroughOneToZero` |
+| Contact registration | removed from the contact list | `_contactNoLongerRegistered_stillCountsItsReports` |
+| Argument | null | `_nullContact_rejectsWithoutMutation` |
+
+| Input to `delete-c` | Boundary values | Test (`ParserBrokenItemTest`) |
+| --- | --- | --- |
+| Number of tokens | 0, 1, 2, 3 | `deleteContact_tokenCountOutsideOneOrTwo_showsUsageAndKeepsContact`, plus the cases below for 1 and 2 |
+| Reports using the contact | 0, 1, 2 | `_reportWithoutContact_deletesWithoutForce`, `_oneReportUsesContact_warnsInSingular…`, `_twoReportsUseContact_warnsInPlural…` |
+| Index | 0, -1, last, last + 1, overflow, non-number, empty list | `_forceWithIndexOutsideBounds_reportsIndexErrorAndKeepsContacts`, `_forceOnEmptyContactList_reportsIndexError` |
+| Flag spelling | `-force`; near misses `-forc`, `-forces`, `-FORCE`, `-Force`, `force`, `--force`, `-f`, `-` | `_usedByReportWithForce_removesContactAndKeepsReport`, `_nearMissFlagSpellings_showUsageAndKeepContact` |
+| Other contact in use / flag on an unused contact | not the contact being deleted | `_otherContactUsedByReport_deletesWithoutWarning`, `_forceOnUnusedContact_deletesNormally` |
+| Broken-item tracking | unavailable | `_reportsUnavailable_deletesWithoutWarning` |
+| Re-adding a deleted contact | identical details | `_forcedThenAddedAgainWithSameDetails_reportStaysUnavailable` |
+
+Known limitations:
+
+- Prefixes are detected by a shared pattern (a single letter followed by `/` at the start of a word), so a value
+  containing a word such as `a/b` cannot be entered. This affects every command with prefixed arguments, including
+  contacts. `find-i` accepts plain search text.
+- Contacts have no permanent identifiers and cannot be edited in place. To change one, delete it and add it again,
+  which does not reconnect broken-item reports that used it.
+- A forced deletion cannot be undone, and a report's contact cannot be reassigned afterwards.
+- Phone numbers and emails are checked loosely. There is no length check and no check that an address exists.
+- Index commands use `Integer.parseInt`, so `delete-c +1` is accepted as index 1. The same applies to the other
+  index commands.
+
+#### 4.4.8. Help text and diagram sources
+
+`help` prints `Ui.HELP_MESSAGE`, which lists the contact commands as `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]`,
+`delete-c INDEX [-force]`, and `list-c` under the `Contacts` heading. Several files contain a copy of this text, so a
+change to a contact command's format must be made in all of them: the usage constants in `Parser`, `Ui.HELP_MESSAGE`,
+the expected text in `ParserHelpTest` (typed out in full so that a mistake in `Ui` is caught), the expected output in
+`text-ui-test/EXPECTED.txt`, the `help` example in the User Guide, and the `help` cases in the UI test plan. The
+`-force` flag required exactly this change.
+
+Editable diagram sources: [class diagram](diagrams/contact-class.puml),
+[addition sequence](diagrams/contact-add-sequence.puml), and
+[deletion sequence](diagrams/contact-delete-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs in
+`docs/images/` after changing their sources, following [the diagram guide](diagrams/README.md).
 
 ### 4.5. Loan tracking
 
@@ -1726,27 +1813,8 @@ stock changes, invalid indices, missing stock, restoration overflow, contact del
 with loans, and `countReportsUsing`. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, stock
 visibility across features, and `delete-c` with and without `-force`. `ParserHelpTest` and the console regression fixture check the advertised commands.
 
-**Boundary value analysis for the contact-deletion safeguard.** The tests for `countReportsUsing` and `delete-c`
-were chosen by boundary value analysis, so each boundary has a test:
-
-| Input | Boundary values | Test |
-| --- | --- | --- |
-| Reports using the contact (`countReportsUsing`) | 0, 1, 2 | `countReportsUsing_noReports_returnsZero`, `_oneReportUsesContact_returnsOne`, `_twoReportsUseContact_returnsTwo` |
-| Other reports in the list | only other contacts or unassigned; mixed | `_onlyOtherContactsOrUnassigned_returnsZero`, `_mixedReports_countsOnlyTheQueriedContact` |
-| Contact identity | same details but a different object | `_sameDetailsDifferentObject_notCounted` |
-| Report count over time | 2, then 1, then 0 | `_afterReportsDeleted_fallsBackThroughOneToZero` |
-| Contact registration | removed from the contact list | `_contactNoLongerRegistered_stillCountsItsReports` |
-| Argument | null | `_nullContact_rejectsWithoutMutation` |
-
-| Input to `delete-c` | Boundary values | Test (`ParserBrokenItemTest`) |
-| --- | --- | --- |
-| Number of tokens | 0, 1, 2, 3 | `deleteContact_tokenCountOutsideOneOrTwo_showsUsageAndKeepsContact`, plus the cases below for 1 and 2 |
-| Reports using the contact | 0, 1, 2 | `_reportWithoutContact_deletesWithoutForce`, `_oneReportUsesContact_warnsInSingular…`, `_twoReportsUseContact_warnsInPlural…` |
-| Index | 0, -1, last, last + 1, overflow, non-number, empty list | `_forceWithIndexOutsideBounds_reportsIndexErrorAndKeepsContacts`, `_forceOnEmptyContactList_reportsIndexError` |
-| Flag spelling | `-force`; near misses `-forc`, `-forces`, `-FORCE`, `-Force`, `force`, `--force`, `-f`, `-` | `_usedByReportWithForce_removesContactAndKeepsReport`, `_nearMissFlagSpellings_showUsageAndKeepContact` |
-| Other contact in use / flag on an unused contact | not the contact being deleted | `_otherContactUsedByReport_deletesWithoutWarning`, `_forceOnUnusedContact_deletesNormally` |
-| Broken-item tracking | unavailable | `_reportsUnavailable_deletesWithoutWarning` |
-| Re-adding a deleted contact | identical details | `_forcedThenAddedAgainWithSameDetails_reportStaysUnavailable` |
+The boundary value analysis behind the `countReportsUsing` and `delete-c` tests is recorded in
+[Contact verification and limitations](#447-verification-and-limitations).
 
 Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
 [addition sequence](diagrams/broken-item-add-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs
