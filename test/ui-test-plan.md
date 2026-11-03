@@ -3,7 +3,7 @@
 This file is the source of truth for repeatable console UI test cases run with the `test-ui` skill.
 
 For the phased loan-history verification criteria, see the
-[Developer Guide](../docs/DeveloperGuide.md#implementation-phases-and-verification-record).
+[Developer Guide](../docs/DeveloperGuide.md#467-implementation-phases-and-verification-record).
 
 The course-style I/O redirection test in `text-ui-test/input.txt` and `text-ui-test/EXPECTED.txt`
 reuses preparation, loan, lookup, broken-item, request-fulfillment, and help scenarios.

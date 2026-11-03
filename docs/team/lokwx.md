@@ -57,7 +57,7 @@ GitHub: [Lokwx](https://github.com/Lokwx) |
   ([examples](https://github.com/AY2627S1-CS2113-T11-3/tp/commit/42afe88)).
 
 - **Developer Guide:** Explained [inventory addition](../DeveloperGuide.md#411-detailed-inventory-addition-design)
-  with class/sequence diagrams, and [requests](../DeveloperGuide.md#46-student-request-tracking), sorting,
+  with class/sequence diagrams, and [requests](../DeveloperGuide.md#47-student-request-tracking), sorting,
   availability, fulfillment, and alternatives
   ([inventory diagrams](https://github.com/AY2627S1-CS2113-T11-3/tp/commit/4ed0ac9)).
 
@@ -170,8 +170,8 @@ Diagram sources: [class diagram](../diagrams/inventory-add-class.puml) and
 
 ### Requests: sorting, availability, and fulfillment
 
-Sources: [Request tracking](../DeveloperGuide.md#46-student-request-tracking) and
-[fulfillment design](../DeveloperGuide.md#464-detailed-request-fulfillment-design).
+Sources: [Request tracking](../DeveloperGuide.md#47-student-request-tracking) and
+[fulfillment design](../DeveloperGuide.md#474-detailed-request-fulfillment-design).
 
 `RequestManager` stores an `ArrayList<Request>` and sorts after addition by deadline, then student and item names
 ignoring case. Stable sorting preserves insertion order for equal keys. Quantity and status are not comparison

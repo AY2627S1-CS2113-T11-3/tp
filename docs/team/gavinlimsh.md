@@ -73,7 +73,7 @@ Evidence: [PR #52](https://github.com/AY2627S1-CS2113-T11-3/tp/pull/52).
   [broken-item](../UserGuide.md#broken-item-tracking) sections with syntax, examples, validation,
   changing-index guidance, stock effects, and recovery instructions.
 - Contributed Developer Guide explanations for [scheduling](../DeveloperGuide.md#42-session-scheduling)
-  and [broken-item tracking](../DeveloperGuide.md#47-broken-item-tracking), including walkthroughs,
+  and [broken-item tracking](../DeveloperGuide.md#48-broken-item-tracking), including walkthroughs,
   design alternatives, and class and sequence diagrams.
 - Added editable PlantUML sources for the broken-item diagrams in
   [PR #60](https://github.com/AY2627S1-CS2113-T11-3/tp/pull/60).
@@ -167,7 +167,7 @@ application's small schedules.
 
 ### Broken-item tracking: responsibilities and relationships
 
-Source: [Broken-item tracking](../DeveloperGuide.md#47-broken-item-tracking).
+Source: [Broken-item tracking](../DeveloperGuide.md#48-broken-item-tracking).
 
 `BrokenItem` validates and stores report details. `BrokenItemManager` coordinates reports using
 the application's shared `Inventory` and `ContactManager`. `Inventory` validates and performs
