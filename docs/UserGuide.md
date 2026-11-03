@@ -1357,6 +1357,11 @@ These are examples of the current messages:
 | Unknown loan index | `Loan index 3 is invalid. There are 2 active loan(s).` | Use the latest `list-l` to check the index. |
 | Stock restoration exceeds the limit | `Cannot restore 2 Wire. Inventory quantity must not exceed 2147483647.` | Check the available stock and correct any inaccurate quantities before retrying; the loan or broken-item report remains unchanged. |
 | Unknown contact index | `Contact index 3 is invalid. There are 2 contact(s).` | Use `list-c` to check the index. |
+| Blank contact value | `Contact name cannot be blank.`, `Phone cannot be blank.`, `Email cannot be blank.`, or `Role cannot be blank.` | Enter a nonblank value after the prefix, or leave out the optional `e/` or `r/`. |
+| Invalid contact index value | `Contact index must be a positive integer.` | Enter a whole number from 1 to 2147483647, taken from `list-c`. |
+| `list-c` with extra text | `Invalid format. Use: list-c` | Enter `list-c` on its own. |
+| `delete-c` with extra words, or a flag other than `-force` | `Invalid format. Use: delete-c INDEX [-force]` | Enter one index, optionally followed by `-force` in lowercase. Nothing is deleted. |
+| Deleting a contact that a broken-item report uses | `Contact NUS Infrastructure is used by 2 broken-item reports. To delete it anyway, use: delete-c 1 -force` | This is a warning, and nothing is deleted. Repeat the command with `-force` only if those reports may lose their contact. |
 | Duplicate inventory item | `Item "Wire" already exists in category "Components".` | Do not use `add-i` to top up an existing item. |
 | `find-i` without a keyword | `Invalid format. Use: find-i KEYWORD` | Add the text to search for, such as `find-i wire`. |
 | Unknown inventory category | `Category "Unknown" does not exist.` | Check the category using `list-i`. |
@@ -1409,6 +1414,8 @@ and use `build/libs/bob.jar`. If you changed source code but still see old behav
   search patterns such as wildcards. If every unit of an item is on loan, the result uses the spelling typed in the
   first matching loan.
 - Commands cannot be chained on one line. Each add or delete command affects one entry.
+- Contacts cannot be edited in place. To change a contact, delete it and add the corrected one. If a broken-item
+  report used the contact, deleting it needs `-force`, and adding it again does not reconnect the report.
 - Broken-item reports cannot be edited in place or partially repaired. There is no disposal command, repair history,
   or command to reassign a report's contact. `delete-b` always restores the entire reported quantity.
 
@@ -1453,6 +1460,22 @@ changed back, and deleting it does not restore stock.
 `delete-b` means that all reported units are usable again, either after a full repair or correction of an
 incorrect report. It restores the entire quantity. Leave genuinely broken units recorded until repaired;
 disposal and partial repairs are not supported.
+
+**Why did `delete-c` not delete my contact?**
+
+A broken-item report uses that contact. Bob shows how many reports use it and the command to repeat. If you are sure,
+enter `delete-c INDEX -force`. Those reports then show `Contact: Unavailable (contact deleted)`.
+
+**I deleted a contact and added it again, but my report still says the contact was deleted. Why?**
+
+A contact you add afterwards is a new contact, even with the same name, phone number, email, and role, so Bob does not
+reconnect it to the old reports. A report's contact cannot be changed once it is recorded. Think before you use
+`-force`, and keep contacts that reports still use.
+
+**Can I change a contact's phone number, email, or role?**
+
+Not in place. Delete the contact with `delete-c` and add the corrected one with `add-c`. Contacts are renumbered after
+a deletion, so run `list-c` first to check the index.
 
 **Can I keep my data for the next launch or transfer it to another computer?**
 
