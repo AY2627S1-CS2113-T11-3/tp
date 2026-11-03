@@ -791,6 +791,15 @@ so all implementation diagrams share one style.
 `ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
 single index on the command line, like `delete-s`.
 
+Deleting a contact that a broken-item report uses needs `-force`. `Parser.deleteContact` splits its arguments into
+tokens (an index, then optionally exactly `-force`), validates the index, and asks
+`BrokenItemManager#countReportsUsing` how many reports hold that exact `Contact` object. If the count is above zero
+and `-force` is missing, it prints a warning that names the count and repeats the command with the flag, and deletes
+nothing. The check lives in `Parser`, which already holds both managers, so `ContactManager` and `BrokenItemManager`
+do not depend on each other. A flag was chosen over a y/n prompt because no other command asks for confirmation in
+the middle of a command. Adding a contact with identical details later does not reconnect those reports, because
+reports and `countReportsUsing` compare contacts by identity.
+
 The [User Guide](UserGuide.md#add-a-contact-add-c) describes these contact rules. Their implementation belongs in
 `Contact` (validation) or `Parser` (`ADD_CONTACT_PREFIXES`):
 
@@ -1508,10 +1517,31 @@ commands would require coordinated storage of reports and inventory changes.
 #### 4.7.5. Verification and diagram sources
 
 `BrokenItemTest` covers field validation and fixed-clock date boundaries. `BrokenItemManagerTest` covers exact
-stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, and interaction
-with loans. Its `countReportsUsing` tests apply boundary value analysis to the number of matching reports (none,
-one, two), to unrelated and unassigned reports, to lookalike contacts, and to a null contact. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, and stock visibility across
-features. `ParserHelpTest` and the console regression fixture check the advertised commands.
+stock changes, invalid indices, missing stock, restoration overflow, contact deletion, snapshots, interaction
+with loans, and `countReportsUsing`. `ParserBrokenItemTest` covers command syntax, unavailable dependencies, stock
+visibility across features, and `delete-c` with and without `-force`. `ParserHelpTest` and the console regression fixture check the advertised commands.
+
+**Boundary value analysis for the contact-deletion safeguard.** The tests for `countReportsUsing` and `delete-c`
+were chosen by boundary value analysis, so each boundary has a test:
+
+| Input | Boundary values | Test |
+| --- | --- | --- |
+| Reports using the contact (`countReportsUsing`) | 0, 1, 2 | `countReportsUsing_noReports_returnsZero`, `_oneReportUsesContact_returnsOne`, `_twoReportsUseContact_returnsTwo` |
+| Other reports in the list | only other contacts or unassigned; mixed | `_onlyOtherContactsOrUnassigned_returnsZero`, `_mixedReports_countsOnlyTheQueriedContact` |
+| Contact identity | same details but a different object | `_sameDetailsDifferentObject_notCounted` |
+| Report count over time | 2, then 1, then 0 | `_afterReportsDeleted_fallsBackThroughOneToZero` |
+| Contact registration | removed from the contact list | `_contactNoLongerRegistered_stillCountsItsReports` |
+| Argument | null | `_nullContact_rejectsWithoutMutation` |
+
+| Input to `delete-c` | Boundary values | Test (`ParserBrokenItemTest`) |
+| --- | --- | --- |
+| Number of tokens | 0, 1, 2, 3 | `deleteContact_tokenCountOutsideOneOrTwo_showsUsageAndKeepsContact`, plus the cases below for 1 and 2 |
+| Reports using the contact | 0, 1, 2 | `_reportWithoutContact_deletesWithoutForce`, `_oneReportUsesContact_warnsInSingular…`, `_twoReportsUseContact_warnsInPlural…` |
+| Index | 0, -1, last, last + 1, overflow, non-number, empty list | `_forceWithIndexOutsideBounds_reportsIndexErrorAndKeepsContacts`, `_forceOnEmptyContactList_reportsIndexError` |
+| Flag spelling | `-force`; near misses `-forc`, `-forces`, `-FORCE`, `-Force`, `force`, `--force`, `-f`, `-` | `_usedByReportWithForce_removesContactAndKeepsReport`, `_nearMissFlagSpellings_showUsageAndKeepContact` |
+| Other contact in use / flag on an unused contact | not the contact being deleted | `_otherContactUsedByReport_deletesWithoutWarning`, `_forceOnUnusedContact_deletesNormally` |
+| Broken-item tracking | unavailable | `_reportsUnavailable_deletesWithoutWarning` |
+| Re-adding a deleted contact | identical details | `_forcedThenAddedAgainWithSameDetails_reportStaysUnavailable` |
 
 Editable diagram sources: [class diagram](diagrams/broken-item-class.puml) and
 [addition sequence](diagrams/broken-item-add-sequence.puml). They reuse `loan-style.puml`; regenerate the PNGs
