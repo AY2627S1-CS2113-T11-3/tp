@@ -93,6 +93,146 @@ class ParserBrokenItemTest {
         assertTrue(broken.getBrokenItems().isEmpty());
     }
 
+    // delete-c with -force: boundary value analysis on the number of tokens (0, 1, 2, 3), the index
+    // (0, 1, last, last + 1, overflow), the flag spelling, and the number of reports using the contact (0, 1, 2).
+
+    @Test
+    void deleteContact_oneReportUsesContact_warnsInSingularAndKeepsContact() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+
+        assertEquals("Contact Maintenance is used by 1 broken-item report. To delete it anyway, use: "
+                + "delete-c 1 -force\n", execute("delete-c 1"));
+        assertEquals(1, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+        assertEquals(listing("1. " + REPORT + "\n   Contact: Maintenance (12345678)\n"), execute("list-b"));
+    }
+
+    @Test
+    void deleteContact_twoReportsUseContact_warnsInPluralAndKeepsContact() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+        execute(ADD_COMMAND + " m/1");
+
+        assertEquals("Contact Maintenance is used by 2 broken-item reports. To delete it anyway, use: "
+                + "delete-c 1 -force\n", execute("delete-c 1"));
+        assertEquals(1, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+    }
+
+    @Test
+    void deleteContact_warningNamesTheRequestedIndex() {
+        execute("add-c n/First t/11111111");
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/2");
+
+        assertEquals("Contact Maintenance is used by 1 broken-item report. To delete it anyway, use: "
+                + "delete-c 2 -force\n", execute("delete-c 2"));
+    }
+
+    @Test
+    void deleteContact_usedByReportWithForce_removesContactAndKeepsReport() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+
+        assertEquals("Successfully removed contact: Maintenance\n", execute("delete-c 1 -force"));
+        assertEquals(0, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+        assertEquals(listing("1. " + REPORT + "\n   Contact: Unavailable (contact deleted)\n"),
+                execute("list-b"));
+        assertEquals(8, stock());
+    }
+
+    @Test
+    void deleteContact_forcedThenAddedAgainWithSameDetails_reportStaysUnavailable() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+        execute("delete-c 1 -force");
+
+        execute("add-c n/Maintenance t/12345678");
+
+        assertEquals(listing("1. " + REPORT + "\n   Contact: Unavailable (contact deleted)\n"),
+                execute("list-b"));
+        assertEquals("Successfully removed contact: Maintenance\n", execute("delete-c 1"));
+    }
+
+    @Test
+    void deleteContact_otherContactUsedByReport_deletesWithoutWarning() {
+        execute("add-c n/Maintenance t/12345678");
+        execute("add-c n/Supplier t/87654321");
+        execute(ADD_COMMAND + " m/1");
+
+        assertEquals("Successfully removed contact: Supplier\n", execute("delete-c 2"));
+        assertEquals(listing("1. " + REPORT + "\n   Contact: Maintenance (12345678)\n"), execute("list-b"));
+    }
+
+    @Test
+    void deleteContact_reportWithoutContact_deletesWithoutForce() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND);
+
+        assertEquals("Successfully removed contact: Maintenance\n", execute("delete-c 1"));
+    }
+
+    @Test
+    void deleteContact_forceOnUnusedContact_deletesNormally() {
+        execute("add-c n/Maintenance t/12345678");
+
+        assertEquals("Successfully removed contact: Maintenance\n", execute("delete-c 1 -force"));
+    }
+
+    @Test
+    void deleteContact_reportsUnavailable_deletesWithoutWarning() {
+        execute("add-c n/Maintenance t/12345678");
+
+        String withoutBrokenItems = executeWithoutBrokenItems("delete-c 1");
+
+        assertEquals("Successfully removed contact: Maintenance\n", withoutBrokenItems);
+    }
+
+    @Test
+    void deleteContact_tokenCountOutsideOneOrTwo_showsUsageAndKeepsContact() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+        String usage = "Invalid format. Use: delete-c INDEX [-force]\n";
+
+        assertEquals(usage, execute("delete-c"));
+        assertEquals(usage, execute("delete-c 1 -force x"));
+        assertEquals(usage, execute("delete-c 1 2"));
+        assertEquals(1, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+    }
+
+    @Test
+    void deleteContact_nearMissFlagSpellings_showUsageAndKeepContact() {
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/1");
+        String usage = "Invalid format. Use: delete-c INDEX [-force]\n";
+
+        for (String flag : List.of("-forc", "-forces", "-FORCE", "-Force", "force", "--force", "-f", "-")) {
+            assertEquals(usage, execute("delete-c 1 " + flag), flag);
+        }
+        assertEquals(1, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+    }
+
+    @Test
+    void deleteContact_forceWithIndexOutsideBounds_reportsIndexErrorAndKeepsContacts() {
+        execute("add-c n/First t/11111111");
+        execute("add-c n/Maintenance t/12345678");
+        execute(ADD_COMMAND + " m/2");
+        String notPositive = "Contact index must be a positive integer.\n";
+
+        assertEquals(notPositive, execute("delete-c 0 -force"));
+        assertEquals(notPositive, execute("delete-c -1 -force"));
+        assertEquals(notPositive, execute("delete-c 2147483648 -force"));
+        assertEquals(notPositive, execute("delete-c abc -force"));
+        assertEquals(notPositive, execute("delete-c -force"));
+        assertEquals("Contact index 3 is invalid. There are 2 contact(s).\n", execute("delete-c 3 -force"));
+        assertEquals(2, contacts.getContactIndex(broken.getBrokenItems().getFirst().getContact()));
+        assertEquals("Successfully removed contact: First\n", execute("delete-c 1"));
+    }
+
+    @Test
+    void deleteContact_forceOnEmptyContactList_reportsIndexError() {
+        assertEquals("Contact index 1 is invalid. There are 0 contact(s).\n", execute("delete-c 1 -force"));
+    }
+
     @Test
     void addBrokenItem_malformedPrefixes_rejectsWithoutMutation() {
         List<String> commands = List.of(
@@ -306,6 +446,13 @@ class ParserBrokenItemTest {
     private String execute(String command) {
         output.reset();
         parser.handleCommand(command, inventory, sessions, contacts, requests, loans, broken);
+        return capturedText();
+    }
+
+    /** Runs a command in a context where broken-item tracking is unavailable. */
+    private String executeWithoutBrokenItems(String command) {
+        output.reset();
+        parser.handleCommand(command, inventory, sessions, contacts, requests, loans);
         return capturedText();
     }
 
