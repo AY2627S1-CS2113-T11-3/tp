@@ -1,0 +1,30 @@
+@startuml
+!include loan-style.puml
+hide footbox
+participant "parser:Parser" as parser
+participant "contactManager:ContactManager" as manager
+
+[-> parser : addContact(arguments, contactManager)
+activate parser
+parser -> parser : check that the prefixes are one of\nthe four accepted combinations\nextract the values
+create participant "contact:Contact" as contact
+parser -> contact : Contact(name, phone, email, role)
+activate contact
+contact -> contact : validate name, phone, email, role
+contact --> parser : validated contact
+deactivate contact
+parser -> manager : addContact(contact)
+activate manager
+manager -> manager : append contact to the list
+manager --> parser
+deactivate manager
+[<-- parser
+deactivate parser
+
+note over manager, contact
+  Successful path after command dispatch.
+  The manager retains the contact.
+  Email and role are null when their prefixes are absent.
+  Assertions, logging, and output are omitted.
+end note
+@enduml
