@@ -43,7 +43,8 @@
   - [Contact management](#44-contact-management)
     - [Detailed contact design](#441-detailed-contact-design)
     - [Responsibilities and storage](#442-responsibilities-and-storage)
-    - [Validation rules and deletion safeguard](#443-validation-rules-and-deletion-safeguard)
+    - [Addition walkthrough](#443-addition-walkthrough)
+    - [Validation rules and deletion safeguard](#444-validation-rules-and-deletion-safeguard)
   - [Loan tracking](#45-loan-tracking)
     - [Detailed loan tracking design](#451-detailed-loan-tracking-design)
     - [Key operations](#452-key-operations)
@@ -885,7 +886,55 @@ does not own it.*
 Editable PlantUML source: [class diagram](diagrams/contact-class.puml). It reuses
 [loan-style.puml](diagrams/loan-style.puml) so all implementation diagrams share one style.
 
-#### 4.4.3. Validation rules and deletion safeguard
+#### 4.4.3. Addition walkthrough
+
+Assume the list already contains one contact, Component Supplier. Enter:
+
+```text
+add-c n/NUS Infrastructure t/65161234 r/Aircon and lighting repairs
+```
+
+1. `Parser#addContact` calls `findPrefixes`, which returns `n`, `t`, `r`. That is one of the four accepted
+   combinations, so the command is accepted. Any other combination throws a `CommandFormatException` carrying the
+   usage message, and nothing is created.
+2. `extractValues` returns the three values in order. The loop over the optional prefixes stores the third value as
+   the role, because its prefix is `r`. The email stays `null`.
+3. The `Contact` constructor checks that the name and phone are present, that the phone contains digits only, and that
+   a supplied email or role is not blank. A supplied email must also have non-whitespace text on both sides of an `@`.
+   The first invalid value throws a `CommandFormatException` with its own message, and nothing is added.
+4. `ContactManager#addContact` rejects a null contact and appends the new one at the end of the list, so
+   NUS Infrastructure becomes contact 2.
+5. The manager asserts that its list contains only nonnull contacts, logs the addition at `FINE`, and prints:
+
+```text
+Successfully added: NUS Infrastructure (65161234) to contacts
+```
+
+The confirmation shows neither the index nor the optional fields. Running `list-c` afterwards displays:
+
+```text
+--------------------------------------------------------------------
+Contacts
+--------------------------------------------------------------------
+1. Component Supplier (91234567)
+2. NUS Infrastructure (65161234) - Aircon and lighting repairs
+--------------------------------------------------------------------
+```
+
+The following sequence summarizes a successful addition after command dispatch. Prefix extraction, assertions,
+logging, and console rendering are condensed into descriptive steps.
+
+![Successful contact addition sequence diagram](images/contact-add-sequence.png)
+
+*Figure C2: Successful contact addition. Construction validates the contact before the manager appends it. The
+manager retains the contact after the call returns; routine getters, assertions, logging, and output are omitted.*
+
+Editable source: [contact addition sequence](diagrams/contact-add-sequence.puml).
+
+Addition never compares the new contact with the existing ones. Adding the same name and phone twice creates two
+separate contacts, and a later `delete-c` removes only the one at the requested position.
+
+#### 4.4.4. Validation rules and deletion safeguard
 
 Deleting a contact that a broken-item report uses needs `-force`. `Parser.deleteContact` splits its arguments into
 tokens (an index, then optionally exactly `-force`), validates the index, and asks
