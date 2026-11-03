@@ -41,6 +41,9 @@
     - [Preparation limitations](#438-preparation-limitations)
     - [Preparation diagram sources](#439-preparation-diagram-sources)
   - [Contact management](#44-contact-management)
+    - [Detailed contact design](#441-detailed-contact-design)
+    - [Responsibilities and storage](#442-responsibilities-and-storage)
+    - [Validation rules and deletion safeguard](#443-validation-rules-and-deletion-safeguard)
   - [Loan tracking](#45-loan-tracking)
     - [Detailed loan tracking design](#451-detailed-loan-tracking-design)
     - [Key operations](#452-key-operations)
@@ -842,6 +845,47 @@ so all implementation diagrams share one style.
 `add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
 `ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
 single index on the command line, like `delete-s`.
+
+#### 4.4.1. Detailed contact design
+
+Contacts keep the people a technician may need to reach, such as suppliers and maintenance staff. The three commands
+are `add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]`, `list-c`, and `delete-c INDEX [-force]`. The name and phone are
+mandatory. The optional email and role must appear in that order, after the phone, and a supplied value must not be
+blank. `Parser` accepts exactly four prefix combinations (`n t`, `n t e`, `n t r`, and `n t e r`), so a command with
+a missing, repeated, or reordered prefix gets the usage message and changes nothing. `list-c` takes no arguments.
+See the User Guide for user-facing examples of [`add-c`](UserGuide.md#add-a-contact-add-c),
+[`list-c`](UserGuide.md#list-contacts-list-c), and [`delete-c`](UserGuide.md#delete-a-contact-delete-c).
+
+#### 4.4.2. Responsibilities and storage
+
+![Selected contact classes and collaborators](images/contact-class.png)
+
+*Figure C1: Selected contact classes and collaborators. Solid arrows show retained references and dashed arrows show
+temporary use. Parser's private helpers are shown because they carry the command logic, and constructors, getters
+used only for display, and the shared `Ui` constants are omitted. A report references the exact `Contact` object but
+does not own it.*
+
+- `Contact` is an immutable value class. Its constructor validates the name, phone, email, and role and throws a
+  `CommandFormatException` with a specific message for the first invalid value. The optional email and role are
+  `null` when they were not supplied.
+- `ContactManager` owns the list of contacts in insertion order. It prints the confirmation for each change and the
+  `list-c` display, and it converts between the one-based positions shown to the user and the zero-based list
+  positions. An index outside the list raises an `InvalidContactIndexException`.
+- `Parser` dispatches `add-c`, `list-c`, and `delete-c`. It validates the prefixes and the index, constructs the
+  `Contact`, and, for `delete-c`, asks the `BrokenItemManager` whether any report uses the contact. `ContactManager`
+  and `BrokenItemManager` therefore do not depend on each other for this check.
+- `AppState` holds the single `ContactManager`, which `BrokenItemManager` shares so that a report can verify that its
+  contact is still registered. `ContactManager#containsContact` compares by identity, not by details.
+- Contacts are saved with the rest of the application. `ContactManager#toSnapshot` copies each contact into a
+  `ContactEntry` record (name, phone, email, and role) and `ContactManager#restore` validates and rebuilds them in
+  the same order, keeping duplicates and leading zeros in phone numbers. See [Storage component](#35-storage-component).
+- `Loan` uses `Contact` only to validate the borrower's name and phone and then keeps copies of those values. A loan
+  borrower is therefore not a registered contact, and adding or deleting a contact never changes a loan.
+
+Editable PlantUML source: [class diagram](diagrams/contact-class.puml). It reuses
+[loan-style.puml](diagrams/loan-style.puml) so all implementation diagrams share one style.
+
+#### 4.4.3. Validation rules and deletion safeguard
 
 Deleting a contact that a broken-item report uses needs `-force`. `Parser.deleteContact` splits its arguments into
 tokens (an index, then optionally exactly `-force`), validates the index, and asks

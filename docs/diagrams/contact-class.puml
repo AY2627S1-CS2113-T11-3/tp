@@ -1,0 +1,65 @@
+@startuml
+' Reuses the loan diagrams' styling so all implementation diagrams look consistent.
+!include loan-style.puml
+hide circle
+top to bottom direction
+skinparam nodesep 45
+skinparam ranksep 55
+
+class Parser {
+    --
+    {field} -addContact(arguments: String, contactManager: ContactManager)
+    {field} -deleteContact(arguments: String, contactManager: ContactManager,\n  brokenItemManager: BrokenItemManager)
+    {field} -listContacts(arguments: String, contactManager: ContactManager)
+}
+
+class ContactManager {
+    --
+    {field} +addContact(contact: Contact)
+    {field} +deleteContact(userIndex: int)
+    {field} +getContact(userIndex: int): Contact
+    {field} +listContacts()
+    {field} +containsContact(contact: Contact): boolean
+}
+
+class Contact {
+    {field} -name: String
+    {field} -phone: String
+    {field} -email: String
+    {field} -role: String
+    --
+    {field} +getName(): String
+    {field} +getPhone(): String
+    {field} +getEmail(): String
+    {field} +getRole(): String
+}
+
+class BrokenItemManager {
+    --
+    {field} +countReportsUsing(contact: Contact): int
+    {field} +getAvailableContact(report: BrokenItem): Contact
+}
+
+class BrokenItem {
+    --
+    {field} +getContact(): Contact
+}
+
+class Loan {
+    --
+}
+
+Parser ..> ContactManager : <<use>>\nexecute add-c, list-c, delete-c >
+Parser ..> Contact : <<create>>\nvalidate add-c values >
+Parser ..> BrokenItemManager : <<use>>\ncount reports before delete-c >
+ContactManager --> "0..*" Contact : registered contacts {ordered} >
+BrokenItemManager --> "1" ContactManager : shared contacts >
+BrokenItemManager --> "0..*" BrokenItem : reports {ordered} >
+BrokenItem --> "0..1" Contact : selected contact >
+Loan ..> Contact : <<use>>\nvalidate borrower values >
+
+note bottom of Contact
+  Contact fields are final.
+  Duplicate contacts stay separate.
+end note
+@enduml
