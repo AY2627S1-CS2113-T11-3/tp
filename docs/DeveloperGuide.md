@@ -160,7 +160,8 @@ The application uses a lightweight layered architecture:
 `Bob.main` creates one `Parser` and an `AppState` that owns one instance of each model manager and a shared
 `Inventory` for the duration of the process. The parser receives these objects when handling each command. This keeps
 the managers independent while allowing loans, fulfilled requests, broken-item reports, and preparations to
-query or update inventory. Broken-item tracking shares the contact manager to preserve selected contacts.
+query or update inventory. Broken-item tracking shares the contact manager to preserve selected contacts, and `delete-c` asks the broken-item
+manager whether a report uses a contact before deleting it.
 
 ![Application architecture including record storage](images/storage-architecture.png)
 
@@ -212,7 +213,8 @@ The model is composed of domain objects and managers:
 - [`SessionManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/SessionManager.java) stores sessions in chronological order.
 - [`Session`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Session.java) validates dates, times, and scheduling conflicts.
 - [`Preparation`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Preparation.java) stores per-session requirements through `PreparationItem`.
-- [`ContactManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/ContactManager.java) stores contacts.
+- [`Contact`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Contact.java) validates a contact's name, phone, optional email, and optional role.
+- [`ContactManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/ContactManager.java) stores contacts in insertion order and reports whether a contact is still registered.
 - [`RequestManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/RequestManager.java) stores deadline-sorted student requests.
 - [`Request`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/Request.java) validates request details and holds the fulfillment status.
 - [`BrokenItemManager`](https://github.com/AY2627S1-CS2113-T11-3/tp/blob/master/src/main/java/seedu/bob/BrokenItemManager.java) coordinates reports, shared inventory,
@@ -849,7 +851,7 @@ so all implementation diagrams share one style.
 
 `add-c`, `list-c`, and `delete-c` follow the same structure as sessions: `Contact` is the validated data class,
 `ContactManager` owns the list and prints confirmations, and `Parser` dispatches the commands. `delete-c` takes a
-single index on the command line, like `delete-s`.
+single index on the command line, like `delete-s`, followed by an optional `-force`.
 
 #### 4.4.1. Detailed contact design
 
@@ -1788,6 +1790,8 @@ an item with all units broken and none on loan may be absent from its results.
 - A report stores the selected `Contact` object. Membership uses identity, so renumbering contacts cannot
   redirect a report, and adding identical contact details does not revive a deleted link. Listing distinguishes
   `Not assigned` from `Unavailable (contact deleted)`; a deleted contact does not prevent stock restoration.
+  Deleting a contact that a report uses requires `delete-c INDEX -force`; see
+  [Listing and deletion](#444-listing-and-deletion).
 - Expected failures use the `CommandException` hierarchy, including `BrokenItemException` and
   `InvalidBrokenItemIndexException`. `Parser` prints their messages. Assertions check internal report validity
   and exact stock changes; FINE logging records diagnostics without adding normal console output.
@@ -1908,6 +1912,7 @@ availability when stock is fulfilled, loaned, returned, reported broken, or rest
 | Medium | lab technician | track student requests and their status | prepare and fulfil requests by their deadlines |
 | Medium | lab technician | record and clear broken-item reports | separate damaged units from usable stock |
 | Medium | lab technician | save supplier and repair contacts | find relevant people quickly |
+| Medium | lab technician | be warned before deleting a contact that a broken-item report uses | avoid losing the maintenance contact of a report by accident |
 | Medium | lab technician | filter overdue loans | follow up on late returns |
 | Low | project maintainer | persist data between launches | retain records after restarting Bob |
 
@@ -1975,6 +1980,7 @@ Use case ends.
 - **Inventory item** — A named resource stored under a category with a positive quantity.
 - **Session** — A scheduled lab event with a date, location, time range, and headcount.
 - **Preparation** — The total material requirement for one session.
+- **Contact** — A supplier or maintenance person's name and phone number, with an optional email and role.
 - **Request** — A student's requested item and quantity, its deadline, and its pending, prepared, or fulfilled status.
 - **Loan** — Immutable details of lent units and a borrower; a `LoanRecord` tracks its active or closed status.
 - **Broken-item report** — A record of damaged units that are excluded from usable inventory until the report is deleted.
@@ -2108,6 +2114,29 @@ Start empty and enter these commands in order:
 In a separate scenario, add requests with different deadlines. Verify deadline ordering and renumbering after
 deletion. Malformed or past deadlines, blank names, bad quantities, invalid indices, and unsupported statuses
 must leave the request list and inventory unchanged.
+
+### Contacts
+
+Start empty and enter these commands in order:
+
+| Command | Expected result |
+| --- | --- |
+| `list-c` | Shows `No contacts saved.` between the heading and the closing divider. |
+| `add-c n/Lab Maintenance t/61234567` | Confirms `Successfully added: Lab Maintenance (61234567) to contacts`. |
+| `add-c n/Component Supplier t/91234567 e/supplier@example.com r/Wires` | Confirms the addition of Component Supplier. |
+| `add-c n/Lab Maintenance t/61234567` | Accepts the duplicate as a separate contact. |
+| `list-c` | Shows three contacts in order. The second reads `Component Supplier (91234567, supplier@example.com) - Wires`. |
+| `delete-c 2` | Confirms `Successfully removed contact: Component Supplier`. |
+| `list-c` | Shows the two remaining contacts numbered 1 and 2. |
+| `delete-c 3` | Rejects with `Contact index 3 is invalid. There are 2 contact(s).` |
+| `delete-c 2 -force` | Removes contact 2. `-force` is accepted although no report uses the contact. |
+| `add-c n/A t/12x` | Rejects with `Phone must contain digits only.` |
+| `add-c n/A t/1 e/bad` | Rejects with the email message. |
+| `add-c n/A` | Rejects with the `add-c` usage message. |
+| `list-c` | Still shows only contact 1. Rejected commands changed nothing. |
+
+Rejected commands, including `delete-c 1 now`, `delete-c 0`, `list-c extra`, and any spelling of the flag other than
+exactly `-force`, must print their message and leave the contact list unchanged.
 
 ### Broken-item tracking and contacts
 
