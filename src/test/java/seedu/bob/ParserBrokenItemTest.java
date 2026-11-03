@@ -83,7 +83,7 @@ class ParserBrokenItemTest {
     void listBrokenItems_deletedContact_displaysUnavailableAndAllowsRepair() {
         execute("add-c n/Maintenance t/12345678");
         execute(ADD_COMMAND + " m/1");
-        execute("delete-c 1");
+        execute("delete-c 1 -force");
         execute("add-c n/Replacement t/87654321");
         assertEquals(listing("1. " + REPORT + "\n   Contact: Unavailable (contact deleted)\n"),
                 execute("list-b"));

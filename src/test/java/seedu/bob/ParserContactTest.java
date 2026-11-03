@@ -143,8 +143,8 @@ class ParserContactTest {
     void deleteContact_invalidRequest_noStateChange() {
         execute("add-c n/First t/11111111");
 
-        assertEquals("Invalid format. Use: delete-c INDEX\n", execute("delete-c"));
-        assertEquals("Invalid format. Use: delete-c INDEX\n", execute("delete-c 1 2"));
+        assertEquals("Invalid format. Use: delete-c INDEX [-force]\n", execute("delete-c"));
+        assertEquals("Invalid format. Use: delete-c INDEX [-force]\n", execute("delete-c 1 2"));
         assertEquals("Contact index must be a positive integer.\n", execute("delete-c abc"));
         assertEquals("Contact index must be a positive integer.\n", execute("delete-c 0"));
         assertEquals("Contact index must be a positive integer.\n", execute("delete-c -1"));

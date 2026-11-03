@@ -72,7 +72,8 @@ public class Parser {
     //@@author
     private static final String ADD_CONTACT_USAGE =
             "Invalid format. Use: add-c n/NAME t/PHONE [e/EMAIL] [r/ROLE]";
-    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX";
+    private static final String DELETE_CONTACT_USAGE = "Invalid format. Use: delete-c INDEX [-force]";
+    private static final String FORCE_FLAG = "-force";
     private static final String LIST_CONTACT_USAGE = "Invalid format. Use: list-c";
 
     //@@author DaynaG3
@@ -286,7 +287,7 @@ public class Parser {
             case "delete-c" -> {
                 try {
                     String arguments = parts.length == 2 ? parts[1] : "";
-                    deleteContact(arguments, contactManager);
+                    deleteContact(arguments, contactManager, brokenItemManager);
                 } catch (CommandException e) {
                     System.out.println(e.getMessage());
                 }
@@ -680,19 +681,32 @@ public class Parser {
     }
 
     /**
-     * Parses and executes a delete-contact command.
+     * Parses and executes a delete-contact command. A contact selected by broken-item reports is kept,
+     * with a warning, unless {@code -force} follows the index.
      *
      * @param arguments Text following the {@code delete-c} command word.
      * @param contactManager Contact list to update.
-     * @throws CommandException If the index is malformed or outside the contact list.
+     * @param brokenItemManager Reports to check for use of the contact; may be null if reports are unavailable.
+     * @throws CommandException If the format is wrong or the index is malformed or outside the contact list.
      */
-    private void deleteContact(String arguments, ContactManager contactManager) throws CommandException {
-        String trimmedArguments = arguments.trim();
-        if (trimmedArguments.isEmpty() || trimmedArguments.matches(".*\\s+.*")) {
+    private void deleteContact(String arguments, ContactManager contactManager,
+            BrokenItemManager brokenItemManager) throws CommandException {
+        String[] tokens = arguments.trim().split("\\s+");
+        boolean isForced = tokens.length == 2 && tokens[1].equals(FORCE_FLAG);
+        if (tokens[0].isEmpty() || tokens.length > 2 || (tokens.length == 2 && !isForced)) {
             throw new CommandFormatException(DELETE_CONTACT_USAGE);
         }
 
-        contactManager.deleteContact(parseContactIndex(trimmedArguments));
+        int index = parseContactIndex(tokens[0]);
+        Contact contact = contactManager.getContact(index);
+        int reportCount = brokenItemManager == null ? 0 : brokenItemManager.countReportsUsing(contact);
+        if (reportCount > 0 && !isForced) {
+            System.out.printf("Contact %s is used by %d broken-item report%s. To delete it anyway, use: "
+                    + "delete-c %d %s%n", contact.getName(), reportCount, reportCount == 1 ? "" : "s",
+                    index, FORCE_FLAG);
+            return;
+        }
+        contactManager.deleteContact(index);
     }
 
     /**
